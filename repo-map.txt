@@ -1,0 +1,125 @@
+css/
+  base.css:
+    基础样式 - 定义全局基础样式，包括 CSS 重置、body 样式、按钮组件和滚动条样式
+  chat.css:
+    聊天面板样式 - 定义聊天面板、消息显示、输入框和待处理变更列表的样式
+  editor.css:
+    编辑器样式 - 定义编辑器区域、标签页和代码编辑相关的样式
+  explorer.css:
+    文件资源管理器样式 - 定义文件树面板、文件节点和目录结构的样式
+  fonts/
+    fonts.css:
+      字体定义 - 使用 @font-face 加载字体文件
+  notification.css:
+    通知系统样式 - 定义系统通知消息的样式，包括容器、消息卡片和动画效果
+  sidebar.css:
+    侧边栏样式 - 定义侧边栏、菜单和设置相关的样式
+  theme.css:
+    主题变量定义 - 定义 CSS 自定义属性（变量），包括颜色系统、背景色、文字颜色和功能色
+index.html:
+  应用主页面 - Caret 代码编辑器的入口 HTML 文件，包含所有 UI 结构和资源引用
+main.js:
+src/
+  chat/
+    chat-handlers.js:
+      class ChatHandlers
+        constructor(context) // (context: 上下文对象，包含所有需要的依赖, context: .file - 文件管理器实例, context: .editor - 编辑器管理器实例, context: ...
+        async handleChatSubmit()
+        cancelCurrentRequest()
+    chat-ui.js:
+      class ChatUI
+        constructor(chatPanel, chatMessagesContainer, chatInput) // (chatPanel: 聊天面板容器, chatMessagesContainer: 消息容器, chatIn...
+        getChatInput() // -> 输入内容
+        addMessage(role, text) // (role: 消息角色：'user' 或 'ai', text: 消息文本) -> 消息元素
+        async runTask(startMsg, taskFn, successMsg = null) // (startMsg: 开始消息, taskFn: 任务函数，可接收 updateStatus..., successMsg...
+        clearMessages()
+        addFileListMessage(files) // -> 消息元素
+    repo-map/
+      language-config.js:
+        const getWasmPath = (lang) =>
+      repo-map-worker.js:
+      repo-map.js:
+  editor/
+    editor-manager.js:
+      class EditorManager
+        constructor(editorContainer, tabsContainer)
+        async init()
+        dispose()
+        setFontSize(size) // (size: 字体大小)
+        convertPreviewToFixed(tabId) // (tabId: Tab ID)
+        async openFile(fileHandle, fullPath, isPreview = false)
+        switchTab(tabId)
+        async closeTab(tabId)
+        async saveCurrentTab()
+        layout()
+        showStandardMode(model, viewState = null)
+        async reset(clearStoredState = true)
+        async restoreTabsState()
+        static getLanguage(fileName)
+  file-tree/
+    file-handlers.js:
+      class FileHandlers
+        constructor(context) // (context: 上下文对象，包含所有需要的依赖, context: .file - 文件管理器实例, context: .editor - 编辑器管理器实例, context: ...
+        async handleOpenFolder()
+        async handleShowMap()
+    file-manager.js:
+      class LRUCache
+        constructor(maxSize = 50)
+        get(key)
+        set(key, value)
+        delete(key)
+        clear()
+      class FileManager
+        constructor(store = null) // (store: 应用状态存储实例)
+        async init()
+        async openDirectoryHandle()
+        hasRoot()
+        getRootHandle()
+        async getDirectoryEntries(dirHandle, currentPath, parentScopeStack)
+        async getRepoMap()
+        async getFileHandleByPath(filePath) // (filePath: 文件路径)
+        async readFile(filePath) // (filePath: 文件路径) -> >}
+        async writeFile(filePath, content)
+        async buildFileTree(dirHandle, currentPath = "", parentScopeStack = null)
+        async getAllFiles() // -> >} 文件列表
+    file-tree-ui.js:
+      class FileTreeUI
+        constructor(fileTreeContainer, fileTreePanel) // (fileTreeContainer: 文件树容器, fileTreePanel: 文件树面板)
+        setFileTreeVisible(isVisible) // (isVisible: 是否可见)
+        renderFileTree(rootName, treeData) // (rootName: 根目录名称, treeData: 树形数据)
+    ignore-manager.js:
+  global/
+    app-controller.js:
+      class AppController
+        constructor(fileManager, editorManager, store) // (fileManager: 文件管理器实例, editorManager: 编辑器管理器实例, store: 状态存储实例)
+        async init()
+    constants.js:
+    notification-system.js:
+      class NotificationSystem // 图标类型映射
+        constructor(container) // (container: 通知容器元素)
+        async alert(message, options = {}) // (message: 消息内容, options: 选项, options: .type - 类型：'info' | 's..., options: .du...
+    store.js:
+      class AppStore extends EventTarget
+        constructor()
+        async init()
+        async updateConfig(newConfig) // (newConfig: 新配置对象)
+        getConfig() // -> 配置对象（深拷贝）
+        async saveDirectoryHandle(handle) // (handle: 文件夹句柄)
+        async restoreDirectoryHandle()
+        async clearDirectoryHandle()
+        async saveTabsState(tabsState) // (tabsState: 标签页状态对象, tabsState: .tabs - 标签页数组，每个元素包含 {..., tabsState: .currentTab...
+        async restoreTabsState() // -> 标签页状态对象，如果没有则返回null
+        async clearTabsState()
+  sidebar/
+    feature-manager.js:
+      class FeatureManager
+        constructor(context) // (context: 功能模块上下文，包含 ui、file、edi...)
+        register(name, featureClass) // (name: 功能模块名称, featureClass: 功能模块类（构造函数）)
+        async run(name, ...args) // (name: 功能模块名称, args: 传递给功能模块的参数)
+    settings-ui.js:
+      class SettingsUI
+        constructor(settingsMenu, toolsMenu) // (settingsMenu: 设置菜单, toolsMenu: 工具菜单)
+        init()
+        updateSettingsView(config) // (config: 配置对象)
+style.css:
+  全局样式入口 - 负责聚合主题、基础样式以及各个 UI 模块（侧边栏、编辑器、聊天）的 CSS 文件

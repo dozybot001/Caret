@@ -1,11 +1,10 @@
-/* Main Entry Point */
-
-/* 1. 基础与布局公共类 */
+/* 全局样式入口 - 负责聚合主题、基础样式以及各个 UI 模块（侧边栏、编辑器、聊天）的 CSS 文件 */
+@import url('css/fonts/fonts.css');
 @import url('css/theme.css');
 @import url('css/base.css');
 
-/* 2. 各功能模块 */
-@import url('css/sidebar.css');  /* 侧边栏 (Left) */
-@import url('css/explorer.css'); /* 文件树 (Left-Panel) */
-@import url('css/editor.css');   /* 编辑器 (Center) */
-@import url('css/chat.css');     /* 聊天窗 (Right) */
+@import url('css/sidebar.css');
+@import url('css/explorer.css');
+@import url('css/editor.css');
+@import url('css/chat.css');
+@import url('css/notification.css');

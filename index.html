@@ -1,61 +1,105 @@
+<!-- 应用主页面 - Caret 代码编辑器的入口 HTML 文件，包含所有 UI 结构和资源引用 -->
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Caret</title>
+    <link href="https://unpkg.com/@vscode/codicons/dist/codicons.css" rel="stylesheet" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* 图标样式调整 - 针对 Codicons 进行优化 */
+        .codicon {
+            font-size: 20px !important; /* 强制统一尺寸 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* 确保图标锐利，无抗锯齿模糊 */
+            -webkit-font-smoothing: antialiased; 
+            text-rendering: optimizeLegibility;
+        }
+
+        /* 覆盖 sidebar 按钮内的图标默认行为，确保居中 */
+        .sidebar-top .btn, 
+        .sidebar-bottom .btn,
+        .header-actions .btn,
+        #chat-input-area .btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
 </head>
 <body>
     <div id="app">
         <nav id="sidebar">
             <div class="sidebar-top">
-                <div class="btn" id="btn-toggle-tree" title="Explorer">
-                    <i class="ph ph-files"></i>
-                </div>
-                <div class="btn" id="btn-open-folder" title="Open Folder">
-                    <i class="ph ph-folder-open"></i>
-                </div>
-                <div class="btn" id="btn-toggle-chat" title="AI Chat">
-                    <i class="ph ph-chat-circle-text"></i>
-                </div>
+                <button type="button" class="btn" id="btn-toggle-tree" title="Explorer">
+                    <i class="codicon codicon-files"></i>
+                </button>
+                <button type="button" class="btn" id="btn-open-folder" title="Open Folder">
+                    <i class="codicon codicon-folder-opened"></i>
+                </button>
+                <button type="button" class="btn" id="btn-toggle-chat" title="Chat">
+                    <i class="codicon codicon-comment"></i>
+                </button>
             </div>
-            
+
             <div class="sidebar-bottom">
-                <div class="btn" id="btn-settings" title="Settings">
-                    <i class="ph ph-gear"></i>
+                <button type="button" class="btn" id="btn-tools" title="Tools">
+                    <i class="codicon codicon-extensions"></i>
+                </button>
+                <div id="tools-menu" class="popup-menu hidden">
                 </div>
+
+                <button type="button" class="btn" id="btn-settings" title="Settings">
+                    <i class="codicon codicon-settings-gear"></i>
+                </button>
+                
                 <div id="settings-menu" class="popup-menu hidden">
-                    <div class="menu-item" id="menu-item-api">
-                        <span>API Configuration</span>
-                        <i class="ph ph-caret-right"></i>
+                    <div class="menu-item-editable" id="menu-item-base-url">
+                        <div class="menu-item-label">Base URL</div>
+                        <input id="input-base-url" type="text" placeholder="https://api." class="menu-item-input" />
                     </div>
-                </div>
-                <div id="api-config-modal" class="popup-menu hidden">
-                    <div class="menu-header">API Settings</div>
-                    <div class="menu-content" style="display: flex; flex-direction: column; gap: 10px;">
-                        <div class="input-group">
-                            <label>Base URL</label>
-                            <input id="input-base-url" type="text" placeholder="https://api." />
-                        </div>
-                        <div class="input-group">
-                            <label>API Key</label>
-                            <input id="input-api-key" type="password" placeholder="sk-..." />
-                        </div>
-                        <div class="input-group">
-                            <label>Model Name</label>
-                            <input id="input-model-name" type="text" placeholder="deepseek" />
-                        </div>
+                    <div class="menu-item-editable" id="menu-item-api-key">
+                        <div class="menu-item-label">API Key</div>
+                        <input id="input-api-key" type="password" placeholder="sk-..." class="menu-item-input" />
+                    </div>
+                    <div class="menu-item-editable" id="menu-item-model-name">
+                        <div class="menu-item-label">Model Name</div>
+                        <input id="input-model-name" type="text" placeholder="deepseek" class="menu-item-input" />
                     </div>
                 </div>
             </div>
         </nav>
 
         <aside id="file-tree-panel">
+            <div id="file-tree"></div>
+        </aside>
+
+
+        <main id="editor-area">
+            <div id="tabs-bar"></div>
+            <div id="monaco-container"></div>
+        </main>
+
+        <aside id="chat-panel">
+            <div class="panel-header">
+                <div class="header-row">
+                    <div class="header-actions">
+                        <button type="button" id="btn-show-map" class="btn" title="Repo Map">
+                            <i class="codicon codicon-git-merge"></i>
+                        </button>
+                        <button type="button" id="btn-clear-chat" class="btn" title="Clear Messages">
+                            <i class="codicon codicon-trash"></i>
+                        </button>
+                    </div>
+                    <div id="chat-timer" class="chat-timer hidden"></div>
+                </div>
+            </div>
             <div id="pending-changes-panel" class="hidden">
                 <div class="pending-header">
                     <span>PENDING CHANGES</span>
@@ -63,52 +107,39 @@
                 </div>
                 <div id="pending-list"></div>
             </div>
-            <div id="file-tree"></div> 
-        </aside>
-
-        <main id="editor-area">
-            <div id="tabs-bar"></div>
-            <div id="monaco-container"></div>
-        </main>
-
-        <aside id="chat-panel" class="collapsed">
-            <div class="panel-header" style="justify-content: space-between; padding-left: 15px;">
-                <div class="model-selector-wrapper">
-                    <div id="current-model-display" class="model-display">
-                        <i class="ph ph-robot"></i>
-                        <span id="model-name-text">Loading...</span>
-                        <i class="ph ph-caret-down"></i>
-                    </div>
-                    <div id="model-menu" class="popup-menu hidden">
-                        <div class="menu-header" style="font-size: 11px; color: #666; padding: 4px 8px;">Switch Model</div>
-                        <div class="menu-item" id="menu-item-custom-api">
-                            <i class="ph ph-sliders" style="margin-right: 8px;"></i>
-                            <span>Use Custom API</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="header-actions">
-                    <button id="btn-show-map" class="btn" title="Repo Map">
-                        <i class="ph ph-map-trifold"></i>
-                    </button>
-                    <button id="btn-clear-chat" class="btn" title="Clear Chat">
-                        <i class="ph ph-trash"></i>
-                    </button>
-                </div>
-            </div>
             <div id="chat-messages"></div>
             <div id="chat-input-area">
                 <textarea id="chat-input" placeholder="Type a message..."></textarea>
-                <button id="btn-send-chat" class="btn">
-                    <i class="ph ph-arrow-up"></i>
+                <button type="button" id="btn-send-chat" class="btn">
+                    <i class="codicon codicon-arrow-up"></i>
                 </button>
             </div>
         </aside>
+
+        <div id="notification-container"></div>
     </div>
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
-    <script src="https://unpkg.com/web-tree-sitter@0.20.8/tree-sitter.js"></script>
+
+    <script>
+        window.loadMonacoEditor = function() {
+            if (!window.monacoLoaderLoaded) {
+                window.monacoLoaderLoaded = true;
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js';
+                script.async = true;
+                document.head.appendChild(script);
+            }
+        };
+        
+        window.loadTreeSitter = function() {
+            if (!window.treeSitterLoaded) {
+                window.treeSitterLoaded = true;
+                const script = document.createElement('script');
+                script.src = 'https://unpkg.com/web-tree-sitter@0.20.8/tree-sitter.js';
+                script.async = true;
+                document.head.appendChild(script);
+            }
+        };
+    </script>
 
     <script type="module" src="main.js"></script>
 </body>

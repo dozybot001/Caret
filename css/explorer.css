@@ -1,119 +1,77 @@
-/* =========================================
-   File Explorer (Tree)
-   ========================================= */
-
+/* 文件资源管理器样式 - 定义文件树面板、文件节点和目录结构的样式 */
 #file-tree-panel {
-    width: var(--tree-width);
+    width: 260px;
     background-color: var(--bg-2);
     display: flex;
     flex-direction: column;
     overflow: hidden;
     position: relative;
-    border: none;
+    flex-shrink: 0;
 }
 
 #file-tree-panel > * {
-    min-width: var(--tree-width);
+    min-width: 260px;
 }
 
 #file-tree-panel.collapsed {
     width: 0;
-    border-right: none;
 }
 
 #file-tree {
     flex: 1;
     overflow-y: auto;
-    overflow-x: auto;         
-    white-space: pre;
-    padding: 10px 0;
+    overflow-x: auto;
+    white-space: nowrap;
+    padding: 16px 0 16px 10px;
     color: var(--text-2);
-    line-height: 1.6;
+    line-height: 1.4;
     scrollbar-gutter: stable;
+    background-color: var(--bg-2);
+}
+
+#file-tree::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
 }
 
 .tree-node {
     cursor: pointer;
-    padding: 1px 0 1px 6px;   /* 减小了上下和左侧内边距 */
-    margin-bottom: 0;
-    border-radius: 4px;
+    padding: 4px 0;
+    margin: 0;
     display: flex;
     align-items: center;
+    font-size: 13px;
+    min-height: 24px;
+}
+
+/* 连接线使用很淡的颜色（最暗） */
+.tree-connector {
+    color: var(--text-7);
+    user-select: none;
+    white-space: pre;
+}
+
+/* 文件名使用正常颜色（最亮） */
+.tree-name {
     color: var(--text-2);
-    font-size: 13px;          /* 稍微减小字号使布局更紧凑 */
-    transition: background-color 0.15s;
+}
+
+/* 项目名（根目录）使用和文件一样的颜色 */
+.tree-node.is-root .tree-name {
+    color: var(--text-2);
+    font-weight: 500;
+}
+
+/* 文件夹名使用中等亮度 */
+.tree-node.is-folder .tree-name {
+    color: var(--text-4);
+    font-weight: 500;
 }
 
 .tree-node:hover {
     background-color: var(--bg-3);
-    color: var(--text-1);
 }
 
-.tree-node.is-folder {
-    color: var(--text-1);
-    font-weight: 500;
-}
-
-.empty-state {
-    font-style: italic;
-    opacity: 0.5;
-    padding-left: 5px;
-}
-
-/* =========================================
-   Pending Changes (Review Mode)
-   ========================================= */
-
-#pending-changes-panel {
-    border-bottom: 1px solid var(--bg-3);
-    margin-bottom: 10px;
-    padding-bottom: 5px;
-    background-color: rgba(255, 193, 7, 0.05); /* Subtle Amber Tint */
-}
-
-#pending-changes-panel.hidden {
+.tree-children.hidden {
     display: none;
-}
-
-.pending-header {
-    padding: 10px 15px 5px 15px;
-    font-size: 11px;
-    font-weight: 700;
-    color: #ffc107; /* Amber */
-    letter-spacing: 0.5px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.pending-header .badge {
-    background: #ffc107;
-    color: #000;
-    padding: 0 6px;
-    border-radius: 10px;
-    font-size: 10px;
-}
-
-.pending-item {
-    cursor: pointer;
-    padding: 4px 15px;
-    font-size: 13px;
-    color: var(--text-1);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    border-left: 3px solid transparent;
-}
-
-.pending-item:hover {
-    background-color: var(--bg-3);
-}
-
-.pending-item.active {
-    background-color: var(--bg-3);
-    border-left-color: #ffc107;
-}
-
-.pending-item i {
-    color: #ffc107;
 }

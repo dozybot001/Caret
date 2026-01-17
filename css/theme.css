@@ -1,22 +1,33 @@
+/* 主题变量定义 - 定义 CSS 自定义属性（变量），包括颜色系统、背景色、文字颜色和功能色 */
 :root {
-    
-    /* Background Levels (1-5) - 拉开对比度 */
-    --bg-1: #101010; /* [Level 1] Deepest: 编辑器/主内容区 (沉浸黑) */
-    --bg-2: #181818; /* [Level 2] Secondary: 文件树/Chat面板 (深灰) */
-    --bg-3: #222222; /* [Level 3] Tertiary: 侧边栏/Popup (中灰) */
-    --bg-4: #303030; /* [Level 4] Elements: 输入框/按钮/Tab背景 */
-    --bg-5: #454545; /* [Level 5] Active: 选中状态/Hover高亮 */
 
-    /* Text Levels (1-5) */
-    --text-1: #eeeeee; /* Primary */
-    --text-2: #b0b0b0; /* Secondary */
-    --text-3: #777777; /* Tertiary/Placeholder */
-    --text-4: #555555; /* Disabled */
-    --text-5: #333333; /* Inverse/Dark */
+    /* 灰阶背景颜色 - 7个层级 */
+    --bg-1: #000000;
+    --bg-2: #0f0f0f;
+    --bg-3: #1e1e1e;
+    --bg-4: #2d2d2d;
+    --bg-5: #3c3c3c;
+    --bg-6: #4b4b4b;
+    --bg-7: #5a5a5a;
 
-    /* Dimensions */
-    --sidebar-width: 50px;
-    --tree-width: 260px;
-    --chat-width: 340px;
-    --tab-height: 36px;
+    /* 灰阶文字颜色 - 7个层级 */
+    --text-1: #e8e8e8;
+    --text-2: #d0d0d0;
+    --text-3: #b8b8b8;
+    --text-4: #a0a0a0;
+    --text-5: #888888;
+    --text-6: #707070;
+    --text-7: #585858;
+
+    /* 功能色 - 四个点缀色：红、黄、蓝、绿 */
+    --color-red: #ff4444;
+    --color-yellow: #ffaa00;
+    --color-blue: #4488ff;
+    --color-green: #44ff44;
+
+    /* 功能色背景（半透明） */
+    --bg-red-dim: rgba(255, 68, 68, 0.15);
+    --bg-yellow-dim: rgba(255, 170, 0, 0.15);
+    --bg-blue-dim: rgba(68, 136, 255, 0.15);
+    --bg-green-dim: rgba(68, 255, 68, 0.15);
 }

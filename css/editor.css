@@ -1,24 +1,20 @@
-/* =========================================
-   Editor & Tabs
-   ========================================= */
-
+/* 编辑器样式 - 定义编辑器区域、标签页和代码编辑相关的样式 */
 #editor-area {
     flex: 1;
     display: flex;
     flex-direction: column;
     background-color: var(--bg-1);
     min-width: 0;
+    overflow: hidden;
 }
 
-/* Tabs Bar */
 #tabs-bar {
-    height: var(--tab-height);
+    height: 36px;
     background-color: var(--bg-1);
     display: flex;
     align-items: center;
     overflow-x: auto;
-    border-bottom: none; 
-    padding: 8px 8px 0 8px;
+    padding: 0 8px;
     gap: 4px;
 }
 #tabs-bar::-webkit-scrollbar {
@@ -30,30 +26,19 @@
     align-items: center;
     padding: 0 15px;
     height: 100%;
-    min-width: 120px;
+    min-width: 100px;
     max-width: 200px;
     font-size: 12px;
-    color: var(--text-2);
+    color: var(--text-3);
     background-color: transparent;
-    border-right: none;
     cursor: pointer;
     user-select: none;
     position: relative;
-    border-top-left-radius: 8px;
-    border-top-right-radius: 8px;
-    transition: background-color 0.2s, color 0.2s;
+    min-height: 36px;
 }
 
 .tab:hover {
-    background-color: var(--bg-3);
-    color: var(--text-1);
-}
-
-.tab.active {
-    background-color: var(--bg-editor);
-    color: var(--text-1);
-    border-top: none;
-    font-weight: 500;
+    background-color: var(--bg-2);
 }
 
 .tab-name {
@@ -65,7 +50,6 @@
     min-width: 0;
 }
 
-/* Tab Actions (Close/Dirty) */
 .tab-actions {
     display: flex;
     align-items: center;
@@ -73,40 +57,34 @@
     margin-left: 4px;
 }
 
-.close-icon {
-    font-size: 14px;
-    width: 20px;
-    height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
-    opacity: 0; 
-    transition: all 0.2s;
+.tab .btn.btn-close.close-icon {
+    opacity: 0;
     margin-left: 2px;
+    color: var(--text-2);
 }
 
-.tab:hover .close-icon, 
-.tab.active .close-icon {
+.tab .btn.btn-close.close-icon i {
+    font-size: 16px !important;
+}
+
+.tab:hover .btn.btn-close.close-icon {
     opacity: 0.7;
+    color: var(--text-2);
 }
 
-.tab:hover .close-icon:hover,
-.tab.active .close-icon:hover {
+.tab:hover .btn.btn-close.close-icon:hover {
+    background-color: var(--bg-3);
     opacity: 1;
-    background-color: var(--bg-5);
-    color: var(--text-1);
 }
 
 .dirty-dot {
     width: 8px;
     height: 8px;
     background-color: var(--text-2);
-    border-radius: 50%;
     display: none;
 }
 
-.tab.is-dirty .close-icon {
+.tab.is-dirty .btn.btn-close.close-icon {
     display: none;
 }
 .tab.is-dirty .dirty-dot {
@@ -115,20 +93,18 @@
 .tab.is-dirty:hover .dirty-dot {
     display: none;
 }
-.tab.is-dirty:hover .close-icon {
-    display: block;
+.tab.is-dirty:hover .btn.btn-close.close-icon {
+    display: flex;
 }
 
-/* Monaco Container */
 #monaco-container {
     flex: 1;
     position: relative;
     overflow: hidden;
-    /* 确保子元素绝对定位重叠 */
-    display: block; 
+
+    display: block;
 }
 
-/* 让两个编辑器容器完全重叠，通过 display 控制显示 */
 .editor-instance-wrapper {
     position: absolute;
     top: 0;
@@ -136,13 +112,22 @@
     width: 100%;
     height: 100%;
     background-color: var(--bg-1);
+    overflow: hidden;
 }
 
-.monaco-editor {
-    opacity: 0;
-    animation: fadeIn 0.5s forwards;
+.editor-error-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-2);
 }
 
-@keyframes fadeIn {
-    to { opacity: 1; }
+.editor-error-content {
+    text-align: center;
+}
+
+.editor-error-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
 }

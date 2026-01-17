@@ -1,24 +1,23 @@
-/* =========================================
-   Sidebar Area
-   ========================================= */
-
+/* 侧边栏样式 - 定义侧边栏、菜单和设置相关的样式 */
 #sidebar {
-    width: var(--sidebar-width);
-    background-color: var(--bg-3);
+    width: 64px;
+    background-color: var(--bg-1);
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding-top: 10px;
-    padding-bottom: 10px;
+    padding-top: 16px;
+    padding-bottom: 16px;
     z-index: 10;
+    flex-shrink: 0;
 }
 
 .sidebar-top {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
     width: 100%;
     align-items: center;
+    padding: 0 12px;
 }
 
 .sidebar-bottom {
@@ -28,20 +27,102 @@
     flex-direction: column;
     align-items: center;
     position: relative;
+    gap: 12px;
+    padding: 0 12px;
+    padding-bottom: 12px;
 }
 
-/* 设置菜单位置 */
-#settings-menu {
-    left: 100%;
-    bottom: 0;
-    margin-left: 10px;
+.popup-menu {
+    background-color: var(--bg-3);
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    z-index: 100;
+    width: max-content;
+    min-width: 200px;
+    max-width: 320px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
 }
 
-/* API 配置模态框位置 */
-#api-config-modal {
-    left: calc(100% + 175px); 
-    bottom: 0;
-    width: 280px;
-    padding: 12px;
-    cursor: default;
+.sidebar-bottom .popup-menu {
+    position: absolute;
+    top: var(--menu-top, 0);
+    left: var(--menu-left, 0);
+    max-height: var(--menu-max-height, calc(100vh - 40px));
+}
+
+.popup-menu.hidden {
+    display: none;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.popup-menu .menu-item-editable {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    min-height: 32px;
+    cursor: pointer;
+    flex-direction: row;
+    position: relative;
+}
+
+.popup-menu .menu-item-editable:hover {
+    background-color: var(--bg-4);
+}
+
+.popup-menu .menu-item-label {
+    flex: 0 0 auto;
+    width: 100px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0;
+    padding: 0;
+}
+
+.popup-menu .menu-item-editable .menu-item-label {
+    pointer-events: none;
+}
+
+.popup-menu .menu-item-editable .menu-item-input {
+    flex: 0 0 auto;
+    width: 140px;
+    margin: 0;
+    padding: 0;
+    color: var(--text-1);
+    font-size: 12px;
+    font-family: inherit;
+    text-align: left;
+    line-height: 1.2;
+    box-sizing: border-box;
+    background: transparent;
+    border: none;
+    outline: none;
+    cursor: pointer;
+}
+
+.popup-menu .menu-item-editable .menu-item-input::placeholder {
+    color: var(--text-4);
+    text-align: left;
+}
+
+.popup-menu .menu-item-editable .menu-item-input:hover,
+.popup-menu .menu-item-editable .menu-item-input:focus {
+    background: transparent;
+    outline: none;
+}
+
+.popup-menu .menu-item-editable .menu-item-input::selection {
+    background-color: var(--bg-5);
+    color: var(--text-1);
+}
+
+.hidden {
+    display: none !important;
 }

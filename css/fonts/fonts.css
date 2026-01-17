@@ -1,0 +1,21 @@
+/* 字体定义 - 使用 @font-face 加载字体文件 */
+@font-face {
+    font-family: 'Maple Mono';
+    src: url('MapleMono-NF-CN-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Maple Mono';
+    src: url('MapleMono-NF-CN-Bold.ttf') format('truetype');
+    font-weight: bold;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* 字体变量定义 */
+:root {
+    --font-family: 'Maple Mono', monospace;
+}

@@ -1,179 +1,218 @@
-/* =========================================
-   Chat Panel
-   ========================================= */
+/* 聊天面板样式 - 定义聊天面板、消息显示、输入框和待处理变更列表的样式 */
+.panel-header {
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    padding: 0 15px;
+    font-size: 11px;
+    font-weight: bold;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    flex-shrink: 0;
+}
 
 #chat-panel {
-    width: var(--chat-width);
+    width: 340px;
     background-color: var(--bg-2);
-    border-left: none;
     display: flex;
     flex-direction: column;
     overflow: hidden;
     position: relative;
+    flex-shrink: 0;
 }
 
 #chat-panel > * {
-    min-width: var(--chat-width);
+    min-width: 340px;
 }
 
 #chat-panel.collapsed {
     width: 0;
-    border-left: none;
 }
 
-/* Header Override */
 #chat-panel .panel-header {
     display: flex;
-    justify-content: flex-end;
+    flex-direction: column;
+    padding: 8px 12px;
+    flex-shrink: 0;
+    gap: 8px;
+    overflow: hidden;
+}
+
+.header-row {
+    display: flex;
+    flex-direction: row;
     align-items: center;
-    padding: 30px 15px 15px;
+    justify-content: space-between;
+    width: 100%;
 }
 
 .header-actions {
     display: flex;
     gap: 4px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: flex-start;
 }
 
-/* Header Buttons Override */
+.chat-timer {
+    font-size: 12px;
+    color: var(--text-3);
+    font-family: var(--font-family);
+    flex-shrink: 0;
+}
+
+.chat-timer.hidden {
+    display: none;
+}
+
+/* 统一头部按钮样式 - 所有按钮使用相同的视觉设计语言 */
 .header-actions .btn {
-    color: var(--text-2);
-}
-.header-actions .btn:hover {
-    color: var(--text-1);
-    background-color: var(--bg-3);
-}
-
-/* Model Selector */
-.model-selector-wrapper {
-    position: relative;
-}
-
-.model-display {
+    color: var(--text-3);
+    min-width: 40px;
+    min-height: 40px;
+    padding: 8px;
+    width: auto;
+    height: auto;
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 4px 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--text-2);
-    transition: all 0.2s;
-    user-select: none;
+    justify-content: center;
 }
-.model-display:hover {
+
+.header-actions .btn:hover,
+.header-actions .btn:focus-visible {
     background-color: var(--bg-3);
-    color: var(--text-1);
-}
-.model-display i {
-    font-size: 14px;
 }
 
-#model-menu {
-    top: 100%;
-    left: 0;         
-    margin-top: 6px;
-    min-width: 180px;
+/* 统一所有按钮图标大小 */
+.header-actions .btn i {
+    font-size: 20px;
+    pointer-events: none;
+    flex-shrink: 0;
 }
 
-/* Messages */
 #chat-messages {
     flex: 1;
     overflow-y: auto;
-    padding: 15px 5px 15px 15px;
+    padding: 0 8px 100px 12px;
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 12px;
     scrollbar-gutter: stable;
+    background-color: var(--bg-2);
 }
 
 .message {
     font-family: inherit;
     font-size: 13px;
-    line-height: 1.5;
-    padding: 10px 12px;
-    border-radius: 8px;
-    max-width: 90%;
+    line-height: 1.6;
+    padding: 12px 14px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
     word-wrap: break-word;
+    overflow-wrap: break-word;
+    border: none;
 }
 
 .message pre {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--font-family);
     margin: 0;
+}
+
+/* Markdown 渲染样式 */
+.message code {
+    font-family: var(--font-family);
+    font-size: 0.9em;
+}
+
+.message .inline-code {
+    background: var(--bg-3);
+    padding: 4px 8px;
+    color: var(--color-red);
+}
+
+.message .code-block {
+    background: var(--bg-1);
+    border: none;
+    padding: 12px;
+    margin: 12px 0;
+    overflow-x: auto;
+    position: relative;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.message .code-block code {
+    display: block;
+    color: var(--text-1);
+    line-height: 1.5;
+}
+
+/* ==================== 消息折叠/展开 ==================== */
+.message-content.collapsed {
+    max-height: 300px;
+    overflow: hidden;
+}
+
+.message {
+    position: relative;
 }
 
 .message.ai {
     background-color: var(--bg-3);
+    border: none;
     color: var(--text-1);
     align-self: flex-start;
-    border-bottom-left-radius: 2px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .message.user {
-    background-color: var(--bg-4);
+    background-color: var(--bg-3);
+    border: none;
     color: var(--text-1);
     align-self: flex-end;
-    border-bottom-right-radius: 2px;
     font-weight: 400;
-}
-
-.message.system {
-    background-color: transparent;
-    color: var(--text-2);
-    align-self: center;
-    font-size: 12px;
-    font-style: italic;
-    border: 1px dashed var(--bg-4);
-    padding: 6px 12px;
-    margin: 5px 0;
-    max-width: 95%;
-    text-align: center;
-}
-
-
-/* 输入框组 */
-.input-group {
-    margin-bottom: 4px;
-}
-.input-group label {
-    display: block;
-    margin-bottom: 6px;
-    color: var(--text-2);
-    font-size: 12px;
-    font-weight: 500;
-}
-.input-group input {
     width: 100%;
-    background-color: var(--bg-4);
-    border: none;
-    color: var(--text-1);
-    padding: 8px 10px;
-    border-radius: 4px;
-    outline: none;
-    font-family: inherit;
-    font-size: 12px;
-}
-.input-group input::placeholder {
-    color: var(--text-3);
-}
-.input-group input:hover,
-.input-group input:focus {
-    background-color: var(--bg-4);
-    border: none;
-    box-shadow: none;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
-/* Input Area */
+.message-copy-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    opacity: 0;
+    pointer-events: none;
+    background-color: var(--bg-3);
+    transition: opacity 0.2s;
+    min-width: 32px;
+    min-height: 32px;
+    width: 32px;
+    height: 32px;
+}
+
+.message:hover .message-copy-btn {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.message-copy-btn:hover {
+    background-color: var(--bg-4);
+}
+
 #chat-input-area {
-    min-height: 60px;
-    padding: 10px 0 10px 15px;
-    background-color: var(--bg-2);
-    border-top: 1px solid transparent;
+    min-height: 85px;
+    padding: 4px 0 4px 15px;
+    background-color: var(--bg-3);
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     flex-shrink: 0;
     position: relative;
     cursor: text;
+    gap: 8px;
 }
 
 #chat-input {
@@ -181,41 +220,304 @@
     background-color: transparent;
     border: none;
     color: var(--text-1);
-    padding: 11px 50px 11px 0; 
-    scrollbar-gutter: stable;
+    padding: 7px 44px 7px 0;
     margin-right: 0;
     font-family: inherit;
     font-size: 13px;
-    line-height: 1.5;
+    line-height: 21px;
     resize: none;
     outline: none;
-    height: 42px;
-    min-height: 42px;
-    max-height: 200px;
+    height: 77px;
     overflow-y: auto;
+    scrollbar-gutter: stable;
 }
 #chat-input:focus {
-    box-shadow: none;
+    background-color: var(--bg-3);
+}
+#chat-input:focus::placeholder {
+    opacity: 0.5;
 }
 
 #chat-input-area #btn-send-chat {
     position: absolute;
-    bottom: 10px;
-    right: 13px;
-    background-color: transparent; 
-    color: var(--text-2); 
-    transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s, background-color 0.2s;
-    box-shadow: none;
+    top: 26px;
+    right: 14px;
+    background-color: transparent;
+    color: var(--text-2);
+    min-width: 32px;
+    min-height: 32px;
+    padding: 8px;
+    flex-shrink: 0;
 }
 
 #chat-input-area #btn-send-chat:hover {
     opacity: 1;
-    transform: none;
-    background-color: var(--bg-3);
-    color: var(--text-1);
+    background-color: var(--bg-4);
     cursor: pointer;
 }
 
-#chat-input-area #btn-send-chat:active {
-    transform: scale(0.95);
+#chat-input-area #btn-send-chat[data-is-cancel="true"] {
+    color: var(--color-red);
+}
+
+#chat-input-area #btn-send-chat[data-is-cancel="true"]:hover {
+    background-color: var(--bg-red-dim);
+}
+
+/* ==================== Pending Changes 面板 ==================== */
+#pending-changes-panel {
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    background-color: var(--bg-yellow-dim);
+}
+
+#pending-changes-panel.hidden {
+    display: none;
+}
+
+.pending-header {
+    padding: 10px 0 4px 0;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--color-yellow);
+    letter-spacing: 0.5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.pending-header .badge {
+    background: var(--color-yellow);
+    color: var(--text-1);
+    padding: 0 6px;
+    font-size: 11px;
+}
+
+/* ==================== File List in Chat ==================== */
+.file-list-thinking {
+    font-size: 13px;
+    color: var(--text-1);
+    line-height: 1.6;
+    margin-bottom: 12px;
+    padding: 0;
+}
+
+.file-generation-progress {
+    font-size: 13px;
+    color: var(--text-2);
+    line-height: 1.6;
+    margin-bottom: 12px;
+    padding: 0;
+}
+
+.file-list-title {
+    font-size: 13px;
+    color: var(--text-2);
+    margin-bottom: 8px;
+}
+
+.file-list {
+    margin: 0 0 12px 0;
+}
+
+.file-list-item {
+    padding: 4px 8px;
+    cursor: pointer;
+    color: var(--text-2);
+    font-size: 13px;
+    background-color: var(--bg-3);
+    display: flex;
+    align-items: center;
+    min-height: 24px;
+}
+
+.file-list-item:hover {
+    background-color: var(--bg-4);
+}
+
+.file-list-item.selected {
+    text-decoration: line-through;
+    opacity: 0.5;
+}
+
+.file-list-item-patch {
+    cursor: pointer;
+}
+
+.file-list-item-patch.selected {
+    text-decoration: none;
+    opacity: 1;
+}
+
+.file-list-item-patch.file-list-item-processed {
+    opacity: 0.5;
+}
+
+.file-list-item-patch.file-list-item-processed .file-list-item-name {
+    text-decoration: line-through;
+}
+
+.file-list-item-patch[data-file-status="accepted"] {
+    background-color: var(--bg-green-dim);
+}
+
+.file-list-item-patch[data-file-status="rejected"] {
+    background-color: var(--bg-red-dim);
+}
+
+.file-list-item-name {
+    font-family: var(--font-family);
+    font-size: 12px;
+}
+
+.file-list-item-stats {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 8px;
+    font-size: 12px;
+}
+
+.file-list-item-stats-added {
+    color: var(--color-green);
+    font-family: var(--font-family);
+}
+
+.file-list-item-stats-removed {
+    color: var(--color-red);
+    font-family: var(--font-family);
+}
+
+.file-list-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    width: 64px;
+    flex-shrink: 0;
+}
+
+.file-list-item-patch:hover .file-list-item-actions:not(.file-list-item-actions-processed) {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.file-list-item-patch:hover .file-list-item-actions-processed {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.file-list-item-actions-processed .file-list-item-accept-btn,
+.file-list-item-actions-processed .file-list-item-reject-btn {
+    display: none;
+}
+
+.file-list-item-actions-processed .file-list-item-revert-btn {
+    display: flex;
+}
+
+.file-list-item-actions-processed {
+    width: 32px;
+}
+
+.file-list-item-action-btn {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    min-height: 24px;
+    padding: 0;
+    background-color: var(--bg-4);
+}
+
+.file-list-item-action-btn i {
+    font-size: 16px;
+}
+
+.file-list-item-accept-btn {
+    color: var(--text-2);
+}
+
+.file-list-item-accept-btn:hover {
+    background-color: var(--bg-green-dim);
+}
+
+.file-list-item-reject-btn {
+    color: var(--text-2);
+}
+
+.file-list-item-reject-btn:hover {
+    background-color: var(--bg-red-dim);
+}
+
+.file-list-item-revert-btn {
+    display: none;
+    color: var(--text-2);
+}
+
+.file-list-item-revert-btn:hover {
+    background-color: var(--bg-5);
+}
+
+
+.file-list-button-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.file-list-button-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+}
+
+.file-list-generate-btn {
+    margin: 0;
+}
+
+.file-list-generate-btn:disabled {
+    pointer-events: none;
+    cursor: default;
+}
+
+.file-list-accept-all-btn:disabled {
+    pointer-events: none;
+    cursor: default;
+}
+
+.file-list-reject-all-btn:disabled {
+    pointer-events: none;
+    cursor: default;
+}
+
+.file-list-apply-patches-btn:disabled {
+    pointer-events: none;
+    cursor: default;
+}
+
+.file-list-apply-patches-btn:disabled:hover,
+.file-list-apply-patches-btn.no-hover:hover {
+    background-color: var(--bg-3) !important;
+}
+
+.btn.btn-text.btn-text-chat.file-list-accept-all-btn:hover {
+    background-color: var(--bg-green-dim);
+}
+
+.btn.btn-text.btn-text-chat.file-list-reject-all-btn:hover {
+    background-color: var(--bg-red-dim);
+}
+
+.message.ai.disabled .file-list-item {
+    pointer-events: none;
+    cursor: default;
 }
