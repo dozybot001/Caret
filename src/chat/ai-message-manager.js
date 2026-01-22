@@ -115,7 +115,9 @@ function createThinkingStreamHandler(onThinkingUpdate) {
  */
 async function callStreamingAI(config, messages, signal, onContentUpdate = null, options = {}) {
     const temperature = options.temperature ?? 0.3;
-    const baseUrl = config.baseUrl.replace(/\/$/, '');
+    // Remove trailing slash and any existing /chat/completions path
+    let baseUrl = config.baseUrl.replace(/\/$/, '');
+    baseUrl = baseUrl.replace(/\/chat\/completions\/?$/, '');
     const url = `${baseUrl}/chat/completions`;
 
     const response = await fetch(url, {
