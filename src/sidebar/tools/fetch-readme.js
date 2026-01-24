@@ -72,6 +72,36 @@ export class FetchReadmeFeature {
     }
 
     /**
+     * Decode base64 content to UTF-8 string
+     * @private
+     * @param {string} base64 - Base64 encoded string
+     * @returns {string} Decoded UTF-8 string
+     */
+    _decodeBase64ToUTF8(base64) {
+        // Remove all whitespace (including newlines) before decoding
+        const cleanBase64 = base64.replace(/\s/g, '');
+        
+        // Decode base64 to binary string
+        const binaryString = atob(cleanBase64);
+        
+        // Convert binary string to UTF-8
+        // Handle UTF-8 encoding properly for multi-byte characters
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        
+        // Use TextDecoder to properly decode UTF-8
+        try {
+            const decoder = new TextDecoder('utf-8');
+            return decoder.decode(bytes);
+        } catch (e) {
+            // Fallback to direct string if TextDecoder fails
+            return binaryString;
+        }
+    }
+
+    /**
      * @private
      * @param {string} url
      * @returns {{owner: string|null, type: 'user'|'org'|null}}
@@ -154,10 +184,18 @@ export class FetchReadmeFeature {
                             {
                                 const d = await res.json();
                                 if (d.type === 'file' && d.content) {
+                                    // GitHub API returns base64 content, decode it properly
+                                    let decodedContent;
+                                    try {
+                                        decodedContent = this._decodeBase64ToUTF8(d.content);
+                                    } catch (e) {
+                                        console.warn(`Failed to decode base64 for ${repo.full_name}/${name}:`, e);
+                                        continue;
+                                    }
                                     return {
                                         repo: repo.name,
                                         full_name: repo.full_name,
-                                        content: atob(d.content.replace(/\s/g, '')),
+                                        content: decodedContent,
                                         filename: name
                                     };
                                 }
@@ -195,7 +233,8 @@ export class FetchReadmeFeature {
         readmes.forEach(({ repo, content, filename }) => {
             // Rename: project-name-README.md (or original extension)
             const zipFilename = `${repo}-${filename}`;
-            zip.file(zipFilename, content);
+            // Explicitly specify UTF-8 encoding for text files
+            zip.file(zipFilename, content, { binary: false });
         });
 
         // Generate timestamp: YYYY-MM-DD_HH-MM-SS
