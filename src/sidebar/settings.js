@@ -19,6 +19,8 @@ export class Settings {
         this.onConfigSave = null;
         this.onFetchReadme = null; // (githubUrl: string) => Promise<void>
         this.onFileSizeChart = null; // () => Promise<void>
+        this.onAutoSpace = null; // () => Promise<void>
+        this.onPureColor = null; // () => Promise<void>
     }
 
     /**
@@ -39,6 +41,12 @@ export class Settings {
 
         // 绑定 File Size Chart 按钮事件
         this._bindFileSizeChartButton();
+
+        // 绑定 Auto Space 按钮事件
+        this._bindAutoSpaceButton();
+
+        // 绑定 Pure Color 按钮事件
+        this._bindPureColorButton();
 
         // 绑定可编辑菜单项点击事件：点击整个区域时聚焦并全选输入框内容
         const editableItems = document.querySelectorAll('.menu-item-editable');
@@ -347,6 +355,46 @@ export class Settings {
 
                 try {
                     await this.onFileSizeChart();
+                } catch (error) {
+                    // Error handling is done in the handler
+                }
+            });
+        }
+    }
+
+    /**
+     * 绑定 Auto Space 按钮事件
+     * @private
+     */
+    _bindAutoSpaceButton() {
+        const btn = document.getElementById('btn-auto-space');
+        if (btn) {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                if (!this.onAutoSpace) return;
+
+                try {
+                    await this.onAutoSpace();
+                } catch (error) {
+                    // Error handling is done in the handler
+                }
+            });
+        }
+    }
+
+    /**
+     * 绑定 Pure Color 按钮事件
+     * @private
+     */
+    _bindPureColorButton() {
+        const btn = document.getElementById('btn-pure-color');
+        if (btn) {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                if (!this.onPureColor) return;
+
+                try {
+                    await this.onPureColor();
                 } catch (error) {
                     // Error handling is done in the handler
                 }

@@ -1,0 +1,456 @@
+/* Tools CSS - Styles for sidebar tools features */
+
+/* File Size Chart Modal - Caret Design System */
+.file-size-chart-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.file-size-chart-modal.hidden {
+    display: none;
+}
+
+.file-size-chart-modal-content {
+    background-color: var(--bg-2);
+    width: 90%;
+    max-width: 980px;
+    max-height: 86vh;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border: none;
+}
+
+.file-size-chart-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background-color: var(--bg-2);
+    min-height: 40px;
+}
+
+.file-size-chart-modal-header h3 {
+    margin: 0;
+    color: var(--text-3);
+    font-size: 11px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.file-size-chart-modal-header .btn {
+    color: var(--text-3);
+    background-color: transparent;
+}
+
+.file-size-chart-modal-header .btn:hover {
+    background-color: var(--bg-3);
+}
+
+.file-size-chart-modal-body {
+    padding: 8px 10px;
+    overflow: hidden;
+    flex: 1;
+    min-height: 0;
+    background-color: var(--bg-2);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    grid-template-rows: auto auto 1fr;
+    gap: 8px 10px;
+}
+
+.chart-total-size {
+    color: var(--text-2);
+    font-size: 10px;
+    text-align: center;
+    padding: 4px 0 0 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    grid-column: 1 / -1;
+}
+
+.chart-privacy-note {
+    color: var(--text-4);
+    font-size: 10px;
+    text-align: center;
+    padding: 0;
+    grid-column: 1 / -1;
+}
+
+.chart-github-note {
+    color: var(--text-4);
+    font-size: 10px;
+    text-align: center;
+    padding: 0 0 4px 0;
+    grid-column: 1 / -1;
+}
+
+.chart-list-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    grid-column: 1 / 2;
+    grid-row: 3 / 4;
+    padding-right: 4px;
+}
+
+.chart-list-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 6px;
+    background-color: var(--bg-2);
+    font-size: 11px;
+}
+
+.chart-list-item-github-limit {
+    position: relative;
+}
+
+.chart-list-item-github-limit::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 3px;
+    bottom: 3px;
+    width: 3px;
+    background-color: var(--color-red);
+    border-radius: 2px;
+}
+
+.chart-list-item-github-limit .chart-list-size,
+.chart-list-item-github-limit .chart-list-info {
+    color: var(--color-red);
+    font-weight: 600;
+}
+
+.chart-list-item:hover {
+    background-color: var(--bg-3);
+}
+
+.chart-list-item-clickable {
+    cursor: pointer;
+}
+
+.chart-list-color {
+    width: 10px;
+    height: 10px;
+    flex-shrink: 0;
+    border-radius: 2px;
+}
+
+.chart-list-label {
+    flex: 1;
+    color: var(--text-1);
+    font-weight: 500;
+    min-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chart-list-info {
+    color: var(--text-3);
+    font-size: 10px;
+    min-width: 60px;
+    text-align: right;
+}
+
+.chart-list-size {
+    color: var(--text-2);
+    font-size: 10px;
+    min-width: 60px;
+    text-align: right;
+}
+
+.chart-list-percentage {
+    color: var(--text-2);
+    font-size: 10px;
+    min-width: 50px;
+    text-align: right;
+    font-weight: 500;
+}
+
+.chart-canvas-container {
+    position: relative;
+    width: 100%;
+    height: 320px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    background-color: var(--bg-2);
+    flex-shrink: 0;
+    grid-column: 2 / 3;
+    grid-row: 3 / 4;
+    border-left: 1px solid var(--bg-4);
+    padding-left: 8px;
+}
+
+.chart-canvas-header {
+    width: 100%;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 2px 0 6px 0;
+    flex-shrink: 0;
+}
+
+.chart-action-btn {
+    font-size: 11px;
+    padding: 4px 8px;
+    min-height: 24px;
+    background-color: var(--bg-3);
+    color: var(--text-2);
+}
+
+.chart-action-btn:hover,
+.chart-action-btn:focus-visible {
+    background-color: var(--bg-4);
+}
+
+.chart-action-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.chart-canvas-container canvas {
+    flex: 1;
+    width: 100%;
+    max-width: 100%;
+    max-height: 100%;
+}
+
+@media (max-width: 520px) {
+    .file-size-chart-modal-body {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto 1fr auto;
+    }
+
+    .chart-list-container {
+        grid-column: 1 / -1;
+        grid-row: 3 / 4;
+    }
+
+    .chart-canvas-container {
+        grid-column: 1 / -1;
+        grid-row: 4 / 5;
+        height: 180px;
+    }
+}
+
+/* Pure Color Modal - Caret Design System */
+.pure-color-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.pure-color-modal.hidden {
+    display: none;
+}
+
+.pure-color-modal-content {
+    background-color: var(--bg-2);
+    width: 90%;
+    max-width: 600px;
+    max-height: 86vh;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border: none;
+}
+
+.pure-color-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background-color: var(--bg-2);
+    min-height: 40px;
+}
+
+.pure-color-modal-header h2 {
+    margin: 0;
+    color: var(--text-3);
+    font-size: 11px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.pure-color-modal-header .btn {
+    color: var(--text-3);
+    background-color: transparent;
+}
+
+.pure-color-modal-header .btn:hover {
+    background-color: var(--bg-3);
+}
+
+.pure-color-modal-body {
+    padding: 16px;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+    background-color: var(--bg-2);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.pure-color-preview-section {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px 0;
+}
+
+.pure-color-preview {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background-color: var(--bg-3);
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.pure-color-preview:hover {
+    transform: scale(1.05);
+}
+
+.pure-color-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.pure-color-input-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background-color: var(--bg-3);
+    padding: 8px 12px;
+}
+
+.pure-color-input-row label {
+    color: var(--text-2);
+    font-size: 12px;
+    min-width: 60px;
+}
+
+.pure-color-input-row input[type="color"] {
+    width: 40px;
+    height: 40px;
+    border: none;
+    cursor: pointer;
+    background: transparent;
+    padding: 0;
+}
+
+.pure-color-input-row input[type="text"] {
+    flex: 1;
+    padding: 6px 8px;
+    background-color: var(--bg-2);
+    border: 1px solid var(--bg-4);
+    color: var(--text-1);
+    font-size: 12px;
+    font-family: inherit;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.pure-color-input-row input[type="text"]:focus {
+    outline: none;
+    border-color: var(--bg-5);
+}
+
+.pure-color-presets {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 8px 0;
+}
+
+.pure-color-preset {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    background-color: var(--bg-3);
+}
+
+.pure-color-preset:hover {
+    transform: scale(1.2);
+}
+
+.pure-color-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+}
+
+.pure-color-actions .btn-text {
+    background-color: var(--bg-3);
+}
+
+.pure-color-actions .btn-text:hover {
+    background-color: var(--bg-4);
+}
+
+.pure-color-fullscreen-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1001;
+    transition: background-color 0.5s ease;
+}
+
+.pure-color-fullscreen-bg.hidden {
+    display: none;
+}
+
+.pure-color-fullscreen-controls {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1002;
+    display: flex;
+    gap: 12px;
+}
+
+.pure-color-fullscreen-controls.hidden {
+    display: none;
+}
+
+.pure-color-fullscreen-controls .btn {
+    background-color: var(--bg-3);
+    color: var(--text-1);
+}
+
+.pure-color-fullscreen-controls .btn:hover {
+    background-color: var(--bg-4);
+}

@@ -1,7 +1,7 @@
 /**
  * @fileoverview Fetch README 功能模块
  * @description 从 GitHub 获取所有公共仓库的 README 文件并打包下载
- * @module sidebar/features/fetch-readme
+ * @module sidebar/tools/fetch-readme
  */
 
 /**

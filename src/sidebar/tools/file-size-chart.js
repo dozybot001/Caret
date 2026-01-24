@@ -1,7 +1,7 @@
 /**
  * @fileoverview 文件大小分析功能模块
  * @description 分析项目文件大小并绘制饼图
- * @module sidebar/features/file-size-chart
+ * @module sidebar/tools/file-size-chart
  */
 
 // GitHub hard limit for regular file uploads (per file).

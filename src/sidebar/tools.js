@@ -4,18 +4,24 @@
  * @module sidebar/tools
  */
 
-import { FetchReadmeFeature } from './features/fetch-readme.js';
-import { FileSizeChartFeature } from './features/file-size-chart.js';
+import { FetchReadmeFeature } from './tools/fetch-readme.js';
+import { FileSizeChartFeature } from './tools/file-size-chart.js';
+import { AutoSpaceFeature } from './tools/auto-space.js';
+import { PureColorFeature } from './tools/pure-color.js';
 
 /** 功能名称常量 */
 export const FEATURE_NAMES = {
     FETCH_README: 'fetch-readme',
-    FILE_SIZE_CHART: 'file-size-chart'
+    FILE_SIZE_CHART: 'file-size-chart',
+    AUTO_SPACE: 'auto-space',
+    PURE_COLOR: 'pure-color'
 };
 
 const REGISTRY = [
     [FEATURE_NAMES.FETCH_README, FetchReadmeFeature],
-    [FEATURE_NAMES.FILE_SIZE_CHART, FileSizeChartFeature]
+    [FEATURE_NAMES.FILE_SIZE_CHART, FileSizeChartFeature],
+    [FEATURE_NAMES.AUTO_SPACE, AutoSpaceFeature],
+    [FEATURE_NAMES.PURE_COLOR, PureColorFeature]
 ];
 
 /**

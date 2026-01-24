@@ -229,6 +229,14 @@ export class AppController {
             await this.features.run(FEATURE_NAMES.FILE_SIZE_CHART);
         };
 
+        this.settingsUI.onAutoSpace = async () => {
+            await this.features.run(FEATURE_NAMES.AUTO_SPACE);
+        };
+
+        this.settingsUI.onPureColor = async () => {
+            await this.features.run(FEATURE_NAMES.PURE_COLOR);
+        };
+
         // 绑定文件树 UI 回调
         this.fileTreeUI.onFileClick = (handle, path, isPreview) => {
             this.editor.openFile(handle, path, isPreview);
