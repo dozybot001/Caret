@@ -4,7 +4,6 @@
  */
 
 import { TimerManager } from './utils/timer.js';
-import { SRBlocksUI } from './sr-blocks-ui.js';
 
 /**
  * 聊天 UI 管理器
@@ -263,11 +262,13 @@ export class ChatUI {
 
     /**
      * 更新流式消息的searchReplaceBlocks内容
+     * @deprecated SR blocks are now only shown in editor, not in chat panel
      * @param {HTMLElement} msgDiv - 消息元素
      * @param {string} srBlocksText - searchReplaceBlocks文本
      */
     updateStreamingSRBlocks(msgDiv, srBlocksText) {
-        SRBlocksUI.updateStreamingSRBlocks(msgDiv, srBlocksText, () => this.scrollToBottom());
+        // SR blocks are only shown in editor when files are clicked
+        // No longer displaying in chat panel
     }
 
     /**
@@ -407,10 +408,8 @@ export class ChatUI {
                             }
                         },
                         (srBlocksText) => {
-                            // 更新searchReplaceBlocks内容（流式）
-                            if (streamingThinkingMsg && srBlocksText) {
-                                this.updateStreamingSRBlocks(streamingThinkingMsg, srBlocksText);
-                            }
+                            // SR blocks are only shown in editor, not in chat panel
+                            // Just store the data for later use
                         }
                     );
                 }

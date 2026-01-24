@@ -84,6 +84,13 @@
     display: none;
 }
 
+.pending-indicator {
+    width: 8px;
+    height: 8px;
+    background-color: var(--color-yellow);
+    display: none;
+}
+
 .tab.is-dirty .btn.btn-close.close-icon {
     display: none;
 }
@@ -94,6 +101,19 @@
     display: none;
 }
 .tab.is-dirty:hover .btn.btn-close.close-icon {
+    display: flex;
+}
+
+.tab.is-pending-change .btn.btn-close.close-icon {
+    display: none;
+}
+.tab.is-pending-change .pending-indicator {
+    display: block;
+}
+.tab.is-pending-change:hover .pending-indicator {
+    display: none;
+}
+.tab.is-pending-change:hover .btn.btn-close.close-icon {
     display: flex;
 }
 
@@ -130,4 +150,11 @@
 .editor-error-icon {
     font-size: 48px;
     margin-bottom: 16px;
+}
+
+.sr-block-search {
+    background-color: var(--bg-red-dim) !important;
+}
+.sr-block-replace {
+    background-color: var(--bg-green-dim) !important;
 }

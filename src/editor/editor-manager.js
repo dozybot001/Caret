@@ -393,7 +393,9 @@ Tips:
                             this.previewTabId = null;
                         }
                     }
-                    if (!tab.isDirty) {
+                    // Pending change tabs (SR preview) don't show dirty indicator
+                    // They are preview copies, not actual file modifications
+                    if (!tab.isDirty && !tab.isPendingChange) {
                         tab.isDirty = true;
                         this._renderTabs();
                         // 保存标签页状态（编辑时转为固定标签页）
@@ -508,10 +510,13 @@ Tips:
 
         const tabToClose = this.tabs[index];
 
-        if (tabToClose.isDirty) {
+        // 如果是pending change（SR预览），直接关闭，不警告（原文件未修改）
+        // 只有真正的dirty（用户编辑）才需要警告
+        if (tabToClose.isDirty && !tabToClose.isPendingChange) {
             if (!confirm(`${tabToClose.name} has unsaved changes. Close anyway?`)) return;
         }
 
+        // SR预览只是编辑器中的副本，关闭时直接丢弃，原文件安全
         tabToClose.model.dispose();
 
         // 如果关闭的是预览tab，清理引用
@@ -575,13 +580,22 @@ Tips:
 
         this.tabs.forEach(tab => {
             const tabEl = document.createElement('div');
-            tabEl.className = `tab ${tab.isDirty ? 'is-dirty' : ''}`;
+            let className = 'tab';
+            // Pending change tabs don't show dirty indicator (they're preview copies)
+            if (tab.isDirty && !tab.isPendingChange) {
+                className += ' is-dirty';
+            }
+            if (tab.isPendingChange) {
+                className += ' is-pending-change';
+            }
+            tabEl.className = className;
             tabEl.setAttribute('data-id', tab.id);
 
             tabEl.innerHTML = `
                 <div class="tab-name">${tab.name}</div>
                 <div class="tab-actions">
                     <div class="dirty-dot"></div>
+                    <div class="pending-indicator"></div>
                     <button type="button" class="btn btn-close close-icon">
                         <i class="codicon codicon-close"></i>
                     </button>

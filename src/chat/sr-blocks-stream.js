@@ -3,11 +3,7 @@
  * @description 负责处理patch消息的流式输出，接续Thinking流，流式接收searchReplaceBlocks
  */
 
-/**
- * Thinking结束标识符
- * @constant {string}
- */
-const THINKING_END_MARKER = '<|THINKING_END|>';
+import { THINKING_END_MARKER } from './prompts/index.js';
 
 /**
  * 创建Patch流式输出处理回调（接续Thinking流，流式接收searchReplaceBlocks）

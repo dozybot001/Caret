@@ -4,12 +4,7 @@
  */
 
 import { createPatchStreamHandler } from './sr-blocks-stream.js';
-
-/**
- * Thinking结束标识符
- * @constant {string}
- */
-const THINKING_END_MARKER = '<|THINKING_END|>';
+import { THINKING_END_MARKER, generatePlanPrompt, generatePatchPrompt } from './prompts/index.js';
 
 /**
  * 从文本中提取JSON（处理markdown代码块）
@@ -243,27 +238,7 @@ export class AIMessageManager {
         const config = this._validateConfig(store);
         const messageId = `msg-${Date.now()}-${Math.random()}`;
 
-        const prompt = `You are analyzing a code modification request. Given the modification request and the repository map, identify the relevant files that need to be reviewed or modified.
-
-Modification Request:
-${modificationRequest}
-
-Repository Map:
-${repoMap}
-
-Please analyze the modification request and identify the relevant files. Return your response in the following JSON format:
-{
-  "thinking": "A brief explanation of your analysis and reasoning${THINKING_END_MARKER}",
-  "relevantFiles": [
-    {
-      "path": "file/path/to/file.js"
-    }
-  ]
-}
-
-Important: After the thinking content, you MUST include the marker "${THINKING_END_MARKER}" before the closing quote of the thinking field. This marker signals the end of the thinking content.
-
-Return ONLY valid JSON, no additional text or markdown formatting.`;
+        const prompt = generatePlanPrompt(modificationRequest, repoMap);
 
         try {
             const aiResponse = await callStreamingAI(
@@ -297,25 +272,7 @@ Return ONLY valid JSON, no additional text or markdown formatting.`;
         const config = this._validateConfig(store);
         const messageId = `msg-${Date.now()}-${Math.random()}`;
 
-        // 构建上下文
-        let context = `User Request:\n${userQuery}\n\nFiles to Modify:\n`;
-        fileContents.forEach(({ path, content }) => {
-            context += `\n=== ${path} ===\n${content}\n`;
-        });
-
-        const prompt = `You are a code modification assistant. Given the user's request and the file contents, generate search-replace blocks to implement the requested changes.
-
-${context}
-
-Please analyze the request and generate search-replace blocks. Return your response in the following JSON format:
-{
-  "thinking": "A brief explanation of your analysis and reasoning${THINKING_END_MARKER}",
-  "searchReplaceBlocks": "=== FILE: file/path/to/file.js ===\\n<<<<<<< SEARCH\\ncode to search for\\n=======\\ncode to replace with\\n>>>>>>> REPLACE\\n\\n=== FILE: another/file.js ===\\n<<<<<<< SEARCH\\n...\\n=======\\n...\\n>>>>>>> REPLACE"
-}
-
-Important: After the thinking content, you MUST include the marker "${THINKING_END_MARKER}" before the closing quote of the thinking field. This marker signals the end of the thinking content.
-
-Return ONLY valid JSON, no additional text or markdown formatting. The searchReplaceBlocks field should contain the search-replace blocks in the format shown above.`;
+        const prompt = generatePatchPrompt(userQuery, fileContents);
 
         try {
             const aiResponse = await callStreamingAI(

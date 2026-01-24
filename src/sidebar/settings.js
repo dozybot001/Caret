@@ -1,13 +1,13 @@
 /**
- * @fileoverview 设置 UI 模块
+ * @fileoverview 设置模块
  * @description 负责设置菜单、API 配置和工具菜单的 UI 管理
  */
 
 /**
- * 设置 UI 管理器
- * @class SettingsUI
+ * 设置管理器
+ * @class Settings
  */
-export class SettingsUI {
+export class Settings {
     /**
      * @param {HTMLElement} settingsMenu - 设置菜单
      * @param {HTMLElement} toolsMenu - 工具菜单
@@ -17,6 +17,8 @@ export class SettingsUI {
         this.toolsMenu = toolsMenu;
         this._settingsInputs = null;
         this.onConfigSave = null;
+        this.onFetchReadme = null; // (githubUrl: string) => Promise<void>
+        this.onFileSizeChart = null; // () => Promise<void>
     }
 
     /**
@@ -25,12 +27,18 @@ export class SettingsUI {
     init() {
         this._initializeSettingsInputs();
 
-        // 绑定菜单按钮事件
+        // 绑定菜单按钮事件（hover 打开）
         this._bindMenuButton('btn-settings', this.settingsMenu);
         this._bindMenuButton('btn-tools', this.toolsMenu);
 
         // 绑定输入框事件
         this._bindSettingsInputs();
+
+        // 绑定 Fetch README 按钮事件
+        this._bindFetchReadmeButton();
+
+        // 绑定 File Size Chart 按钮事件
+        this._bindFileSizeChartButton();
 
         // 绑定可编辑菜单项点击事件：点击整个区域时聚焦并全选输入框内容
         const editableItems = document.querySelectorAll('.menu-item-editable');
@@ -66,17 +74,19 @@ export class SettingsUI {
     updateSettingsView(config) {
         this._initializeSettingsInputs();
         
-        const { urlInput, keyInput, modelInput } = this._settingsInputs;
+        const { urlInput, keyInput, modelInput, githubUrlInput } = this._settingsInputs;
         
         const baseUrl = config.baseUrl || '';
         const apiKey = config.apiKey || '';
         const model = config.model || '';
+        const githubUrl = config.githubUrl || '';
         
         // 更新输入框值
         const inputValues = [
             { input: urlInput, value: baseUrl },
             { input: keyInput, value: apiKey },
-            { input: modelInput, value: model }
+            { input: modelInput, value: model },
+            { input: githubUrlInput, value: githubUrl }
         ];
         
         inputValues.forEach(({ input, value }) => {
@@ -96,7 +106,8 @@ export class SettingsUI {
             this._settingsInputs = {
                 urlInput: document.getElementById('input-base-url'),
                 keyInput: document.getElementById('input-api-key'),
-                modelInput: document.getElementById('input-model-name')
+                modelInput: document.getElementById('input-model-name'),
+                githubUrlInput: document.getElementById('input-fetch-readme-url')
             };
         }
     }
@@ -110,9 +121,14 @@ export class SettingsUI {
     _bindMenuButton(buttonId, menu) {
         const button = document.getElementById(buttonId);
         if (button) {
-            button.addEventListener('click', (e) => 
-                this._toggleMenu(button, menu, e)
-            );
+            const openMenu = (e) => this._openMenu(button, menu, e);
+
+            // Hover 打开，不在 hover 结束时关闭
+            button.addEventListener('mouseenter', openMenu);
+            menu.addEventListener('mouseenter', openMenu);
+
+            // 仍允许点击切换（兼容触摸/键盘）
+            button.addEventListener('click', (e) => openMenu(e));
         }
     }
 
@@ -126,7 +142,8 @@ export class SettingsUI {
         const inputs = [
             this._settingsInputs.urlInput,
             this._settingsInputs.keyInput,
-            this._settingsInputs.modelInput
+            this._settingsInputs.modelInput,
+            this._settingsInputs.githubUrlInput
         ];
         
         inputs.forEach(input => {
@@ -150,11 +167,12 @@ export class SettingsUI {
     _saveConfigFromInputs() {
         if (!this._settingsInputs || !this.onConfigSave) return;
         
-        const { urlInput, keyInput, modelInput } = this._settingsInputs;
+        const { urlInput, keyInput, modelInput, githubUrlInput } = this._settingsInputs;
         this.onConfigSave(
             keyInput?.value.trim() || '',
             urlInput?.value.trim() || '',
-            modelInput?.value.trim() || ''
+            modelInput?.value.trim() || '',
+            githubUrlInput?.value.trim() || ''
         );
     }
 
@@ -179,6 +197,27 @@ export class SettingsUI {
                 this._positionMenu(menu, btn);
             });
         }
+    }
+
+    /**
+     * 打开菜单（如果已打开则不做任何事）
+     * @private
+     * @param {HTMLElement} btn - 按钮元素
+     * @param {HTMLElement} menu - 菜单元素
+     * @param {Event} e - 事件对象
+     */
+    _openMenu(btn, menu, e) {
+        if (e) e.stopPropagation();
+        if (!menu.classList.contains('hidden')) {
+            return;
+        }
+
+        this._closeAllMenus();
+        menu.classList.remove('hidden');
+
+        requestAnimationFrame(() => {
+            this._positionMenu(menu, btn);
+        });
     }
 
     /**
@@ -265,6 +304,57 @@ export class SettingsUI {
     }
 
     /**
+     * 绑定 Fetch README 按钮事件
+     * @private
+     */
+    _bindFetchReadmeButton() {
+        const btn = document.getElementById('btn-fetch-readme');
+        if (btn) {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                if (!this.onFetchReadme) return;
+
+                const githubUrlInput = this._settingsInputs?.githubUrlInput;
+                if (!githubUrlInput) return;
+
+                const githubUrl = githubUrlInput.value.trim();
+                if (!githubUrl) {
+                    if (window.notify) {
+                        window.notify.alert('Please enter a GitHub URL', { type: 'warning' });
+                    }
+                    return;
+                }
+
+                try {
+                    await this.onFetchReadme(githubUrl);
+                } catch (error) {
+                    // Error handling is done in the handler
+                }
+            });
+        }
+    }
+
+    /**
+     * 绑定 File Size Chart 按钮事件
+     * @private
+     */
+    _bindFileSizeChartButton() {
+        const btn = document.getElementById('btn-file-size-chart');
+        if (btn) {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                if (!this.onFileSizeChart) return;
+
+                try {
+                    await this.onFileSizeChart();
+                } catch (error) {
+                    // Error handling is done in the handler
+                }
+            });
+        }
+    }
+
+    /**
      * 关闭所有菜单
      * @private
      */
@@ -273,4 +363,3 @@ export class SettingsUI {
         this.toolsMenu.classList.add('hidden');
     }
 }
-

@@ -25,6 +25,20 @@
     --color-blue: #4488ff;
     --color-green: #44ff44;
 
+    /* 功能色变体 - 用于图表等场景 */
+    --color-red-variant: #ff6666;
+    --color-yellow-variant: #ffbb33;
+    --color-blue-variant: #6699ff;
+    --color-green-variant: #66ff66;
+    --color-purple: #8844ff;
+    --color-cyan: #44ffaa;
+    --color-orange: #ff8844;
+    --color-pink: #ff4488;
+    --color-teal: #44aaff;
+    --color-lime: #88ff44;
+    --color-magenta: #aa44ff;
+    --color-amber: #ffaa44;
+
     /* 功能色背景（半透明） */
     --bg-red-dim: rgba(255, 68, 68, 0.15);
     --bg-yellow-dim: rgba(255, 170, 0, 0.15);

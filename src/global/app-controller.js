@@ -3,7 +3,7 @@
  * @description 核心协调者，负责初始化所有组件并协调它们之间的交互
  * 
  * ## 职责
- * - 初始化所有 UI 组件（ChatUI, FileTreeUI, SettingsUI）
+ * - 初始化所有 UI 组件（ChatUI, FileTreeUI, Settings）
  * - 初始化所有管理器和服务
  * - 协调各个模块之间的交互
  * - 绑定全局事件和回调
@@ -16,11 +16,11 @@
 
 import { ChatUI } from '../chat/chat-ui.js';
 import { FileTreeUI } from '../file-tree/file-tree-ui.js';
-import { SettingsUI } from '../sidebar/settings-ui.js';
-import { FeatureManager } from '../sidebar/feature-manager.js';
+import { Settings } from '../sidebar/settings.js';
 import { PlanHandler } from '../chat/plan.js';
 import { FileHandlers } from '../file-tree/file-handlers.js';
 import { PatchHandler } from '../chat/patch.js';
+import { createFeatures, FEATURE_NAMES } from '../sidebar/tools.js';
 
 /**
  * 应用控制器
@@ -41,12 +41,8 @@ export class AppController {
         // 初始化 UI 组件（需要在 store 赋值之后）
         this._initUI();
 
-        this.features = new FeatureManager({
-            ui: {
-                chatUI: this.chatUI,
-                fileTreeUI: this.fileTreeUI,
-                settingsUI: this.settingsUI
-            },
+        this.features = createFeatures({
+            ui: { chatUI: this.chatUI, fileTreeUI: this.fileTreeUI, settingsUI: this.settingsUI },
             file: this.file,
             editor: this.editor,
             store: this.store
@@ -75,7 +71,7 @@ export class AppController {
         // 初始化各个 UI 模块
         this.chatUI = new ChatUI(chatPanel, chatMessagesContainer, chatInput);
         this.fileTreeUI = new FileTreeUI(fileTreeContainer, fileTreePanel);
-        this.settingsUI = new SettingsUI(settingsMenu, toolsMenu);
+        this.settingsUI = new Settings(settingsMenu, toolsMenu);
 
         // 初始化 UI 事件监听器
         this._initUIListeners();
@@ -221,8 +217,16 @@ export class AppController {
         });
 
         // 绑定设置 UI 回调
-        this.settingsUI.onConfigSave = async (apiKey, baseUrl, model) => {
-            await this.store.updateConfig({ apiKey, baseUrl, model });
+        this.settingsUI.onConfigSave = async (apiKey, baseUrl, model, githubUrl) => {
+            await this.store.updateConfig({ apiKey, baseUrl, model, githubUrl });
+        };
+
+        this.settingsUI.onFetchReadme = async (githubUrl) => {
+            await this.features.run(FEATURE_NAMES.FETCH_README, githubUrl);
+        };
+
+        this.settingsUI.onFileSizeChart = async () => {
+            await this.features.run(FEATURE_NAMES.FILE_SIZE_CHART);
         };
 
         // 绑定文件树 UI 回调
