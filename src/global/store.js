@@ -19,7 +19,6 @@ export class AppStore extends EventTarget {
                 apiKey: '',
                 baseUrl: '',
                 model: '',
-                githubUrl: '',
                 fontSize: DEFAULT_CONFIG.FONT_SIZE,
                 tokenBudget: DEFAULT_CONFIG.TOKEN_BUDGET,
                 compressionStrategy: DEFAULT_CONFIG.COMPRESSION_STRATEGY

@@ -50,40 +50,6 @@
             </div>
 
             <div class="sidebar-bottom">
-                <button type="button" class="btn" id="btn-tools" title="Tools">
-                    <i class="codicon codicon-extensions"></i>
-                </button>
-                <div id="tools-menu" class="popup-menu hidden">
-                    <div class="menu-item-editable" id="menu-item-fetch-readme-url">
-                        <div class="menu-item-label">GitHub URL</div>
-                        <input id="input-fetch-readme-url" type="text" placeholder="https://github.com/username" class="menu-item-input" />
-                    </div>
-                    <div class="menu-item-action">
-                        <button type="button" class="btn btn-text" id="btn-fetch-readme">
-                            <i class="codicon codicon-markdown"></i>
-                            <span>Fetch README</span>
-                        </button>
-                    </div>
-                    <div class="menu-item-action">
-                        <button type="button" class="btn btn-text" id="btn-file-size-chart">
-                            <i class="codicon codicon-graph"></i>
-                            <span>File Size Chart</span>
-                        </button>
-                    </div>
-                    <div class="menu-item-action">
-                        <button type="button" class="btn btn-text" id="btn-auto-space">
-                            <i class="codicon codicon-whitespace"></i>
-                            <span>Auto Space</span>
-                        </button>
-                    </div>
-                    <div class="menu-item-action">
-                        <button type="button" class="btn btn-text" id="btn-pure-color">
-                            <i class="codicon codicon-symbol-color"></i>
-                            <span>Pure Color</span>
-                        </button>
-                    </div>
-                </div>
-
                 <button type="button" class="btn" id="btn-settings" title="Settings">
                     <i class="codicon codicon-settings-gear"></i>
                 </button>
@@ -148,8 +114,6 @@
         <div id="notification-container"></div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script>
         window.loadMonacoEditor = function() {
             if (!window.monacoLoaderLoaded) {

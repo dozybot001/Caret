@@ -20,7 +20,6 @@ import { Settings } from '../sidebar/settings.js';
 import { PlanHandler } from '../chat/plan.js';
 import { FileHandlers } from '../file-tree/file-handlers.js';
 import { PatchHandler } from '../chat/patch.js';
-import { createFeatures, FEATURE_NAMES } from '../sidebar/tools.js';
 
 /**
  * 应用控制器
@@ -41,13 +40,6 @@ export class AppController {
         // 初始化 UI 组件（需要在 store 赋值之后）
         this._initUI();
 
-        this.features = createFeatures({
-            ui: { chatUI: this.chatUI, fileTreeUI: this.fileTreeUI, settingsUI: this.settingsUI },
-            file: this.file,
-            editor: this.editor,
-            store: this.store
-        });
-
         // 初始化 handlers
         this.planHandler = null;
         this.fileHandlers = null;
@@ -65,13 +57,12 @@ export class AppController {
         const chatMessagesContainer = document.getElementById('chat-messages');
         const chatInput = document.getElementById('chat-input');
         const settingsMenu = document.getElementById('settings-menu');
-        const toolsMenu = document.getElementById('tools-menu');
         this.btnSend = document.getElementById('btn-send-chat');
 
         // 初始化各个 UI 模块
         this.chatUI = new ChatUI(chatPanel, chatMessagesContainer, chatInput);
         this.fileTreeUI = new FileTreeUI(fileTreeContainer, fileTreePanel);
-        this.settingsUI = new Settings(settingsMenu, toolsMenu);
+        this.settingsUI = new Settings(settingsMenu);
 
         // 初始化 UI 事件监听器
         this._initUIListeners();
@@ -217,24 +208,8 @@ export class AppController {
         });
 
         // 绑定设置 UI 回调
-        this.settingsUI.onConfigSave = async (apiKey, baseUrl, model, githubUrl) => {
-            await this.store.updateConfig({ apiKey, baseUrl, model, githubUrl });
-        };
-
-        this.settingsUI.onFetchReadme = async (githubUrl) => {
-            await this.features.run(FEATURE_NAMES.FETCH_README, githubUrl);
-        };
-
-        this.settingsUI.onFileSizeChart = async () => {
-            await this.features.run(FEATURE_NAMES.FILE_SIZE_CHART);
-        };
-
-        this.settingsUI.onAutoSpace = async () => {
-            await this.features.run(FEATURE_NAMES.AUTO_SPACE);
-        };
-
-        this.settingsUI.onPureColor = async () => {
-            await this.features.run(FEATURE_NAMES.PURE_COLOR);
+        this.settingsUI.onConfigSave = async (apiKey, baseUrl, model) => {
+            await this.store.updateConfig({ apiKey, baseUrl, model });
         };
 
         // 绑定文件树 UI 回调

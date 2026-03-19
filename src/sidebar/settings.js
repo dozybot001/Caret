@@ -10,17 +10,11 @@
 export class Settings {
     /**
      * @param {HTMLElement} settingsMenu - 设置菜单
-     * @param {HTMLElement} toolsMenu - 工具菜单
      */
-    constructor(settingsMenu, toolsMenu) {
+    constructor(settingsMenu) {
         this.settingsMenu = settingsMenu;
-        this.toolsMenu = toolsMenu;
         this._settingsInputs = null;
         this.onConfigSave = null;
-        this.onFetchReadme = null; // (githubUrl: string) => Promise<void>
-        this.onFileSizeChart = null; // () => Promise<void>
-        this.onAutoSpace = null; // () => Promise<void>
-        this.onPureColor = null; // () => Promise<void>
     }
 
     /**
@@ -31,22 +25,9 @@ export class Settings {
 
         // 绑定菜单按钮事件（hover 打开）
         this._bindMenuButton('btn-settings', this.settingsMenu);
-        this._bindMenuButton('btn-tools', this.toolsMenu);
 
         // 绑定输入框事件
         this._bindSettingsInputs();
-
-        // 绑定 Fetch README 按钮事件
-        this._bindFetchReadmeButton();
-
-        // 绑定 File Size Chart 按钮事件
-        this._bindFileSizeChartButton();
-
-        // 绑定 Auto Space 按钮事件
-        this._bindAutoSpaceButton();
-
-        // 绑定 Pure Color 按钮事件
-        this._bindPureColorButton();
 
         // 绑定可编辑菜单项点击事件：点击整个区域时聚焦并全选输入框内容
         const editableItems = document.querySelectorAll('.menu-item-editable');
@@ -66,13 +47,11 @@ export class Settings {
         
         // 点击外部关闭所有菜单
         document.addEventListener('click', () => this._closeAllMenus());
-        
+
         // 菜单内的点击事件不关闭菜单
-        [this.settingsMenu, this.toolsMenu].forEach(menu => {
-            if (menu) {
-                menu.addEventListener('click', e => e.stopPropagation());
-            }
-        });
+        if (this.settingsMenu) {
+            this.settingsMenu.addEventListener('click', e => e.stopPropagation());
+        }
     }
 
     /**
@@ -82,19 +61,17 @@ export class Settings {
     updateSettingsView(config) {
         this._initializeSettingsInputs();
         
-        const { urlInput, keyInput, modelInput, githubUrlInput } = this._settingsInputs;
-        
+        const { urlInput, keyInput, modelInput } = this._settingsInputs;
+
         const baseUrl = config.baseUrl || '';
         const apiKey = config.apiKey || '';
         const model = config.model || '';
-        const githubUrl = config.githubUrl || '';
-        
+
         // 更新输入框值
         const inputValues = [
             { input: urlInput, value: baseUrl },
             { input: keyInput, value: apiKey },
-            { input: modelInput, value: model },
-            { input: githubUrlInput, value: githubUrl }
+            { input: modelInput, value: model }
         ];
         
         inputValues.forEach(({ input, value }) => {
@@ -114,8 +91,7 @@ export class Settings {
             this._settingsInputs = {
                 urlInput: document.getElementById('input-base-url'),
                 keyInput: document.getElementById('input-api-key'),
-                modelInput: document.getElementById('input-model-name'),
-                githubUrlInput: document.getElementById('input-fetch-readme-url')
+                modelInput: document.getElementById('input-model-name')
             };
         }
     }
@@ -150,8 +126,7 @@ export class Settings {
         const inputs = [
             this._settingsInputs.urlInput,
             this._settingsInputs.keyInput,
-            this._settingsInputs.modelInput,
-            this._settingsInputs.githubUrlInput
+            this._settingsInputs.modelInput
         ];
         
         inputs.forEach(input => {
@@ -175,12 +150,11 @@ export class Settings {
     _saveConfigFromInputs() {
         if (!this._settingsInputs || !this.onConfigSave) return;
         
-        const { urlInput, keyInput, modelInput, githubUrlInput } = this._settingsInputs;
+        const { urlInput, keyInput, modelInput } = this._settingsInputs;
         this.onConfigSave(
             keyInput?.value.trim() || '',
             urlInput?.value.trim() || '',
-            modelInput?.value.trim() || '',
-            githubUrlInput?.value.trim() || ''
+            modelInput?.value.trim() || ''
         );
     }
 
@@ -312,102 +286,10 @@ export class Settings {
     }
 
     /**
-     * 绑定 Fetch README 按钮事件
-     * @private
-     */
-    _bindFetchReadmeButton() {
-        const btn = document.getElementById('btn-fetch-readme');
-        if (btn) {
-            btn.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                if (!this.onFetchReadme) return;
-
-                const githubUrlInput = this._settingsInputs?.githubUrlInput;
-                if (!githubUrlInput) return;
-
-                const githubUrl = githubUrlInput.value.trim();
-                if (!githubUrl) {
-                    if (window.notify) {
-                        window.notify.alert('Please enter a GitHub URL', { type: 'warning' });
-                    }
-                    return;
-                }
-
-                try {
-                    await this.onFetchReadme(githubUrl);
-                } catch (error) {
-                    // Error handling is done in the handler
-                }
-            });
-        }
-    }
-
-    /**
-     * 绑定 File Size Chart 按钮事件
-     * @private
-     */
-    _bindFileSizeChartButton() {
-        const btn = document.getElementById('btn-file-size-chart');
-        if (btn) {
-            btn.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                if (!this.onFileSizeChart) return;
-
-                try {
-                    await this.onFileSizeChart();
-                } catch (error) {
-                    // Error handling is done in the handler
-                }
-            });
-        }
-    }
-
-    /**
-     * 绑定 Auto Space 按钮事件
-     * @private
-     */
-    _bindAutoSpaceButton() {
-        const btn = document.getElementById('btn-auto-space');
-        if (btn) {
-            btn.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                if (!this.onAutoSpace) return;
-
-                try {
-                    await this.onAutoSpace();
-                } catch (error) {
-                    // Error handling is done in the handler
-                }
-            });
-        }
-    }
-
-    /**
-     * 绑定 Pure Color 按钮事件
-     * @private
-     */
-    _bindPureColorButton() {
-        const btn = document.getElementById('btn-pure-color');
-        if (btn) {
-            btn.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                if (!this.onPureColor) return;
-
-                try {
-                    await this.onPureColor();
-                } catch (error) {
-                    // Error handling is done in the handler
-                }
-            });
-        }
-    }
-
-    /**
      * 关闭所有菜单
      * @private
      */
     _closeAllMenus() {
         this.settingsMenu.classList.add('hidden');
-        this.toolsMenu.classList.add('hidden');
     }
 }
