@@ -39,15 +39,15 @@ Caret 没有隐藏的记忆，只有两样你能看到的东西：
 - `.env`、私钥等常见密钥文件不会被读取
 - API Key 和对话记录只保存在这台设备的浏览器里
 
-## 启动
+## 使用
 
-需要桌面版 Chrome 或 Edge。
+用桌面版 Chrome 或 Edge 打开 <https://caret.tenon.asia/>，也可以在本地运行：
 
 ```bash
 python3 -m http.server 8000
 ```
 
-打开 `http://localhost:8000`。
+然后打开 `http://localhost:8000`。
 
 ## 测试
 
@@ -57,4 +57,4 @@ node --test test.mjs
 
 ## 许可证
 
-[MIT](LICENSE)
+[MIT](LICENSE)。图标来自 [vscode-codicons](https://github.com/microsoft/vscode-codicons)，许可证见 [css/codicons](css/codicons)。

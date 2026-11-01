@@ -200,6 +200,24 @@ body {
     display: flex;
 }
 
+/* 备案信息 */
+.filing {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    margin-top: 24px;
+    font-size: 11px;
+}
+
+.filing a {
+    color: var(--text-5);
+    text-decoration: none;
+}
+
+.filing a:hover {
+    color: var(--text-3);
+}
+
 /* 产品标志：字标加右上角 Tenon 标识 */
 .product-logo {
     display: inline-flex;
