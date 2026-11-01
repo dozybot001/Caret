@@ -21,12 +21,12 @@ export const TOOL_SCHEMAS = [
         type: 'function',
         function: {
             name: 'read',
-            description: 'Read a file, list a directory, or search with grep. Results include unapplied changes.',
+            description: 'Read a file, list a directory, or search file contents with pattern. Results include unapplied changes.',
             parameters: {
                 type: 'object',
                 properties: {
                     path: { type: 'string', description: 'File or directory relative to the project root. Defaults to the root.' },
-                    grep: { type: 'string', description: 'Regular expression. Returns matching lines from the file or directory. Case-insensitive unless it contains capitals.' },
+                    pattern: { type: 'string', description: 'Regular expression. Returns matching lines from the file or directory. Case-insensitive unless it contains capitals.' },
                     offset: { type: 'integer', description: 'First line to return, starting at 1.' },
                     limit: { type: 'integer', description: 'Number of lines to return.' }
                 }
@@ -227,11 +227,11 @@ function fileProblem(path, file) {
     return null;
 }
 
-async function read(workspace, { path, grep, offset, limit }) {
+async function read(workspace, { path, pattern, offset, limit }) {
     const target = normalizePath(path);
     const isDirectory = target === '.' || workspace.isDirectory(target);
-    if (grep) {
-        return { ok: true, verb: 'search', target: grep, output: await search(workspace, target, grep, isDirectory) };
+    if (pattern) {
+        return { ok: true, verb: 'search', target: pattern, output: await search(workspace, target, pattern, isDirectory) };
     }
     if (isDirectory) {
         return { ok: true, verb: 'list', target, output: outline(workspace.paths(), target === '.' ? '' : target) };

@@ -212,8 +212,8 @@ export class AppController {
             onStepStart: (name, args) => {
                 this.replyRow = null;
                 chatUI.setStatus(null);
-                const verb = name === 'read' ? (args?.grep ? 'search' : 'read') : name;
-                return chatUI.addStep(verb, args?.grep || args?.path || '.');
+                const verb = name === 'read' ? (args?.pattern ? 'search' : 'read') : name;
+                return chatUI.addStep(verb, args?.pattern || args?.path || '.');
             },
             onStepEnd: (row, result) => {
                 chatUI.finishStep(row, result);

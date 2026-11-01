@@ -60,13 +60,13 @@ test('read 能读取文件、分页、列目录和搜索', async () => {
     assert.equal((await run(ws, 'read', { path: 'src' })).output, 'a.js\nb.js');
     assert.equal((await run(ws, 'read', {})).verb, 'list');
 
-    const insensitive = await run(ws, 'read', { grep: 'timeout' });
+    const insensitive = await run(ws, 'read', { pattern: 'timeout' });
     assert.equal(insensitive.verb, 'search');
     assert.equal(insensitive.output, 'src/a.js:1: const timeout = 30;\nsrc/b.js:1: TIMEOUT');
 
-    assert.equal((await run(ws, 'read', { grep: 'TIMEOUT' })).output, 'src/b.js:1: TIMEOUT');
-    assert.equal((await run(ws, 'read', { path: 'src/a.js', grep: 'Name' })).output, 'src/a.js:2: const Name = 1;');
-    assert.equal((await run(ws, 'read', { grep: '(unclosed' })).output, 'No matches.');
+    assert.equal((await run(ws, 'read', { pattern: 'TIMEOUT' })).output, 'src/b.js:1: TIMEOUT');
+    assert.equal((await run(ws, 'read', { path: 'src/a.js', pattern: 'Name' })).output, 'src/a.js:2: const Name = 1;');
+    assert.equal((await run(ws, 'read', { pattern: '(unclosed' })).output, 'No matches.');
 });
 
 test('密钥文件不读取、不修改、不进入搜索结果', async () => {
@@ -76,7 +76,7 @@ test('密钥文件不读取、不修改、不进入搜索结果', async () => {
     assert.doesNotMatch(read.output, /SECRET=1/);
     assert.equal((await run(ws, 'edit', { path: '.env', old: '1', new: '2' })).ok, false);
     assert.equal((await run(ws, 'write', { path: 'a.pem', content: 'x' })).ok, false);
-    assert.equal((await run(ws, 'read', { grep: 'SECRET' })).output, '.env.example:1: SECRET=');
+    assert.equal((await run(ws, 'read', { pattern: 'SECRET' })).output, '.env.example:1: SECRET=');
     assert.equal((await run(ws, 'read', { path: '.env.example' })).ok, true);
 });
 
