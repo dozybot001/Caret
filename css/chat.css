@@ -582,15 +582,22 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 26px;
-    height: 26px;
+    width: 22px;
+    height: 22px;
     padding: 0;
     border: 0;
     background: transparent;
     color: var(--text-4);
     font: inherit;
-    font-size: 10px;
+    font-size: 9px;
     cursor: pointer;
+}
+
+/* 图形小，点击范围单独放大 */
+#context-ring::after {
+    content: "";
+    position: absolute;
+    inset: -5px;
 }
 
 #context-ring:hover {
