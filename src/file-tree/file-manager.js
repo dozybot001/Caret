@@ -75,6 +75,9 @@ export function decodeBytes(buffer) {
 
 const isMissing = error => error.name === 'NotFoundError' || error.name === 'TypeMismatchError';
 
+/** 这些目录不显示，也不交给 Agent，任何规则都不能放开 */
+const PROTECTED_DIRECTORIES = ['.git', '.intent'];
+
 export class FileManager {
     /**
      * @param {AppStore} store - 应用状态存储实例
@@ -84,6 +87,8 @@ export class FileManager {
         /** 上次打开的文件夹，需要用户点击后才能恢复访问 */
         this.pendingHandle = null;
         this.globalIgnoreRules = [];
+        /** 设置里的忽略规则，优先于内置规则和 .gitignore */
+        this.userIgnoreRules = [];
         this.store = store;
 
         // File content cache: key = filePath, value = { result, lastModified, size }
@@ -106,6 +111,11 @@ export class FileManager {
                 this.rootDirHandle = null;
             }
         }
+    }
+
+    /** @param {string} text - 设置里的忽略规则，写法和 .gitignore 相同 */
+    setUserIgnoreRules(text) {
+        this.userIgnoreRules = parseIgnoreFile(text);
     }
 
     /**
@@ -153,7 +163,7 @@ export class FileManager {
      */
     async getGitStatus() {
         if (!this.rootDirHandle) return null;
-        return readGitStatus(this.rootDirHandle, await this.getAllFiles(), this.globalIgnoreRules);
+        return readGitStatus(this.rootDirHandle, await this.getAllFiles(), [...this.globalIgnoreRules, ...this.userIgnoreRules]);
     }
 
     hasRoot() {
@@ -186,10 +196,11 @@ export class FileManager {
             }
         }
 
+        const scopes = [...currentStack, { basePath: '', rules: this.userIgnoreRules }];
         const visibleEntries = entries.filter(entry => {
-            if (entry.name === '.git') return false;
+            if (PROTECTED_DIRECTORIES.includes(entry.name)) return false;
             const entryPath = currentPath ? `${currentPath}/${entry.name}` : entry.name;
-            return !isIgnored(entryPath, currentStack);
+            return !isIgnored(entryPath, scopes);
         });
 
         visibleEntries.sort((a, b) => (a.kind === b.kind ? a.name.localeCompare(b.name) : a.kind === 'directory' ? -1 : 1));

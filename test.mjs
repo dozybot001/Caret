@@ -10,6 +10,7 @@ import { PromptRecall } from './src/chat/prompt-recall.js';
 import { countChanges } from './src/agent/diff.js';
 import { collectMessage, isContextError, listModels, readEvents } from './src/agent/model.js';
 import { executeTool, normalizePath, outline, replaceText, TOOL_SCHEMAS } from './src/agent/tools.js';
+import { FileManager } from './src/file-tree/file-manager.js';
 import { parseGitHead, parseGitIndex, readGitStatus } from './src/file-tree/git-status.js';
 
 /** 内存工作区 */
@@ -272,7 +273,12 @@ function memoryStore() {
         deleteSessions: async ids => ids.forEach(id => {
             sessions.delete(id);
             data.delete(id);
-        })
+        }),
+        clearConversations: async () => {
+            sessions.clear();
+            data.clear();
+            projects.forEach((project, id) => projects.set(id, { ...project, prompts: [] }));
+        }
     };
 }
 
@@ -571,6 +577,116 @@ test('取消授权后不再保存句柄，对话记录保留，同名文件夹�
     assert.equal((await history.list()).length, 1);
     assert.deepEqual(history.prompts(), ['任务']);
     assert.equal((await store.listProjects()).find(project => project.name === 'app').handle, reopened);
+});
+
+test('全局指令发给模型，排在项目规则之前', async () => {
+    const requests = scriptedModel([{ text: '好' }, { text: '好' }]);
+    const rules = { 'AGENTS.md': '- 用中文注释\n' };
+    await new Agent(workspace(rules), connection, {}, () => ({ instructions: '  回复用中文\n' })).send('改');
+    const system = requests[0].messages[0].content;
+    assert.match(system, /The user's instructions for all projects:\n回复用中文\n\nProject: demo/);
+    assert.ok(system.indexOf('回复用中文') < system.indexOf('用中文注释'));
+
+    await new Agent(workspace(rules), connection, {}, () => ({ instructions: '   ' })).send('改');
+    assert.doesNotMatch(requests[1].messages[0].content, /for all projects/);
+});
+
+test('关闭记录项目规则后不再要求写入，已有规则仍然读取', async () => {
+    const requests = scriptedModel([{ text: '好' }]);
+    await new Agent(workspace({ 'AGENTS.md': '- 用中文注释\n' }), connection, {}, () => ({ rememberRules: false })).send('改');
+    const system = requests[0].messages[0].content;
+    assert.doesNotMatch(system, /add one short line/);
+    assert.match(system, /Project instructions from AGENTS\.md:\n- 用中文注释/);
+});
+
+test('步数上限按设置生效，到上限时停止', async () => {
+    const requests = scriptedModel(Array.from({ length: 3 }, () => ({ tool: 'read', args: {} })));
+    const agent = new Agent(workspace(), connection, {}, () => ({ maxSteps: 2 }));
+    await assert.rejects(agent.send('改'), { code: 'too-many-steps' });
+    assert.equal(requests.length, 2);
+    assert.equal(agent.running, false);
+});
+
+test('压缩线按设置生效，小圈的分母跟着变化', async () => {
+    const agent = new Agent(workspace(bigFiles(3)), connection, {}, () => ({ contextLimit: 50000 }));
+    agent.messages = [{ role: 'user', content: 'x'.repeat(100000) }];
+    assert.equal(agent.contextUsage, 50);
+
+    const requests = scriptedModel([...readFiles(3), { text: '好' }]);
+    let compactions = 0;
+    const small = new Agent(workspace(bigFiles(3)), connection, { onCompact: () => compactions++ }, () => ({ contextLimit: 30000 }));
+    await small.send('读');
+    assert.equal(compactions, 1);
+    assert.match(requests[3].messages.find(message => message.role === 'tool').content, CLEARED);
+});
+
+test('关闭保存后不写入新的对话和提示词，已有记录保留', async () => {
+    const store = memoryStore();
+    const history = new SessionHistory(store);
+    await history.openProject(folder('app'));
+    history.begin('保留的任务');
+    history.schedule(() => ({ messages: [1], timeline: [] }));
+    await history.flush();
+    history.rememberPrompt('保留的任务');
+
+    history.isEnabled = false;
+    await history.close();
+    history.begin('不保存的任务');
+    history.schedule(() => ({ messages: [2], timeline: [] }));
+    await history.flush();
+    history.rememberPrompt('不保存的任务');
+
+    assert.deepEqual((await history.list()).map(session => session.title), ['保留的任务']);
+    assert.deepEqual(history.prompts(), ['保留的任务']);
+});
+
+test('清空全部对话时包括所有项目的提示词，当前对话不再写入', async () => {
+    const store = memoryStore();
+    const history = new SessionHistory(store);
+    const other = folder('other');
+    await history.openProject(other);
+    history.rememberPrompt('另一个项目');
+    await history.openProject(folder('app'));
+    history.begin('任务');
+    history.rememberPrompt('任务');
+    history.schedule(() => ({ messages: [1], timeline: [] }));
+
+    await history.clearAll();
+    await history.flush();
+    assert.equal(history.currentId, null);
+    assert.equal(store.data.size, 0);
+    assert.deepEqual(history.prompts(), []);
+    await history.openProject(other);
+    assert.deepEqual(history.prompts(), []);
+});
+
+/** 内存文件夹，支持 values() */
+function directory(entries) {
+    const handles = Object.entries(entries).map(([name, value]) => (typeof value === 'string'
+        ? { name, kind: 'file', getFile: async () => new File([value], name) }
+        : { ...directory(value), name, kind: 'directory' }));
+    return { async *values() { yield* handles; } };
+}
+
+test('忽略规则优先于内置规则和 .gitignore，但放不开 .git 和 .intent', async () => {
+    const manager = new FileManager();
+    await manager.init();
+    manager.rootDirHandle = directory({
+        '.git': { config: 'x' },
+        '.intent': { 'a.json': '{}' },
+        '.gitignore': 'notes.md\n',
+        'a.js': 'x',
+        'notes.md': 'x',
+        'logo.svg': '<svg/>',
+        dist: { 'app.js': 'x' }
+    });
+    const paths = async () => (await manager.getAllFiles()).map(file => file.path).sort();
+
+    assert.deepEqual(await paths(), ['.gitignore', 'a.js']);
+    manager.setUserIgnoreRules('# 注释\na.js\n!*.svg\n!notes.md\n!dist\n!.git\n!.intent\n');
+    assert.deepEqual(await paths(), ['.gitignore', 'dist/app.js', 'logo.svg', 'notes.md']);
+    manager.setUserIgnoreRules('');
+    assert.deepEqual(await paths(), ['.gitignore', 'a.js']);
 });
 
 const REGULAR = 0o100644;

@@ -25,7 +25,7 @@ import { FileHandlers } from '../file-tree/file-handlers.js';
 import { FileTreeUI } from '../file-tree/file-tree-ui.js';
 import { Settings } from '../sidebar/settings.js';
 import { applyTranslations, onLanguageChange, t } from './i18n.js';
-import { onThemeChange } from './preferences.js';
+import { clearPreferences, onThemeChange } from './preferences.js';
 import { initResizers } from './resizers.js';
 
 /**
@@ -67,6 +67,8 @@ export class AppController {
 
         /** 选好文件夹或连好模型后要继续发送 */
         this.waitingToSend = false;
+        /** 正在清除全部数据，刷新页面时不再提醒 */
+        this.isLeaving = false;
         this.stepStartedAt = 0;
         this.replyRow = null;
     }
@@ -126,6 +128,9 @@ export class AppController {
             if (this.waitingToSend && this.settings.isReady()) this._submit();
             this.waitingToSend = false;
         };
+        this.settings.isBusy = () => this.agent.running;
+        this.settings.onClearConversations = () => this._clearConversations();
+        this.settings.onDeleteAll = () => this._deleteAllData();
 
         this.changesUI = new ChangesUI(element('changes-panel'), {
             onOpen: path => this._openChange(path),
@@ -157,7 +162,7 @@ export class AppController {
         this.fileTreeUI.onReleaseFolder = () => this._releaseFolder();
         this.fileTreeUI.onFileClick = (handle, path, isPreview) => {
             this.workspace.follow = false;
-            this.editor.openFile(handle, path, isPreview);
+            this.editor.openFile(handle, path, isPreview && this.store.getConfig().previewTabs);
             if (this.fileTreeUI.isOverlay()) this.fileTreeUI.setFileTreeVisible(false);
         };
 
@@ -234,15 +239,26 @@ export class AppController {
                 chatUI.addNote('chat.compacted');
                 this._updateContextUsage();
             }
-        });
+        }, () => this.store.getConfig());
     }
 
-    /** 应用设置里的字号和换行 */
-    _applyDisplay() {
-        const { fontSize, chatFontSize, wordWrap } = this.store.getConfig();
-        this.editor.setFontSize(fontSize);
-        this.editor.setWordWrap(wordWrap);
-        document.documentElement.style.setProperty('--chat-font-size', `${chatFontSize}px`);
+    /**
+     * 应用设置里的偏好
+     * @private
+     * @param {Object} changes - 这次改动的设置，启动时为空
+     */
+    _applyPreferences(changes = {}) {
+        const config = this.store.getConfig();
+        this.editor.setFontSize(config.fontSize);
+        this.editor.setPreferences(config);
+        document.documentElement.style.setProperty('--chat-font-size', `${config.chatFontSize}px`);
+        this.file.setUserIgnoreRules(config.ignoreRules);
+        this.fileHandlers.showGit = config.gitStatus;
+        this.history.isEnabled = config.saveHistory;
+
+        if ('ignoreRules' in changes) this.fileHandlers.refreshTree();
+        else if ('gitStatus' in changes) this.fileHandlers.refreshGit();
+        if ('contextLimit' in changes) this._updateContextUsage();
     }
 
     /**
@@ -254,8 +270,8 @@ export class AppController {
 
         editor.store = this.store;
         editor.fileManager = this.file;
-        this._applyDisplay();
-        this.settings.onDisplayChange = () => this._applyDisplay();
+        this._applyPreferences();
+        this.settings.onPreferencesChange = changes => this._applyPreferences(changes);
         editor.onFontSizeChange = fontSize => this.store.updateConfig({ fontSize });
 
         editor.onChangesUpdated = () => {
@@ -300,8 +316,10 @@ export class AppController {
                 return;
             }
             if (event.key !== 'Enter' || event.shiftKey) return;
+            const hasModifier = event.metaKey || event.ctrlKey;
+            if (!hasModifier && this.store.getConfig().sendKey === 'mod') return;
             event.preventDefault();
-            if ((event.metaKey || event.ctrlKey) && !input.value.trim()) this._apply(false);
+            if (hasModifier && !input.value.trim()) this._apply(false);
             else this._submit();
         });
 
@@ -366,7 +384,7 @@ export class AppController {
     async _run(start) {
         const startedAt = performance.now();
         this.replyRow = null;
-        this.workspace.follow = true;
+        this.workspace.follow = this.store.getConfig().followAgent;
         this.changesUI.setLocked(true);
         this.chatUI.setStatus('chat.thinking');
 
@@ -604,6 +622,26 @@ export class AppController {
         await this._removeSessions(this.sessions.map(session => session.id));
     }
 
+    /** 清空所有项目的对话和提示词 */
+    async _clearConversations() {
+        await this.history.clearAll();
+        this.promptRecall.load([]);
+        this._resetConversation();
+        await this._refreshHistory();
+        this._setHistoryVisible(false);
+    }
+
+    /** 删除这个浏览器里的全部 Caret 数据，然后回到初次打开时的样子 */
+    async _deleteAllData() {
+        await this.history.clearAll();
+        await this.store.deleteDatabase();
+        clearPreferences();
+        this.isLeaving = true;
+        location.reload();
+        // 刷新完成前按钮保持等待状态，也不再读取数据库
+        await new Promise(() => {});
+    }
+
     async _removeSessions(ids) {
         const removesCurrent = ids.includes(this.history.currentId);
         if (removesCurrent && this.agent.running) return;
@@ -667,6 +705,7 @@ export class AppController {
      */
     _bindWindow() {
         window.addEventListener('beforeunload', (event) => {
+            if (this.isLeaving) return;
             if (this.editor.getChanges().length > 0 || this.agent.running) event.preventDefault();
         });
         // 在终端里提交或切换分支后回到页面时更新

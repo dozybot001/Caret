@@ -3,7 +3,7 @@
  * @description 管理全局应用状态（配置/上下文），负责本地存储持久化与事件驱动的数据同步
  */
 
-import { STORAGE_CONSTANTS, DEFAULT_CONFIG } from './constants.js';
+import { STORAGE_CONSTANTS, DEFAULT_CONFIG, DEFAULT_PREFERENCES } from './constants.js';
 import { t } from './i18n.js';
 
 const { OBJECT_STORES } = STORAGE_CONSTANTS;
@@ -30,9 +30,7 @@ export class AppStore extends EventTarget {
                 /** 接口返回的推理档位：{ 服务商: { 模型: { levels, defaultLevel } } } */
                 modelEfforts: {},
                 customUrl: '',
-                fontSize: DEFAULT_CONFIG.FONT_SIZE,
-                chatFontSize: DEFAULT_CONFIG.CHAT_FONT_SIZE,
-                wordWrap: true
+                ...DEFAULT_PREFERENCES
             }
         };
 
@@ -202,6 +200,34 @@ export class AppStore extends EventTarget {
                 transaction.objectStore(OBJECT_STORES.SESSIONS).delete(id);
                 transaction.objectStore(OBJECT_STORES.SESSION_DATA).delete(id);
             }
+        });
+    }
+
+    /**
+     * 清空所有项目的对话和提示词，项目本身保留
+     * @returns {Promise<void>}
+     */
+    async clearConversations() {
+        await this._transaction(transaction => {
+            transaction.objectStore(OBJECT_STORES.SESSIONS).clear();
+            transaction.objectStore(OBJECT_STORES.SESSION_DATA).clear();
+        });
+        for (const project of await this.listProjects()) {
+            await this.saveProject({ ...project, prompts: [] });
+        }
+    }
+
+    /**
+     * 删除这个浏览器里的整个数据库。其他标签页会在 onversionchange 里让出连接
+     * @returns {Promise<void>}
+     */
+    async deleteDatabase() {
+        this._db?.close();
+        this._db = null;
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.deleteDatabase(STORAGE_CONSTANTS.IDB_DB_NAME);
+            request.onerror = () => reject(request.error);
+            request.onsuccess = () => resolve();
         });
     }
 

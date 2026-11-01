@@ -82,6 +82,15 @@ export function setPanelWidth(name, width) {
     save();
 }
 
+/** 删除保存的偏好，下次打开时回到默认值 */
+export function clearPreferences() {
+    try {
+        localStorage.removeItem(PREFERENCES_KEY);
+    } catch {
+        // 没有保存过时不需要处理
+    }
+}
+
 /** @param {Function} listener - 主题变化时调用 */
 export function onThemeChange(listener) {
     themeListeners.add(listener);

@@ -1,14 +1,29 @@
 /**
  * @fileoverview 设置模块
- * @description 负责设置对话框：连接模型、主题、语言、关于页面
+ * @description 负责设置对话框：左侧导航、模型连接、各项偏好、本地数据和关于页面
  */
 
-import { PROVIDERS, VERSION } from '../global/constants.js';
+import { DEFAULT_PREFERENCES, PROVIDERS, VERSION } from '../global/constants.js';
 import { articleText, changeLanguage, getLanguage, onLanguageChange, t } from '../global/i18n.js';
 import { getTheme, setTheme } from '../global/preferences.js';
 import { listModels } from '../agent/model.js';
 
-const CHECK_DELAY = 400;
+/** 设置的页面。有 parent 的是子页面：导航停在上级，可以返回 */
+const PAGES = {
+    model: { title: 'settings.model', tip: 'settings.modelTip' },
+    agent: { title: 'settings.agent' },
+    editor: { title: 'settings.editor' },
+    files: { title: 'settings.files' },
+    appearance: { title: 'settings.appearance' },
+    data: { title: 'settings.data', tip: 'settings.dataTip' },
+    about: { title: 'settings.about' },
+    context: { title: 'context.title', parent: 'agent' },
+    privacy: { title: 'about.privacy', parent: 'about' },
+    terms: { title: 'about.terms', parent: 'about' }
+};
+
+/** 输入停下这么久后再保存或检查连接 */
+const INPUT_DELAY = 400;
 const VIEWPORT_MARGIN = 16;
 const POPUP_GAP = 8;
 const MENU_MIN_WIDTH = 200;
@@ -48,11 +63,12 @@ export class Settings {
     constructor(dialog, store) {
         this.dialog = dialog;
         this.store = store;
-        this.page = 'main';
+        this.page = 'model';
         this.models = [];
         this.checkTimer = null;
         this.checkController = null;
         this.status = null;
+        this.dataStatus = null;
         /** 这次是否拿到了接口返回的模型列表，拿不到时才允许手动填写 */
         this.hasModelList = false;
         /** 输入栏选择的模型和推理强度，只在当前对话有效 */
@@ -65,14 +81,19 @@ export class Settings {
         this.onClose = null;
         /** 连接信息变化时调用 */
         this.onConnectionChange = null;
-        /** 字号或换行变化时调用 */
-        this.onDisplayChange = null;
-        /** 清除 Key 后调用 */
+        /** 偏好变化时调用，参数是这次改动的设置 */
+        this.onPreferencesChange = null;
+        /** 返回 Agent 是否在运行，运行时不清除数据 */
+        this.isBusy = null;
+        /** 确认后清空全部对话 */
+        this.onClearConversations = null;
+        /** 确认后清除全部本地数据 */
+        this.onDeleteAll = null;
 
         const find = selector => dialog.querySelector(selector);
         this.title = find('#settings-title');
+        this.titleInfo = find('#settings-info');
         this.backButton = find('#settings-back');
-        this.footer = find('.dialog-foot');
         this.providerTrigger = find('#provider-trigger');
         this.urlField = find('#field-base-url');
         this.urlInput = find('#input-base-url');
@@ -82,8 +103,9 @@ export class Settings {
         this.modelTrigger = find('#model-trigger');
         this.effortField = find('#field-effort');
         this.effortTrigger = find('#effort-trigger');
-        this.wrapSwitch = find('#wrap-switch');
         this.statusText = find('#connection-status');
+        this.dataUsage = find('#data-usage');
+        this.dataStatusText = find('#data-status');
         this.menu = find('#select-menu');
         this.tooltip = find('#tooltip');
     }
@@ -93,8 +115,7 @@ export class Settings {
         const { dialog } = this;
 
         dialog.querySelector('#settings-close').addEventListener('click', () => dialog.close());
-        dialog.querySelector('#settings-done').addEventListener('click', () => dialog.close());
-        this.backButton.addEventListener('click', () => this._showPage(['privacy', 'terms'].includes(this.page) ? 'about' : 'main'));
+        this.backButton.addEventListener('click', () => this._showPage(PAGES[this.page].parent));
         dialog.addEventListener('close', () => {
             this._hideTooltip();
             this.onClose?.();
@@ -130,25 +151,21 @@ export class Settings {
         dialog.querySelectorAll('[data-theme-option]').forEach(button => {
             button.addEventListener('click', () => {
                 setTheme(button.dataset.themeOption);
-                this._renderChoices();
+                this._renderPreferences();
             });
         });
         dialog.querySelectorAll('[data-lang-option]').forEach(button => {
             button.addEventListener('click', () => {
                 changeLanguage(button.dataset.langOption);
-                this._renderChoices();
+                this._renderPreferences();
             });
         });
-        dialog.querySelectorAll('[data-size-setting]').forEach((group) => {
-            group.addEventListener('click', (event) => {
-                const size = event.target.closest('[data-size]')?.dataset.size;
-                if (size) this._saveDisplay({ [group.dataset.sizeSetting]: Number(size) });
-            });
-        });
-        this.wrapSwitch.addEventListener('click', () => this._saveDisplay({ wordWrap: !this._config.wordWrap }));
+        dialog.querySelectorAll('[data-setting]').forEach(control => this._bindPreference(control));
+        dialog.querySelector('#send-key-mod').textContent = `${navigator.platform.startsWith('Mac') ? '⌘' : 'Ctrl'} Enter`;
         dialog.querySelectorAll('[data-go]').forEach(button => {
             button.addEventListener('click', () => this._showPage(button.dataset.go));
         });
+        this._bindDataActions();
 
         dialog.querySelectorAll('.info').forEach(button => this._bindTooltip(button));
         document.addEventListener('click', (event) => {
@@ -171,10 +188,11 @@ export class Settings {
      * 打开设置
      * @param {string} page - 页面
      */
-    open(page = 'main') {
+    open(page = 'model') {
+        this.dataStatus = null;
         this._showPage(page);
         this._renderConnection();
-        this._renderChoices();
+        this._renderPreferences();
         if (!this.dialog.open) {
             this.dialog.showModal();
             // 焦点放在对话框本身，打开时不高亮关闭按钮
@@ -266,15 +284,21 @@ export class Settings {
     }
 
     _showPage(page) {
+        const { title, tip, parent } = PAGES[page];
         this.page = page;
         this.dialog.querySelectorAll('[data-page]').forEach(section => {
             section.classList.toggle('hidden', section.dataset.page !== page);
         });
-        const titles = { main: 'settings.title', about: 'settings.about', context: 'context.title', privacy: 'about.privacy', terms: 'about.terms' };
-        this.title.textContent = t(titles[page]);
-        this.backButton.classList.toggle('hidden', page === 'main');
-        this.footer.classList.toggle('hidden', page !== 'main');
+        this.dialog.querySelectorAll('.settings-nav-item').forEach((item) => {
+            if (item.dataset.go === (parent || page)) item.setAttribute('aria-current', 'page');
+            else item.removeAttribute('aria-current');
+        });
+        this.title.textContent = t(title);
+        this.titleInfo.classList.toggle('hidden', !tip);
+        if (tip) this.titleInfo.dataset.tip = tip;
+        this.backButton.classList.toggle('hidden', !parent);
         if (articleText(page)) this._renderArticle(page);
+        if (page === 'data') this._renderData();
         this.dialog.querySelector('.dialog-body').scrollTop = 0;
     }
 
@@ -310,25 +334,113 @@ export class Settings {
         this.clearKeyButton.classList.toggle('hidden', !key);
     }
 
-    _renderChoices() {
+    /**
+     * 把控件和同名设置绑定：分段选择、胶囊开关或文本框
+     * @private
+     * @param {HTMLElement} control - 带 data-setting 的控件
+     */
+    _bindPreference(control) {
+        const key = control.dataset.setting;
+        if (control.matches('.segments')) {
+            control.addEventListener('click', (event) => {
+                const value = event.target.closest('[data-value]')?.dataset.value;
+                if (value === undefined) return;
+                this._savePreferences({ [key]: typeof DEFAULT_PREFERENCES[key] === 'number' ? Number(value) : value });
+            });
+        } else if (control.matches('.switch')) {
+            control.addEventListener('click', () => this._savePreferences({ [key]: !this._config[key] }));
+        } else {
+            let timer = null;
+            control.addEventListener('input', () => {
+                clearTimeout(timer);
+                timer = setTimeout(() => this._savePreferences({ [key]: control.value }), INPUT_DELAY);
+            });
+        }
+    }
+
+    _renderPreferences() {
         this.dialog.querySelectorAll('[data-theme-option]').forEach(button => {
             button.setAttribute('aria-pressed', String(button.dataset.themeOption === getTheme()));
         });
         this.dialog.querySelectorAll('[data-lang-option]').forEach(button => {
             button.setAttribute('aria-pressed', String(button.dataset.langOption === getLanguage()));
         });
-        this.dialog.querySelectorAll('[data-size-setting]').forEach((group) => {
-            group.querySelectorAll('[data-size]').forEach((button) => {
-                button.setAttribute('aria-pressed', String(Number(button.dataset.size) === this._config[group.dataset.sizeSetting]));
-            });
+        this.dialog.querySelectorAll('[data-setting]').forEach((control) => {
+            const value = this._config[control.dataset.setting];
+            if (control.matches('.segments')) {
+                control.querySelectorAll('[data-value]').forEach((button) => {
+                    button.setAttribute('aria-pressed', String(button.dataset.value === String(value)));
+                });
+            } else if (control.matches('.switch')) {
+                control.setAttribute('aria-checked', String(value));
+            } else if (document.activeElement !== control) {
+                // 保存有延迟，不能覆盖用户正在输入的内容
+                control.value = value;
+            }
         });
-        this.wrapSwitch.setAttribute('aria-checked', String(this._config.wordWrap));
     }
 
-    async _saveDisplay(changes) {
+    async _savePreferences(changes) {
         await this.store.updateConfig(changes);
-        this._renderChoices();
-        this.onDisplayChange?.();
+        this._renderPreferences();
+        this.onPreferencesChange?.(changes);
+    }
+
+    _bindDataActions() {
+        const bind = (selector, copy, action) => {
+            const button = this.dialog.querySelector(selector);
+            button.addEventListener('click', () => this._runDataAction(button, copy, action));
+        };
+        bind('#btn-clear-conversations', { confirm: 'settings.clearConversationsConfirm', done: 'settings.conversationsCleared' },
+            () => this.onClearConversations?.());
+        bind('#btn-reset-preferences', { confirm: 'settings.resetPreferencesConfirm', done: 'settings.preferencesReset' },
+            () => this._resetPreferences());
+        bind('#btn-delete-all', { confirm: 'settings.deleteAllConfirm' }, () => this.onDeleteAll?.());
+    }
+
+    /**
+     * 执行数据页的操作：确认后立刻显示等待状态，结果写在页面上。
+     * 通知条在对话框下层看不到，所以这里不用通知
+     * @private
+     * @param {HTMLButtonElement} button - 触发按钮
+     * @param {{confirm: string, done: string}} copy - 确认和完成时的文案键
+     * @param {Function} action - 操作
+     */
+    async _runDataAction(button, { confirm, done }, action) {
+        if (this.isBusy?.()) {
+            this.dataStatus = { key: 'settings.dataBusy', kind: 'error' };
+            this._renderData();
+            return;
+        }
+        if (!(await window.notify.confirm(t(confirm), button.textContent))) return;
+
+        button.classList.add('is-loading');
+        button.disabled = true;
+        try {
+            await action();
+            this.dataStatus = { key: done, kind: 'ok' };
+        } catch (error) {
+            this.dataStatus = { key: 'error.generic', args: [error.message], kind: 'error' };
+        }
+        button.classList.remove('is-loading');
+        button.disabled = false;
+        await this._renderData();
+    }
+
+    async _resetPreferences() {
+        await this.store.updateConfig(DEFAULT_PREFERENCES);
+        setTheme('system');
+        this._renderPreferences();
+        this.onPreferencesChange?.(DEFAULT_PREFERENCES);
+    }
+
+    /** 显示本地数据的用量和上一次操作的结果 */
+    async _renderData() {
+        this._drawStatus(this.dataStatusText, this.dataStatus);
+        const [sessions, storage] = await Promise.all([this.store.listSessions(), navigator.storage?.estimate?.()]);
+        const parts = [t('settings.storageCount', sessions.length)];
+        if (storage) parts.unshift(t('settings.storageSize', (storage.usage / 1024 / 1024).toFixed(1)));
+        this.dataUsage.textContent = parts.join(' · ');
     }
 
     /**
@@ -341,8 +453,12 @@ export class Settings {
     }
 
     _renderStatus() {
-        this.statusText.textContent = this.status ? t(this.status.key, ...(this.status.args || [])) : '';
-        this.statusText.dataset.kind = this.status?.kind || '';
+        this._drawStatus(this.statusText, this.status);
+    }
+
+    _drawStatus(element, status) {
+        element.textContent = status ? t(status.key, ...(status.args || [])) : '';
+        element.dataset.kind = status?.kind || '';
     }
 
     async _saveConnection(changes) {
@@ -350,7 +466,7 @@ export class Settings {
         this._renderConnection();
         this.onConnectionChange?.();
         clearTimeout(this.checkTimer);
-        this.checkTimer = setTimeout(() => this._checkConnection(), CHECK_DELAY);
+        this.checkTimer = setTimeout(() => this._checkConnection(), INPUT_DELAY);
     }
 
     /** 设置默认模型 */

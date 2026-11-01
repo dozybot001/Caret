@@ -66,8 +66,6 @@ export const FS_CONSTANTS = {
  * Agent 相关常量
  */
 export const AGENT_CONSTANTS = {
-    /** 单次运行最多调用模型的轮数 */
-    MAX_STEPS: 40,
     /** read 一次返回的最大行数 */
     READ_LINES: 2000,
     /** read 一次返回的最大字符数 */
@@ -82,12 +80,48 @@ export const AGENT_CONSTANTS = {
     OUTLINE_LINES: 300,
     /** 项目说明文件保留的字符数 */
     RULES_CHARS: 8000,
-    /** 上下文到这个 token 数时清理较早的工具结果 */
-    CONTEXT_TOKENS: 100000,
     /** 按字符数估算 token，这样不依赖各家接口返回的用量 */
     CHARS_PER_TOKEN: 4,
     /** 清理时保留的最近工具结果字符数，不小于 READ_CHARS */
     CONTEXT_KEEP_CHARS: 60000
+};
+
+/**
+ * 设置里的偏好，恢复默认设置时回到这些值
+ */
+export const DEFAULT_PREFERENCES = {
+    /** 发给模型的全局指令 */
+    instructions: '',
+    /** 发送消息的按键：enter 或 mod（Ctrl/Cmd + Enter） */
+    sendKey: 'enter',
+    /** 单次运行最多调用模型的轮数 */
+    maxSteps: 40,
+    /** 上下文到这个 token 数时清理较早的工具结果 */
+    contextLimit: 100000,
+    /** Agent 是否把用户说明的长期规则写进项目说明文件 */
+    rememberRules: true,
+    /** 运行时编辑器是否显示 Agent 正在修改的文件 */
+    followAgent: true,
+    fontSize: DEFAULT_CONFIG.FONT_SIZE,
+    chatFontSize: DEFAULT_CONFIG.CHAT_FONT_SIZE,
+    /** 编辑器字体，空字符串表示默认字体 */
+    fontFamily: '',
+    /** 缩进宽度，0 表示按文件内容判断 */
+    tabSize: 0,
+    /** 光标样式：line、block 或 underline */
+    cursorStyle: 'line',
+    wordWrap: true,
+    lineNumbers: true,
+    minimap: false,
+    showWhitespace: false,
+    /** Diff 视图：inline 或 sideBySide */
+    diffView: 'inline',
+    foldUnchanged: true,
+    /** 用户的忽略规则，写法和 .gitignore 相同 */
+    ignoreRules: '',
+    gitStatus: true,
+    previewTabs: true,
+    saveHistory: true
 };
 
 /**
@@ -117,4 +151,4 @@ export const PROVIDERS = {
 };
 
 /** 当前版本 */
-export const VERSION = '0.9.0';
+export const VERSION = '0.10.0';

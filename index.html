@@ -158,21 +158,32 @@
         </div>
     </dialog>
 
-    <dialog id="settings-dialog" aria-labelledby="settings-title" tabindex="-1">
-        <header class="dialog-head">
-            <button type="button" id="settings-back" class="btn hidden" data-i18n-title="settings.back">
-                <i class="codicon codicon-arrow-left"></i>
-            </button>
-            <h2 id="settings-title"></h2>
-            <button type="button" id="settings-close" class="btn" data-i18n-title="settings.close">
-                <i class="codicon codicon-close"></i>
-            </button>
-        </header>
+    <dialog id="settings-dialog" aria-labelledby="settings-heading" tabindex="-1">
+        <nav class="settings-nav" aria-labelledby="settings-heading">
+            <h2 id="settings-heading" data-i18n="settings.title"></h2>
+            <button type="button" class="settings-nav-item" data-go="model"><i class="codicon codicon-plug"></i><span data-i18n="settings.model"></span></button>
+            <button type="button" class="settings-nav-item" data-go="agent"><i class="codicon codicon-comment"></i><span data-i18n="settings.agent"></span></button>
+            <button type="button" class="settings-nav-item" data-go="editor"><i class="codicon codicon-code"></i><span data-i18n="settings.editor"></span></button>
+            <button type="button" class="settings-nav-item" data-go="files"><i class="codicon codicon-files"></i><span data-i18n="settings.files"></span></button>
+            <button type="button" class="settings-nav-item" data-go="appearance"><i class="codicon codicon-symbol-color"></i><span data-i18n="settings.appearance"></span></button>
+            <button type="button" class="settings-nav-item" data-go="data"><i class="codicon codicon-database"></i><span data-i18n="settings.data"></span></button>
+            <button type="button" class="settings-nav-item" data-go="about"><i class="codicon codicon-info"></i><span data-i18n="settings.about"></span></button>
+        </nav>
 
-        <div class="dialog-body">
-            <section data-page="main" class="settings-columns">
-                <div>
-                    <h3 class="section-title"><span data-i18n="settings.model"></span><button type="button" class="info" data-tip="settings.modelTip" data-i18n-label="settings.info"><i class="codicon codicon-info"></i></button></h3>
+        <div class="settings-main">
+            <header class="dialog-head">
+                <button type="button" id="settings-back" class="btn hidden" data-i18n-title="settings.back">
+                    <i class="codicon codicon-arrow-left"></i>
+                </button>
+                <h3 id="settings-title"></h3>
+                <button type="button" id="settings-info" class="info hidden" data-i18n-label="settings.info"><i class="codicon codicon-info"></i></button>
+                <button type="button" id="settings-close" class="btn" data-i18n-title="settings.close">
+                    <i class="codicon codicon-close"></i>
+                </button>
+            </header>
+
+            <div class="dialog-body">
+                <section data-page="model">
                     <div class="field">
                         <span class="field-label" id="provider-label" data-i18n="settings.provider"></span>
                         <button type="button" id="provider-trigger" class="select-trigger" aria-haspopup="listbox" aria-labelledby="provider-label"><span></span><i class="codicon codicon-chevron-down"></i></button>
@@ -204,83 +215,188 @@
                         </div>
                         <button type="button" id="effort-trigger" class="select-trigger" aria-haspopup="listbox" aria-labelledby="effort-label"><span></span><i class="codicon codicon-chevron-down"></i></button>
                     </div>
-                    <p id="connection-status" role="status"></p>
-                </div>
+                    <p id="connection-status" class="settings-status" role="status"></p>
+                </section>
 
-                <div>
-                    <h3 class="section-title" data-i18n="settings.appearance"></h3>
+                <section data-page="agent" class="hidden">
                     <div class="field">
-                        <span class="field-label" data-i18n="settings.theme"></span>
-                        <div class="segments">
+                        <div class="field-label">
+                            <label for="input-instructions" data-i18n="settings.instructions"></label>
+                            <button type="button" class="info" data-tip="settings.instructionsTip" data-i18n-label="settings.info"><i class="codicon codicon-info"></i></button>
+                        </div>
+                        <textarea id="input-instructions" data-setting="instructions" data-i18n-placeholder="settings.instructionsHint" maxlength="8000" spellcheck="false"></textarea>
+                    </div>
+                    <div class="setting-row">
+                        <div class="field-label"><span id="send-key-label" data-i18n="settings.sendKey"></span><button type="button" class="info" data-tip="settings.sendKeyTip" data-i18n-label="settings.info"><i class="codicon codicon-info"></i></button></div>
+                        <div class="segments" role="group" data-setting="sendKey" aria-labelledby="send-key-label"><button type="button" data-value="enter">Enter</button><button type="button" data-value="mod" id="send-key-mod"></button></div>
+                    </div>
+                    <div class="setting-row">
+                        <div class="field-label"><span id="max-steps-label" data-i18n="settings.maxSteps"></span><button type="button" class="info" data-tip="settings.maxStepsTip" data-i18n-label="settings.info"><i class="codicon codicon-info"></i></button></div>
+                        <div class="segments" role="group" data-setting="maxSteps" aria-labelledby="max-steps-label"><button type="button" data-value="20">20</button><button type="button" data-value="40">40</button><button type="button" data-value="80">80</button></div>
+                    </div>
+                    <div class="setting-row">
+                        <div class="field-label"><span id="context-limit-label" data-i18n="settings.contextLimit"></span><button type="button" class="info" data-tip="settings.contextLimitTip" data-i18n-label="settings.info"><i class="codicon codicon-info"></i></button></div>
+                        <div class="segments" role="group" data-setting="contextLimit" aria-labelledby="context-limit-label"><button type="button" data-value="50000" data-i18n="settings.limit50"></button><button type="button" data-value="100000" data-i18n="settings.limit100"></button><button type="button" data-value="200000" data-i18n="settings.limit200"></button></div>
+                    </div>
+                    <div class="setting-row">
+                        <div class="field-label"><span id="remember-rules-label" data-i18n="settings.rememberRules"></span><button type="button" class="info" data-tip="settings.rememberRulesTip" data-i18n-label="settings.info"><i class="codicon codicon-info"></i></button></div>
+                        <button type="button" class="switch" role="switch" data-setting="rememberRules" aria-labelledby="remember-rules-label"></button>
+                    </div>
+                    <div class="setting-row">
+                        <div class="field-label"><span id="follow-agent-label" data-i18n="settings.followAgent"></span><button type="button" class="info" data-tip="settings.followAgentTip" data-i18n-label="settings.info"><i class="codicon codicon-info"></i></button></div>
+                        <button type="button" class="switch" role="switch" data-setting="followAgent" aria-labelledby="follow-agent-label"></button>
+                    </div>
+                    <button type="button" class="settings-link" data-go="context"><span data-i18n="context.title"></span><i class="codicon codicon-chevron-right"></i></button>
+                </section>
+
+                <section data-page="editor" class="hidden">
+                    <div class="setting-row">
+                        <div class="field-label"><span id="tab-size-label" data-i18n="settings.tabSize"></span><button type="button" class="info" data-tip="settings.tabSizeTip" data-i18n-label="settings.info"><i class="codicon codicon-info"></i></button></div>
+                        <div class="segments" role="group" data-setting="tabSize" aria-labelledby="tab-size-label"><button type="button" data-value="0" data-i18n="settings.tabAuto"></button><button type="button" data-value="2">2</button><button type="button" data-value="4">4</button><button type="button" data-value="8">8</button></div>
+                    </div>
+                    <div class="setting-row">
+                        <div class="field-label"><span id="cursor-style-label" data-i18n="settings.cursorStyle"></span></div>
+                        <div class="segments" role="group" data-setting="cursorStyle" aria-labelledby="cursor-style-label"><button type="button" data-value="line" data-i18n="settings.cursorLine"></button><button type="button" data-value="block" data-i18n="settings.cursorBlock"></button><button type="button" data-value="underline" data-i18n="settings.cursorUnderline"></button></div>
+                    </div>
+                    <div class="setting-row">
+                        <div class="field-label"><span id="word-wrap-label" data-i18n="settings.wordWrap"></span></div>
+                        <button type="button" class="switch" role="switch" data-setting="wordWrap" aria-labelledby="word-wrap-label"></button>
+                    </div>
+                    <div class="setting-row">
+                        <div class="field-label"><span id="line-numbers-label" data-i18n="settings.lineNumbers"></span></div>
+                        <button type="button" class="switch" role="switch" data-setting="lineNumbers" aria-labelledby="line-numbers-label"></button>
+                    </div>
+                    <div class="setting-row">
+                        <div class="field-label"><span id="minimap-label" data-i18n="settings.minimap"></span></div>
+                        <button type="button" class="switch" role="switch" data-setting="minimap" aria-labelledby="minimap-label"></button>
+                    </div>
+                    <div class="setting-row">
+                        <div class="field-label"><span id="whitespace-label" data-i18n="settings.showWhitespace"></span></div>
+                        <button type="button" class="switch" role="switch" data-setting="showWhitespace" aria-labelledby="whitespace-label"></button>
+                    </div>
+                    <h4 class="section-title" data-i18n="settings.review"></h4>
+                    <div class="setting-row">
+                        <div class="field-label"><span id="diff-view-label" data-i18n="settings.diffView"></span><button type="button" class="info" data-tip="settings.diffViewTip" data-i18n-label="settings.info"><i class="codicon codicon-info"></i></button></div>
+                        <div class="segments" role="group" data-setting="diffView" aria-labelledby="diff-view-label"><button type="button" data-value="inline" data-i18n="settings.diffInline"></button><button type="button" data-value="sideBySide" data-i18n="settings.diffSideBySide"></button></div>
+                    </div>
+                    <div class="setting-row">
+                        <div class="field-label"><span id="fold-unchanged-label" data-i18n="settings.foldUnchanged"></span></div>
+                        <button type="button" class="switch" role="switch" data-setting="foldUnchanged" aria-labelledby="fold-unchanged-label"></button>
+                    </div>
+                </section>
+
+                <section data-page="files" class="hidden">
+                    <div class="field">
+                        <div class="field-label">
+                            <label for="input-ignore-rules" data-i18n="settings.ignoreRules"></label>
+                            <button type="button" class="info" data-tip="settings.ignoreRulesTip" data-i18n-label="settings.info"><i class="codicon codicon-info"></i></button>
+                        </div>
+                        <textarea id="input-ignore-rules" data-setting="ignoreRules" data-i18n-placeholder="settings.ignoreRulesHint" spellcheck="false"></textarea>
+                    </div>
+                    <div class="setting-row">
+                        <div class="field-label"><span id="git-status-label" data-i18n="settings.gitStatus"></span><button type="button" class="info" data-tip="settings.gitStatusTip" data-i18n-label="settings.info"><i class="codicon codicon-info"></i></button></div>
+                        <button type="button" class="switch" role="switch" data-setting="gitStatus" aria-labelledby="git-status-label"></button>
+                    </div>
+                    <div class="setting-row">
+                        <div class="field-label"><span id="preview-tabs-label" data-i18n="settings.previewTabs"></span><button type="button" class="info" data-tip="settings.previewTabsTip" data-i18n-label="settings.info"><i class="codicon codicon-info"></i></button></div>
+                        <button type="button" class="switch" role="switch" data-setting="previewTabs" aria-labelledby="preview-tabs-label"></button>
+                    </div>
+                </section>
+
+                <section data-page="appearance" class="hidden">
+                    <div class="setting-row">
+                        <span class="field-label" id="theme-label" data-i18n="settings.theme"></span>
+                        <div class="segments" role="group" aria-labelledby="theme-label">
                             <button type="button" data-theme-option="system" data-i18n="settings.themeSystem"></button>
                             <button type="button" data-theme-option="light" data-i18n="settings.themeLight"></button>
                             <button type="button" data-theme-option="dark" data-i18n="settings.themeDark"></button>
                         </div>
                     </div>
-                    <div class="field">
-                        <span class="field-label" data-i18n="settings.language"></span>
-                        <div class="segments">
+                    <div class="setting-row">
+                        <span class="field-label" id="language-label" data-i18n="settings.language"></span>
+                        <div class="segments" role="group" aria-labelledby="language-label">
                             <button type="button" data-lang-option="zh">简体中文</button>
                             <button type="button" data-lang-option="en">English</button>
                         </div>
                     </div>
-                    <div class="field">
-                        <span class="field-label" data-i18n="settings.editorFontSize"></span>
-                        <div class="segments" data-size-setting="fontSize"><button type="button" data-size="12">12</button><button type="button" data-size="13">13</button><button type="button" data-size="14">14</button><button type="button" data-size="15">15</button><button type="button" data-size="16">16</button></div>
+                    <div class="setting-row">
+                        <div class="field-label">
+                            <label for="input-font-family" data-i18n="settings.fontFamily"></label>
+                            <button type="button" class="info" data-tip="settings.fontFamilyTip" data-i18n-label="settings.info"><i class="codicon codicon-info"></i></button>
+                        </div>
+                        <input id="input-font-family" type="text" data-setting="fontFamily" data-i18n-placeholder="settings.fontFamilyHint" autocomplete="off" spellcheck="false">
                     </div>
-                    <div class="field">
-                        <span class="field-label" data-i18n="settings.chatFontSize"></span>
-                        <div class="segments" data-size-setting="chatFontSize"><button type="button" data-size="12">12</button><button type="button" data-size="13">13</button><button type="button" data-size="14">14</button><button type="button" data-size="15">15</button><button type="button" data-size="16">16</button></div>
+                    <div class="setting-row">
+                        <div class="field-label"><span id="font-size-label" data-i18n="settings.editorFontSize"></span></div>
+                        <div class="segments" role="group" data-setting="fontSize" aria-labelledby="font-size-label"><button type="button" data-value="12">12</button><button type="button" data-value="13">13</button><button type="button" data-value="14">14</button><button type="button" data-value="15">15</button><button type="button" data-value="16">16</button></div>
                     </div>
-                    <div class="field field-switch">
-                        <span class="field-label" id="wrap-label" data-i18n="settings.wordWrap"></span>
-                        <button type="button" id="wrap-switch" class="switch" role="switch" aria-labelledby="wrap-label"></button>
+                    <div class="setting-row">
+                        <div class="field-label"><span id="chat-font-size-label" data-i18n="settings.chatFontSize"></span></div>
+                        <div class="segments" role="group" data-setting="chatFontSize" aria-labelledby="chat-font-size-label"><button type="button" data-value="12">12</button><button type="button" data-value="13">13</button><button type="button" data-value="14">14</button><button type="button" data-value="15">15</button><button type="button" data-value="16">16</button></div>
                     </div>
-                </div>
+                </section>
 
-                <div class="settings-links">
-                    <button type="button" class="settings-link" data-go="context"><span data-i18n="context.title"></span><i class="codicon codicon-chevron-right"></i></button>
-                    <button type="button" class="settings-link" data-go="about"><span data-i18n="settings.about"></span><i class="codicon codicon-chevron-right"></i></button>
-                </div>
-            </section>
+                <section data-page="data" class="hidden">
+                    <div class="setting-row">
+                        <div class="field-label"><span id="save-history-label" data-i18n="settings.saveHistory"></span><button type="button" class="info" data-tip="settings.saveHistoryTip" data-i18n-label="settings.info"><i class="codicon codicon-info"></i></button></div>
+                        <button type="button" class="switch" role="switch" data-setting="saveHistory" aria-labelledby="save-history-label"></button>
+                    </div>
+                    <div class="setting-row">
+                        <span class="field-label" data-i18n="settings.storage"></span>
+                        <span id="data-usage"></span>
+                    </div>
+                    <h4 class="section-title" data-i18n="settings.clearing"></h4>
+                    <div class="setting-row">
+                        <div class="field-label"><span id="clear-conversations-label" data-i18n="settings.clearConversations"></span></div>
+                        <button type="button" id="btn-clear-conversations" class="btn btn-text btn-text-chat" data-i18n="settings.clearAction" aria-describedby="clear-conversations-label"></button>
+                    </div>
+                    <div class="setting-row">
+                        <div class="field-label"><span id="reset-preferences-label" data-i18n="settings.resetPreferences"></span><button type="button" class="info" data-tip="settings.resetPreferencesTip" data-i18n-label="settings.info"><i class="codicon codicon-info"></i></button></div>
+                        <button type="button" id="btn-reset-preferences" class="btn btn-text btn-text-chat" data-i18n="settings.resetAction" aria-describedby="reset-preferences-label"></button>
+                    </div>
+                    <div class="setting-row">
+                        <div class="field-label"><span id="delete-all-label" data-i18n="settings.deleteAll"></span><button type="button" class="info" data-tip="settings.deleteAllTip" data-i18n-label="settings.info"><i class="codicon codicon-info"></i></button></div>
+                        <button type="button" id="btn-delete-all" class="btn btn-text btn-text-chat is-danger" data-i18n="settings.deleteAction" aria-describedby="delete-all-label"></button>
+                    </div>
+                    <p id="data-status" class="settings-status" role="status"></p>
+                </section>
 
-            <section data-page="about" class="hidden">
-                <div class="about-head">
-                    <div class="product-logo" data-i18n-label="brand.label">Caret<svg class="product-logo-mark" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="17" fill="#f06b32"/><path d="M13 16H51V28H38V48H26V28H13Z" fill="#fff"/></svg></div>
-                    <p class="about-version"><span data-i18n="about.version"></span> <span id="about-version"></span></p>
-                </div>
-                <p data-i18n="about.body1"></p>
-                <p data-i18n="about.body2"></p>
-                <dl class="about-facts">
-                    <div><dt data-i18n="about.publisher"></dt><dd class="about-publisher"><svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="17" fill="#f06b32"/><path d="M13 16H51V28H38V48H26V28H13Z" fill="#fff"/></svg>榫卯 Tenon AI</dd></div>
-                    <div><dt data-i18n="about.website"></dt><dd><a href="https://tenon.asia/" target="_blank" rel="noopener noreferrer">tenon.asia</a></dd></div>
-                    <div><dt data-i18n="about.feedback"></dt><dd><a href="mailto:support@tenonai.cn">support@tenonai.cn</a></dd></div>
-                    <div><dt data-i18n="about.source"></dt><dd><a href="https://github.com/dozybot001/Caret" target="_blank" rel="noopener noreferrer">GitHub</a></dd></div>
-                    <div><dt data-i18n="about.license"></dt><dd><a href="https://github.com/dozybot001/Caret/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT</a></dd></div>
-                </dl>
-                <button type="button" class="settings-link" data-go="privacy"><span data-i18n="about.privacy"></span><i class="codicon codicon-chevron-right"></i></button>
-                <button type="button" class="settings-link" data-go="terms"><span data-i18n="about.terms"></span><i class="codicon codicon-chevron-right"></i></button>
-                <p class="filing"><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">湘ICP备2026031578号-1</a><a href="https://beian.mps.gov.cn/#/query/webSearch?code=43132202001134" target="_blank" rel="noopener noreferrer">湘公网安备43132202001134号</a></p>
-            </section>
+                <section data-page="about" class="hidden">
+                    <div class="about-head">
+                        <div class="product-logo" data-i18n-label="brand.label">Caret<svg class="product-logo-mark" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="17" fill="#f06b32"/><path d="M13 16H51V28H38V48H26V28H13Z" fill="#fff"/></svg></div>
+                        <p class="about-version"><span data-i18n="about.version"></span> <span id="about-version"></span></p>
+                    </div>
+                    <p data-i18n="about.body1"></p>
+                    <p data-i18n="about.body2"></p>
+                    <dl class="about-facts">
+                        <div><dt data-i18n="about.publisher"></dt><dd class="about-publisher"><svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="17" fill="#f06b32"/><path d="M13 16H51V28H38V48H26V28H13Z" fill="#fff"/></svg>榫卯 Tenon AI</dd></div>
+                        <div><dt data-i18n="about.website"></dt><dd><a href="https://tenon.asia/" target="_blank" rel="noopener noreferrer">tenon.asia</a></dd></div>
+                        <div><dt data-i18n="about.feedback"></dt><dd><a href="mailto:support@tenonai.cn">support@tenonai.cn</a></dd></div>
+                        <div><dt data-i18n="about.source"></dt><dd><a href="https://github.com/dozybot001/Caret" target="_blank" rel="noopener noreferrer">GitHub</a></dd></div>
+                        <div><dt data-i18n="about.license"></dt><dd><a href="https://github.com/dozybot001/Caret/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT</a></dd></div>
+                    </dl>
+                    <div class="settings-links">
+                        <button type="button" class="settings-link" data-go="privacy"><span data-i18n="about.privacy"></span><i class="codicon codicon-chevron-right"></i></button>
+                        <button type="button" class="settings-link" data-go="terms"><span data-i18n="about.terms"></span><i class="codicon codicon-chevron-right"></i></button>
+                    </div>
+                    <p class="filing"><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">湘ICP备2026031578号-1</a><a href="https://beian.mps.gov.cn/#/query/webSearch?code=43132202001134" target="_blank" rel="noopener noreferrer">湘公网安备43132202001134号</a></p>
+                </section>
 
-            <section data-page="context" class="hidden">
-                <div class="article-body"></div>
-            </section>
+                <section data-page="context" class="hidden">
+                    <div class="article-body"></div>
+                </section>
 
-            <section data-page="privacy" class="hidden">
-                <p class="legal-meta" data-i18n="legal.meta"></p>
-                <div class="article-body"></div>
-            </section>
+                <section data-page="privacy" class="hidden">
+                    <p class="legal-meta" data-i18n="legal.meta"></p>
+                    <div class="article-body"></div>
+                </section>
 
-            <section data-page="terms" class="hidden">
-                <p class="legal-meta" data-i18n="legal.meta"></p>
-                <div class="article-body"></div>
-            </section>
+                <section data-page="terms" class="hidden">
+                    <p class="legal-meta" data-i18n="legal.meta"></p>
+                    <div class="article-body"></div>
+                </section>
+            </div>
         </div>
-
-        <footer class="dialog-foot">
-            <button type="button" id="settings-done" class="btn btn-text btn-primary" data-i18n="settings.done"></button>
-        </footer>
 
         <div id="select-menu" popover="auto" role="listbox"></div>
         <div id="tooltip" popover="manual" role="tooltip"></div>

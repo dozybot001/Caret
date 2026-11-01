@@ -16,6 +16,10 @@ import { getLanguage, t } from '../global/i18n.js';
 import { resolvedTheme } from '../global/preferences.js';
 
 const MONACO_BASE = 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min';
+/** 折叠未改动的代码时，改动前后保留的行数 */
+const FOLD_OPTIONS = { contextLineCount: 3, minimumLineCount: 3, revealLineCount: 20 };
+/** 编辑器比这个宽度窄时，并排 Diff 显示为行内 */
+const SIDE_BY_SIDE_MIN_WIDTH = 600;
 
 /** 根据偏移量计算行列，文本使用 LF 换行 */
 function positionAt(text, offset) {
@@ -158,9 +162,9 @@ export class EditorManager {
         this.container.appendChild(this.diffWrapper);
 
         // 从 CSS 变量获取字体
-        const fontFamily = getComputedStyle(document.documentElement).getPropertyValue('--font-family').trim();
+        this.defaultFontFamily = getComputedStyle(document.documentElement).getPropertyValue('--font-family').trim();
         const sharedOptions = {
-            fontFamily,
+            fontFamily: this.defaultFontFamily,
             fontSize: this.fontSize,
             automaticLayout: true,
             wordWrap: 'on',
@@ -170,17 +174,18 @@ export class EditorManager {
 
         this.editorInstance = monaco.editor.create(this.stdWrapper, { ...sharedOptions, model: null });
 
-        // 审阅改动用行内 diff；右侧内容可以直接编辑，只折叠没有变化的部分
+        // 审阅改动默认用行内 diff；右侧内容可以直接编辑，只折叠没有变化的部分
         this.diffEditor = monaco.editor.createDiffEditor(this.diffWrapper, {
             ...sharedOptions,
             diffWordWrap: 'on',
             renderSideBySide: false,
+            renderSideBySideInlineBreakpoint: SIDE_BY_SIDE_MIN_WIDTH,
             originalEditable: false,
             ignoreTrimWhitespace: false,
             renderMarginRevertIcon: false,
             renderGutterMenu: false,
             renderOverviewRuler: false,
-            hideUnchangedRegions: { enabled: true, contextLineCount: 3, minimumLineCount: 3, revealLineCount: 20 }
+            hideUnchangedRegions: { enabled: true, ...FOLD_OPTIONS }
         });
 
         this._bindCommands(this.editorInstance);
@@ -242,19 +247,34 @@ export class EditorManager {
     }
 
     /**
+     * 应用设置里的编辑器选项，审阅改动时同样生效
+     * @param {Object} preferences - 设置，字段见 DEFAULT_PREFERENCES
+     */
+    setPreferences({ fontFamily, tabSize, cursorStyle, wordWrap, lineNumbers, minimap, showWhitespace, diffView, foldUnchanged }) {
+        const family = fontFamily.trim();
+        const options = {
+            fontFamily: family ? `${family}, ${this.defaultFontFamily}` : this.defaultFontFamily,
+            detectIndentation: tabSize === 0,
+            ...(tabSize === 0 ? {} : { tabSize }),
+            cursorStyle,
+            lineNumbers: lineNumbers ? 'on' : 'off',
+            minimap: { enabled: minimap },
+            renderWhitespace: showWhitespace ? 'all' : 'selection'
+        };
+        const wrap = wordWrap ? 'on' : 'off';
+        this.editorInstance?.updateOptions({ ...options, wordWrap: wrap });
+        this.diffEditor?.updateOptions({
+            ...options,
+            diffWordWrap: wrap,
+            renderSideBySide: diffView === 'sideBySide',
+            hideUnchangedRegions: { enabled: foldUnchanged, ...FOLD_OPTIONS }
+        });
+    }
+
+    /**
      * 更新编辑器字体大小
      * @private
      */
-    /**
-     * 设置自动换行，审阅改动时同样生效
-     * @param {boolean} isOn - 是否换行
-     */
-    setWordWrap(isOn) {
-        const value = isOn ? 'on' : 'off';
-        this.editorInstance?.updateOptions({ wordWrap: value });
-        this.diffEditor?.updateOptions({ diffWordWrap: value });
-    }
-
     _updateFontSize() {
         this.editorInstance?.updateOptions({ fontSize: this.fontSize });
         this.diffEditor?.updateOptions({ fontSize: this.fontSize });

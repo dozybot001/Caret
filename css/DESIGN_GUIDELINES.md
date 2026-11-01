@@ -36,6 +36,7 @@
 
 - 输入框、下拉菜单和分段选择的样式都在 `settings.css`
 - 下拉菜单统一用 `#select-menu`，说明提示统一用 `#tooltip`，不使用浏览器默认样式
+- 设置里的单行设置用 `.setting-row`，布尔项用 `.switch`，控件带上 `data-setting` 后由 `settings.js` 统一读写
 
 ## 交互规范
 

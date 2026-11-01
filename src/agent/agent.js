@@ -4,7 +4,7 @@
  * @module agent
  */
 
-import { AGENT_CONSTANTS } from '../global/constants.js';
+import { AGENT_CONSTANTS, DEFAULT_PREFERENCES } from '../global/constants.js';
 import { isContextError, requestCompletion } from './model.js';
 import { executeTool } from './tools.js';
 
@@ -41,11 +41,13 @@ export class Agent {
      * @param {Object} workspace - 工作区
      * @param {Function} getConnection - 返回当前模型连接
      * @param {Object} events - 过程回调：onThinking、onToolCall、onText、onStepStart、onStepEnd、onCompact
+     * @param {Function} getPreferences - 返回设置，缺少的项用默认值
      */
-    constructor(workspace, getConnection, events) {
+    constructor(workspace, getConnection, events, getPreferences = () => ({})) {
         this.workspace = workspace;
         this.getConnection = getConnection;
         this.events = events;
+        this.getPreferences = getPreferences;
         this.messages = [];
         this.pendingNotes = [];
         this.controller = null;
@@ -55,9 +57,13 @@ export class Agent {
         return this.controller !== null;
     }
 
+    get preferences() {
+        return { ...DEFAULT_PREFERENCES, ...this.getPreferences() };
+    }
+
     /** @returns {number} 上下文占压缩线的比例，0 到 99 */
     get contextUsage() {
-        return Math.min(99, Math.floor(this._contextTokens() / AGENT_CONSTANTS.CONTEXT_TOKENS * 100));
+        return Math.min(99, Math.floor(this._contextTokens() / this.preferences.contextLimit * 100));
     }
 
     /** 开始新任务，清空上下文 */
@@ -110,7 +116,8 @@ export class Agent {
         try {
             await this.workspace.refresh();
             const system = await this._systemPrompt();
-            for (let step = 0; step < AGENT_CONSTANTS.MAX_STEPS; step++) {
+            const { maxSteps } = this.preferences;
+            for (let step = 0; step < maxSteps; step++) {
                 const message = await this._nextMessage(system, signal);
                 this.messages.push(message);
                 if (!message.tool_calls) return 'done';
@@ -142,11 +149,15 @@ export class Agent {
 
     async _systemPrompt() {
         const { workspace } = this;
+        const { instructions, rememberRules } = this.preferences;
         const { name, text } = await this._projectRules();
         const { RULES_CHARS } = AGENT_CONSTANTS;
         const truncated = text.length > RULES_CHARS ? `\n[Truncated. Read ${name} for the rest.]` : '';
         const rules = text ? `\n\nProject instructions from ${name}:\n${text.slice(0, RULES_CHARS)}${truncated}` : '';
-        return `${SYSTEM_PROMPT}\n${memoryRule(name)}\n\nProject: ${workspace.name}${rules}`;
+        const memory = rememberRules ? `\n${memoryRule(name)}` : '';
+        // 项目规则放在最后，和全局指令冲突时以项目为准
+        const global = instructions.trim() ? `\n\nThe user's instructions for all projects:\n${instructions.trim()}` : '';
+        return `${SYSTEM_PROMPT}${memory}${global}\n\nProject: ${workspace.name}${rules}`;
     }
 
     _contextTokens() {
@@ -178,7 +189,7 @@ export class Agent {
      * @private
      */
     async _nextMessage(system, signal) {
-        if (this._contextTokens() >= AGENT_CONSTANTS.CONTEXT_TOKENS) this._compact();
+        if (this._contextTokens() >= this.preferences.contextLimit) this._compact();
         try {
             return await this._request(system, signal);
         } catch (error) {

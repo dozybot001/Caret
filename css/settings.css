@@ -1,4 +1,4 @@
-/* 设置样式 - 定义设置对话框、表单控件、下拉菜单和说明提示 */
+/* 设置样式 - 定义设置对话框的导航、表单控件、下拉菜单和说明提示 */
 #settings-dialog {
     width: min(800px, calc(100vw - 32px));
     height: min(640px, calc(100dvh - 32px));
@@ -11,8 +11,8 @@
 }
 
 #settings-dialog[open] {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 184px minmax(0, 1fr);
 }
 
 #settings-dialog:focus {
@@ -23,62 +23,133 @@
     background-color: var(--overlay);
 }
 
+/* 左侧导航，窄屏时移到正文上方 */
+.settings-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-height: 0;
+    padding: 12px 8px;
+    overflow-y: auto;
+    background-color: var(--bg-3);
+}
+
+.settings-nav h2 {
+    padding: 4px 10px 12px;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.settings-nav-item {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    gap: 10px;
+    width: 100%;
+    min-height: 36px;
+    padding: 0 10px;
+    border: 0;
+    background: transparent;
+    color: var(--text-3);
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.settings-nav-item:hover {
+    background-color: var(--bg-4);
+}
+
+.settings-nav-item[aria-current="page"] {
+    background-color: var(--bg-5);
+    color: var(--text-1);
+    font-weight: 600;
+}
+
+.settings-nav-item .codicon {
+    font-size: 16px;
+}
+
+/* 数据和关于放在底部，和日常设置分开 */
+.settings-nav-item[data-go="data"] {
+    margin-top: auto;
+}
+
+.settings-main {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+}
+
 .dialog-head {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     min-height: 52px;
     padding: 6px 12px 6px 28px;
     flex-shrink: 0;
 }
 
 .dialog-head:has(#settings-back:not(.hidden)) {
-    padding-left: 6px;
+    padding-left: 12px;
 }
 
-.dialog-head h2 {
-    flex: 1;
+.dialog-head h3 {
     min-width: 0;
     font-size: 15px;
     font-weight: 600;
 }
 
+#settings-close {
+    margin-left: auto;
+}
+
+/* 底部渐隐提示还有内容，内边距保证滚到底时内容不被遮住 */
 .dialog-body {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding: 4px 28px 12px;
+    padding: 4px 28px 28px;
     line-height: 1.7;
-}
-
-/* 说明和法律页面按阅读宽度排版 */
-.dialog-body > section:not(.settings-columns) {
-    max-width: 640px;
-    margin-inline: auto;
-}
-
-/* 设置主页两栏，窄屏时变成一栏 */
-.settings-columns {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 0 40px;
-    align-items: start;
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent);
 }
 
 .settings-links {
-    grid-column: 1 / -1;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 2px 40px;
-    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
 }
 
-.field.field-switch {
-    flex-direction: row;
+/* 一行一项：名称在左，控件在右 */
+.setting-row {
+    display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 24px;
     min-height: 36px;
+    margin-bottom: 12px;
+}
+
+.setting-row .field-label {
+    min-width: 0;
+}
+
+.setting-row .segments,
+.setting-row input {
+    flex: 0 0 304px;
+    width: 304px;
+}
+
+#data-usage {
+    color: var(--text-3);
+    font-size: 13px;
+}
+
+.btn.btn-text.btn-text-chat.is-danger {
+    color: var(--color-red);
 }
 
 /* 胶囊开关：开启时滑块在右 */
@@ -114,13 +185,6 @@
     transform: translateX(16px);
 }
 
-.dialog-foot {
-    display: flex;
-    justify-content: flex-end;
-    padding: 12px 28px;
-    flex-shrink: 0;
-}
-
 .section-title {
     display: flex;
     align-items: center;
@@ -129,10 +193,6 @@
     font-size: 13px;
     font-weight: 600;
     color: var(--text-1);
-}
-
-[data-page="main"] .section-title:first-child {
-    margin-top: 4px;
 }
 
 .field {
@@ -146,8 +206,8 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    color: var(--text-3);
-    font-size: 12px;
+    color: var(--text-2);
+    font-size: 13px;
 }
 
 .field-link {
@@ -170,6 +230,8 @@
 }
 
 .field input,
+.setting-row input,
+.field textarea,
 .select-trigger {
     width: 100%;
     height: 36px;
@@ -182,16 +244,33 @@
     outline: none;
 }
 
-.field input::placeholder {
+/* 随内容增高，长内容由正文区域滚动 */
+.field textarea {
+    display: block;
+    height: auto;
+    min-height: 88px;
+    padding: 8px 10px;
+    field-sizing: content;
+    line-height: 1.7;
+    resize: none;
+}
+
+.field input::placeholder,
+.setting-row input::placeholder,
+.field textarea::placeholder {
     color: var(--text-5);
 }
 
 .field input:hover,
+.setting-row input:hover,
+.field textarea:hover,
 .select-trigger:hover {
     background-color: var(--bg-4);
 }
 
-.field input:focus {
+.field input:focus,
+.setting-row input:focus,
+.field textarea:focus {
     outline: 2px solid var(--accent-text);
     outline-offset: -2px;
 }
@@ -209,17 +288,17 @@
     color: var(--text-4);
 }
 
-#connection-status {
+.settings-status {
     min-height: 22px;
     font-size: 12px;
     color: var(--text-4);
 }
 
-#connection-status[data-kind="ok"] {
+.settings-status[data-kind="ok"] {
     color: var(--color-green);
 }
 
-#connection-status[data-kind="error"] {
+.settings-status[data-kind="error"] {
     color: var(--color-red);
 }
 
@@ -272,6 +351,10 @@
 .settings-link .codicon {
     font-size: 14px;
     color: var(--text-4);
+}
+
+[data-page="agent"] .settings-link {
+    margin-top: 8px;
 }
 
 /* 确认对话框 */
@@ -502,4 +585,56 @@
 
 .article-body p {
     color: var(--text-2);
+}
+
+/* 窄屏：导航移到上方，一行放不下的设置改成上下排列 */
+@media (max-width: 640px) {
+    #settings-dialog[open] {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto minmax(0, 1fr);
+    }
+
+    .settings-nav {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        padding: 8px;
+        overflow: visible;
+    }
+
+    .settings-nav h2,
+    .settings-nav .settings-nav-item .codicon {
+        display: none;
+    }
+
+    .settings-nav-item {
+        justify-content: center;
+        min-height: 32px;
+        padding: 0 4px;
+        font-size: 12px;
+        text-align: center;
+    }
+
+    .settings-nav-item[data-go="data"] {
+        margin-top: 0;
+    }
+
+    .dialog-head {
+        padding-left: 16px;
+    }
+
+    .dialog-body {
+        padding-inline: 16px;
+    }
+
+    .setting-row:has(.segments, input) {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+    }
+
+    .setting-row .segments,
+    .setting-row input {
+        flex: none;
+        width: 100%;
+    }
 }

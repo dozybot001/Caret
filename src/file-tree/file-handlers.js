@@ -23,6 +23,8 @@ export class FileHandlers {
     constructor(context) {
         this.context = context;
         this.gitRequest = 0;
+        /** 关闭后不读取 .git */
+        this.showGit = true;
     }
 
     /**
@@ -139,7 +141,7 @@ export class FileHandlers {
     async refreshGit() {
         const { file, fileTreeUI } = this.context;
         const request = ++this.gitRequest;
-        const git = await file.getGitStatus().catch(() => null);
+        const git = this.showGit ? await file.getGitStatus().catch(() => null) : null;
         if (request === this.gitRequest) fileTreeUI.setGitStatus(git);
     }
 }

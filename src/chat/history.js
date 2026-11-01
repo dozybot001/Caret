@@ -26,6 +26,8 @@ export class SessionHistory {
         this.pendingSnapshot = null;
         this.timer = null;
         this.isUnsaved = false;
+        /** 是否保存新的对话和提示词，已有记录不受影响 */
+        this.isEnabled = true;
         this.onError = null;
     }
 
@@ -76,7 +78,7 @@ export class SessionHistory {
      * @param {string} text - 提示词
      */
     rememberPrompt(text) {
-        if (!this.project) return;
+        if (!this.project || !this.isEnabled) return;
         const prompts = [...this.prompts().filter(item => item !== text), text].slice(-MAX_PROMPTS);
         this.project = { ...this.project, prompts };
         this.store.saveProject(this.project).catch(error => this.onError?.(error));
@@ -116,7 +118,7 @@ export class SessionHistory {
      * @param {Function} getSnapshot - 返回 { messages, timeline }
      */
     schedule(getSnapshot) {
-        if (!this.current) return;
+        if (!this.current || !this.isEnabled) return;
         this.pendingSnapshot = getSnapshot;
         clearTimeout(this.timer);
         this.timer = setTimeout(() => this.flush(), SAVE_DELAY);
@@ -172,6 +174,15 @@ export class SessionHistory {
             this.current = null;
         }
         await this.store.deleteSessions(ids);
+    }
+
+    /** 清空所有项目的对话和提示词 */
+    async clearAll() {
+        clearTimeout(this.timer);
+        this.pendingSnapshot = null;
+        this.current = null;
+        await this.store.clearConversations();
+        if (this.project) this.project = { ...this.project, prompts: [] };
     }
 
     /** 申请持久存储，并删除超出数量的旧会话 */
