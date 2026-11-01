@@ -17,6 +17,8 @@ import { Agent } from '../agent/agent.js';
 import { Workspace } from '../agent/workspace.js';
 import { ChangesUI } from '../chat/changes-ui.js';
 import { ChatUI } from '../chat/chat-ui.js';
+import { SessionHistory } from '../chat/history.js';
+import { HistoryUI } from '../chat/history-ui.js';
 import { FileHandlers } from '../file-tree/file-handlers.js';
 import { FileTreeUI } from '../file-tree/file-tree-ui.js';
 import { Settings } from '../sidebar/settings.js';
@@ -56,6 +58,8 @@ export class AppController {
         this.editor = editorManager;
         this.store = store;
         this.workspace = new Workspace(fileManager, editorManager);
+        this.history = new SessionHistory(store);
+        this.sessions = [];
 
         /** 选好文件夹或连好模型后要继续发送 */
         this.waitingToSend = false;
@@ -78,6 +82,7 @@ export class AppController {
 
         await this._restoreFolder();
         await this.editor.restoreTabsState();
+        if (this.file.hasRoot()) await this._openProject();
         this._updateModelButton();
         this.input.focus();
     }
@@ -92,13 +97,20 @@ export class AppController {
         this.sendButton = element('btn-send-chat');
         this.modelButton = element('btn-model');
         this.chatPanel = element('chat-panel');
+        this.chatMessages = element('chat-messages');
+        this.historyButton = element('btn-history');
         this.welcome = element('welcome');
 
         this.chatUI = new ChatUI(this.chatPanel, element('chat-messages'), this.input);
         this.chatUI.onFileClick = path => this._openChange(path);
 
         this.fileTreeUI = new FileTreeUI(element('file-tree'), element('file-tree-panel'));
-        this.fileHandlers = new FileHandlers({ file: this.file, editor: this.editor, fileTreeUI: this.fileTreeUI });
+        this.fileHandlers = new FileHandlers({
+            file: this.file,
+            editor: this.editor,
+            fileTreeUI: this.fileTreeUI,
+            onFolderOpened: () => this._openProject()
+        });
 
         this.settings = new Settings(element('settings-dialog'), this.store);
         this.settings.init();
@@ -117,13 +129,21 @@ export class AppController {
 
         element('btn-toggle-tree').addEventListener('click', () => this.fileTreeUI.fileTreePanel.classList.toggle('collapsed'));
         element('btn-toggle-chat').addEventListener('click', () => this.chatPanel.classList.toggle('collapsed'));
-        element('btn-open-folder').addEventListener('click', () => this.fileHandlers.handleOpenFolder());
-        element('btn-welcome-open').addEventListener('click', () => this.fileHandlers.handleOpenFolder());
+        element('btn-open-folder').addEventListener('click', () => this._openFolder());
+        element('btn-welcome-open').addEventListener('click', () => this._openFolder());
         element('btn-settings').addEventListener('click', () => this.settings.open());
         element('btn-new-task').addEventListener('click', () => this._newTask());
+        this.historyButton.addEventListener('click', () => this._setHistoryVisible(!this.historyUI.isVisible));
         this.modelButton.addEventListener('click', () => this.settings.open());
 
-        this.fileTreeUI.onOpenFolder = () => this.fileHandlers.handleOpenFolder();
+        this.historyUI = new HistoryUI(element('history-panel'), {
+            onOpen: id => this._openSession(id),
+            onDelete: session => this._deleteSession(session),
+            onClear: () => this._clearHistory()
+        });
+        this.history.onError = () => window.notify?.alert(t('history.saveFailed'), { type: 'warning' });
+
+        this.fileTreeUI.onOpenFolder = () => this._openFolder();
         this.fileTreeUI.onResumeFolder = () => this.fileHandlers.handleResumeFolder();
         this.fileTreeUI.onFileClick = (handle, path, isPreview) => {
             this.workspace.follow = false;
@@ -198,6 +218,7 @@ export class AppController {
             onStepEnd: (row, result) => {
                 chatUI.finishStep(row, result);
                 chatUI.setStatus('chat.thinking');
+                this._saveSession();
             }
         });
     }
@@ -281,6 +302,8 @@ export class AppController {
         }
 
         this.input.value = '';
+        this._setHistoryVisible(false);
+        this.history.begin(text);
         this.chatUI.addUserMessage(text);
         this._run(() => this.agent.send(text));
     }
@@ -299,13 +322,14 @@ export class AppController {
 
         const running = start();
         this._updateSendButton();
+        this._saveSession();
         try {
             const outcome = await running;
             if (outcome === 'stopped') {
-                this.chatUI.addNote(() => t('chat.stopped'));
+                this.chatUI.addNote('chat.stopped');
             } else {
                 const seconds = Math.max(1, Math.round((performance.now() - startedAt) / 1000));
-                this.chatUI.addNote(() => t('chat.finished', seconds));
+                this.chatUI.addNote('chat.finished', seconds);
             }
         } catch (error) {
             const describe = describeError(error);
@@ -321,6 +345,9 @@ export class AppController {
             if (firstChange && this.workspace.follow) {
                 this.editor.showChange(firstChange.path, { focus: false });
             }
+            this._saveSession();
+            await this.history.flush();
+            await this._refreshHistory();
         }
     }
 
@@ -343,6 +370,7 @@ export class AppController {
             }
             this.agent.addNote('[The user applied the pending changes to disk.]');
             const row = this.chatUI.addApplied(applied.length, () => this._undo(applied, row));
+            this._saveSession();
             if (changes.some(change => change.isNew)) await this.fileHandlers.refreshTree();
         } catch (error) {
             this.chatUI.addError(describeError(error), null);
@@ -359,7 +387,8 @@ export class AppController {
         try {
             await this.editor.undoApply(applied);
             this.agent.addNote('[The user undid the last apply. Those changes are pending again.]');
-            row.markUndone();
+            this.chatUI.markUndone(row);
+            this._saveSession();
             await this.fileHandlers.refreshTree();
         } catch (error) {
             this.chatUI.addError(describeError(error), null);
@@ -379,14 +408,119 @@ export class AppController {
     }
 
     /**
-     * 开始新任务。未写入的改动保留在编辑器里
+     * 开始新任务。未写入的改动保留在编辑器里，当前对话留在历史记录里
      * @private
      */
-    _newTask() {
+    async _newTask() {
         if (this.agent.running) return;
+        await this.history.close();
+        this._resetConversation();
+        await this._refreshHistory();
+        this._setHistoryVisible(this.sessions.length > 0);
+        this.input.focus();
+    }
+
+    _resetConversation() {
         this.agent.reset();
         this.chatUI.clear();
+    }
+
+    /**
+     * 打开文件夹。运行中不切换，避免 Agent 的改动落到另一个项目
+     * @private
+     */
+    _openFolder() {
+        if (!this.agent.running) return this.fileHandlers.handleOpenFolder();
+    }
+
+    /**
+     * 打开文件夹后切换到这个项目的历史记录
+     * @private
+     */
+    async _openProject() {
+        await this.history.openProject(this.file.getRootHandle());
+        this._resetConversation();
+        await this._refreshHistory();
+        this._setHistoryVisible(this.sessions.length > 0);
+    }
+
+    /**
+     * 安排保存当前对话
+     * @private
+     */
+    _saveSession() {
+        this.history.schedule(() => ({
+            messages: this.agent.messages,
+            timeline: this.chatUI.serialize()
+        }));
+    }
+
+    async _refreshHistory() {
+        this.sessions = await this.history.list();
+        this.historyUI.render(this.sessions, this.history.currentId);
+    }
+
+    /**
+     * 显示或隐藏历史记录，隐藏时回到对话
+     * @private
+     * @param {boolean} visible - 是否显示
+     */
+    _setHistoryVisible(visible) {
+        this.historyUI.setVisible(visible);
+        this.chatMessages.classList.toggle('hidden', visible);
+        this.historyButton.setAttribute('aria-pressed', String(visible));
+        if (visible) this.chatPanel.classList.remove('collapsed');
+    }
+
+    /**
+     * 打开历史记录里的对话
+     * @private
+     * @param {string} id - 会话 ID
+     */
+    async _openSession(id) {
+        if (this.agent.running) return;
+        if (id === this.history.currentId) {
+            this._setHistoryVisible(false);
+            return;
+        }
+
+        const session = await this.history.open(id);
+        if (!session) {
+            window.notify?.alert(t('history.missing'), { type: 'warning' });
+            await this._refreshHistory();
+            return;
+        }
+        this.agent.restore(session.messages);
+        this.chatUI.restore(session.timeline);
+        this.historyUI.render(this.sessions, id);
+        this._setHistoryVisible(false);
         this.input.focus();
+    }
+
+    /**
+     * 删除一条历史记录
+     * @private
+     * @param {{id: string, title: string}} session - 会话
+     */
+    async _deleteSession(session) {
+        const confirmed = await window.notify.confirm(t('history.deleteConfirm', session.title), t('confirm.delete'));
+        if (!confirmed) return;
+        await this._removeSessions([session.id]);
+    }
+
+    /** 清空当前项目的历史记录 */
+    async _clearHistory() {
+        const confirmed = await window.notify.confirm(t('history.clearConfirm'), t('confirm.delete'));
+        if (!confirmed) return;
+        await this._removeSessions(this.sessions.map(session => session.id));
+    }
+
+    async _removeSessions(ids) {
+        const removesCurrent = ids.includes(this.history.currentId);
+        if (removesCurrent && this.agent.running) return;
+        await this.history.remove(ids);
+        if (removesCurrent) this._resetConversation();
+        await this._refreshHistory();
     }
 
     _updateSendButton() {
@@ -426,7 +560,8 @@ export class AppController {
             const item = [...event.dataTransfer.items].find(entry => entry.kind === 'file');
             const handle = await item?.getAsFileSystemHandle?.();
             if (!handle) return;
-            if (handle.kind === 'directory') await this.fileHandlers.handleDroppedFolder(handle);
+            if (handle.kind === 'directory' && !this.agent.running) await this.fileHandlers.handleDroppedFolder(handle);
+            else if (handle.kind === 'directory') return;
             else window.notify?.alert(t('error.dropFile'), { type: 'warning' });
         });
     }

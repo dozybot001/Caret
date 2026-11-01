@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { Agent } from './src/agent/agent.js';
+import { SessionHistory } from './src/chat/history.js';
 import { countChanges } from './src/agent/diff.js';
 import { collectMessage, readEvents } from './src/agent/model.js';
 import { executeTool, normalizePath, outline, replaceText, TOOL_SCHEMAS } from './src/agent/tools.js';
@@ -220,4 +221,130 @@ test('模型服务报错时保留上下文，可以重试', async () => {
     await assert.rejects(agent.send('改'), error => error.status === 401 && error.message === 'bad key');
     assert.equal(agent.running, false);
     assert.equal(await agent.resume(), 'done');
+});
+
+test('系统提示词带上项目规则，并要求长期规则写进同一个文件', async () => {
+    const requests = scriptedModel([{ text: '好' }, { text: '好' }]);
+    await new Agent(workspace({ 'AGENTS.md': '- 用中文注释\n' }), connection, {}).send('改');
+    const withRules = requests[0].messages[0].content;
+    assert.match(withRules, /Project instructions from AGENTS\.md:\n- 用中文注释/);
+    assert.match(withRules, /add one short line to AGENTS\.md with edit/);
+
+    await new Agent(workspace({ 'CLAUDE.md': 'x'.repeat(9000) }), connection, {}).send('改');
+    const truncated = requests[1].messages[0].content;
+    assert.match(truncated, /add one short line to CLAUDE\.md with edit/);
+    assert.match(truncated, /\[Truncated\. Read CLAUDE\.md for the rest\.\]/);
+});
+
+test('恢复对话时补齐工具结果，并提醒模型重新读取文件', async () => {
+    const requests = scriptedModel([{ text: '好' }]);
+    const agent = new Agent(workspace(), connection, {});
+    agent.restore([
+        { role: 'user', content: '改' },
+        { role: 'assistant', content: '', tool_calls: [{ id: 'one', type: 'function', function: { name: 'read', arguments: '{}' } }] }
+    ]);
+    await agent.send('继续');
+    const { messages } = requests[0];
+    assert.equal(messages.find(message => message.tool_call_id === 'one').content, 'Stopped by the user.');
+    assert.match(messages.at(-1).content, /^\[This conversation was resumed from history/);
+    assert.match(messages.at(-1).content, /继续$/);
+});
+
+/** 内存存储 */
+function memoryStore() {
+    const projects = new Map();
+    const sessions = new Map();
+    const data = new Map();
+    return {
+        data,
+        listProjects: async () => [...projects.values()],
+        saveProject: async project => void projects.set(project.id, project),
+        listSessions: async () => [...sessions.values()],
+        getSessionData: async id => data.get(id),
+        saveSession: async (session, content) => {
+            sessions.set(session.id, session);
+            data.set(session.id, structuredClone(content));
+        },
+        deleteSessions: async ids => ids.forEach(id => {
+            sessions.delete(id);
+            data.delete(id);
+        })
+    };
+}
+
+const folder = (name, id = name) => ({ name, id, isSameEntry: async other => other.id === id });
+
+test('历史记录按文件夹隔离，同名的不同文件夹互不影响', async () => {
+    const history = new SessionHistory(memoryStore());
+    const a = folder('app', 'a');
+    const b = folder('app', 'b');
+
+    await history.openProject(a);
+    history.begin('第一个  项目\n的任务');
+    history.schedule(() => ({ messages: [1], timeline: [] }));
+    await history.flush();
+
+    await history.openProject(b);
+    assert.deepEqual(await history.list(), []);
+    assert.equal(history.currentId, null);
+
+    await history.openProject(a);
+    const [session] = await history.list();
+    assert.equal(session.title, '第一个 项目 的任务');
+    assert.deepEqual((await history.open(session.id)).messages, [1]);
+    assert.equal(history.currentId, session.id);
+});
+
+test('历史记录合并连续保存，继续对话时更新同一条记录', async () => {
+    const store = memoryStore();
+    const history = new SessionHistory(store);
+    await history.openProject(folder('app'));
+    history.begin('任务');
+
+    for (const step of [1, 2, 3]) history.schedule(() => ({ messages: [step], timeline: [] }));
+    await history.flush();
+    assert.equal(store.data.size, 1);
+    assert.deepEqual([...store.data.values()][0].messages, [3]);
+
+    history.begin('不会覆盖标题');
+    history.schedule(() => ({ messages: [4], timeline: [] }));
+    await history.flush();
+    assert.equal(store.data.size, 1);
+    assert.equal((await history.list())[0].title, '任务');
+});
+
+test('历史记录只保留最新的 100 条，删除当前会话后不再写入', async () => {
+    const store = memoryStore();
+    const history = new SessionHistory(store);
+    await history.openProject(folder('app'));
+
+    for (let index = 0; index < 103; index++) {
+        await history.close();
+        history.begin(`任务 ${index}`);
+        history.schedule(() => ({ messages: [], timeline: [] }));
+        await history.flush();
+    }
+    const sessions = await history.list();
+    assert.equal(sessions.length, 100);
+    assert.ok(sessions.some(session => session.title === '任务 102'));
+
+    const { currentId } = history;
+    history.schedule(() => ({ messages: ['late'], timeline: [] }));
+    await history.remove([currentId]);
+    await history.flush();
+    assert.equal(store.data.has(currentId), false);
+    assert.equal(history.currentId, null);
+});
+
+test('保存失败不影响任务，错误交给界面提示', async () => {
+    const store = memoryStore();
+    store.saveSession = async () => { throw new Error('quota'); };
+    const history = new SessionHistory(store);
+    const errors = [];
+    history.onError = error => errors.push(error.message);
+    await history.openProject(folder('app'));
+    history.begin('任务');
+    history.schedule(() => ({ messages: [], timeline: [] }));
+    await history.flush();
+    assert.deepEqual(errors, ['quota']);
 });

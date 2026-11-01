@@ -25,11 +25,6 @@ import { Notify } from './src/global/notification-system.js';
 // 初始化通知系统（全局单例）
 window.notify = new Notify(document.getElementById('notification-container'));
 
-// 切换文件时 Monaco 会取消进行中的 diff 计算，不是错误
-window.addEventListener('unhandledrejection', (event) => {
-    if (event.reason?.name === 'Canceled') event.preventDefault();
-});
-
 const store = new AppStore();
 const fileManager = new FileManager(store);
 const editorManager = new EditorManager(

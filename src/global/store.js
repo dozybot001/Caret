@@ -137,6 +137,99 @@ export class AppStore extends EventTarget {
     }
 
     /**
+     * 列出记录过的项目
+     * @returns {Promise<Array<{id: string, name: string, handle: FileSystemDirectoryHandle}>>}
+     */
+    listProjects() {
+        return this._getAll(OBJECT_STORES.PROJECTS);
+    }
+
+    /**
+     * 保存项目
+     * @param {{id: string, name: string, handle: FileSystemDirectoryHandle}} project - 项目
+     * @returns {Promise<void>}
+     */
+    async saveProject(project) {
+        await this._dbOp(OBJECT_STORES.PROJECTS, 'put', project.id, project);
+    }
+
+    /**
+     * 列出所有会话的基本信息，不含对话内容
+     * @returns {Promise<Array<Object>>}
+     */
+    listSessions() {
+        return this._getAll(OBJECT_STORES.SESSIONS);
+    }
+
+    /**
+     * 读取会话内容
+     * @param {string} id - 会话 ID
+     * @returns {Promise<{messages: Array, timeline: Array}|undefined>}
+     */
+    getSessionData(id) {
+        return this._dbOp(OBJECT_STORES.SESSION_DATA, 'get', id);
+    }
+
+    /**
+     * 保存会话。基本信息和内容分开存放，列表不用读取完整对话
+     * @param {Object} session - 基本信息
+     * @param {{messages: Array, timeline: Array}} data - 内容
+     * @returns {Promise<void>}
+     */
+    saveSession(session, data) {
+        return this._transaction(transaction => {
+            transaction.objectStore(OBJECT_STORES.SESSIONS).put(session, session.id);
+            transaction.objectStore(OBJECT_STORES.SESSION_DATA).put(data, session.id);
+        });
+    }
+
+    /**
+     * 删除会话
+     * @param {string[]} ids - 会话 ID
+     * @returns {Promise<void>}
+     */
+    deleteSessions(ids) {
+        return this._transaction(transaction => {
+            for (const id of ids) {
+                transaction.objectStore(OBJECT_STORES.SESSIONS).delete(id);
+                transaction.objectStore(OBJECT_STORES.SESSION_DATA).delete(id);
+            }
+        });
+    }
+
+    /**
+     * 读取存储里的全部值
+     * @private
+     * @param {string} storeName - 存储名称
+     * @returns {Promise<Array>}
+     */
+    async _getAll(storeName) {
+        await this._openDB();
+        return new Promise((resolve, reject) => {
+            const request = this._db.transaction([storeName], 'readonly').objectStore(storeName).getAll();
+            request.onerror = () => reject(request.error);
+            request.onsuccess = () => resolve(request.result);
+        });
+    }
+
+    /**
+     * 在一个事务里写入会话的基本信息和内容
+     * @private
+     * @param {Function} write - 写入函数
+     * @returns {Promise<void>}
+     */
+    async _transaction(write) {
+        await this._openDB();
+        return new Promise((resolve, reject) => {
+            const transaction = this._db.transaction([OBJECT_STORES.SESSIONS, OBJECT_STORES.SESSION_DATA], 'readwrite');
+            transaction.oncomplete = () => resolve();
+            transaction.onerror = () => reject(transaction.error);
+            transaction.onabort = () => reject(transaction.error);
+            write(transaction);
+        });
+    }
+
+    /**
      * 打开IndexedDB数据库
      * @private
      * @returns {Promise<IDBDatabase>}
@@ -150,6 +243,11 @@ export class AppStore extends EventTarget {
             request.onerror = () => reject(request.error);
             request.onsuccess = () => {
                 this._db = request.result;
+                // 新版本在其他标签页打开时让出连接
+                this._db.onversionchange = () => {
+                    this._db.close();
+                    this._db = null;
+                };
                 resolve(this._db);
             };
 

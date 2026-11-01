@@ -4,6 +4,8 @@
  * @module Notify
  */
 
+import { t } from './i18n.js';
+
 /** 图标类型映射 */
 const ICON_MAP = {
     info: 'codicon-info',
@@ -28,11 +30,13 @@ export class Notify {
     /**
      * 请用户确认会丢失内容的操作
      * @param {string} message - 说明
+     * @param {string} confirmLabel - 确认按钮的文字
      * @returns {Promise<boolean>} 用户是否确认
      */
-    confirm(message) {
+    confirm(message, confirmLabel = t('confirm.discard')) {
         const dialog = document.getElementById('confirm-dialog');
         document.getElementById('confirm-message').textContent = message;
+        document.getElementById('confirm-ok').textContent = confirmLabel;
         dialog.showModal();
 
         return new Promise((resolve) => {

@@ -26,6 +26,15 @@ const MESSAGES = {
         'tree.drop': '松开以打开这个文件夹',
 
         'chat.newTask': '新任务',
+        'history.title': '历史记录',
+        'history.empty': '这个项目还没有对话。发送第一条消息后，对话会保存在这个浏览器里。',
+        'history.clear': '清空',
+        'history.delete': '删除这条记录',
+        'history.deleteConfirm': title => `删除“${title}”？删除后无法恢复。`,
+        'history.clearConfirm': '清空这个项目的全部对话？删除后无法恢复。',
+        'history.missing': '这条记录已经不存在。',
+        'history.saveFailed': '对话没能保存到这个浏览器，当前任务不受影响。可以删除一些历史记录后再试。',
+        'confirm.delete': '删除',
         'chat.placeholder': '想改什么？例如：把登录按钮的文字改成“继续”',
         'chat.placeholderNext': '继续说明要改什么',
         'chat.send': '发送',
@@ -137,6 +146,15 @@ const MESSAGES = {
         'tree.drop': 'Drop to open this folder',
 
         'chat.newTask': 'New task',
+        'history.title': 'History',
+        'history.empty': 'No conversations for this project yet. They are saved in this browser after your first message.',
+        'history.clear': 'Clear',
+        'history.delete': 'Delete this conversation',
+        'history.deleteConfirm': title => `Delete "${title}"? This cannot be undone.`,
+        'history.clearConfirm': 'Delete all conversations for this project? This cannot be undone.',
+        'history.missing': 'This conversation no longer exists.',
+        'history.saveFailed': 'The conversation could not be saved in this browser. The current task is not affected. Delete some history and try again.',
+        'confirm.delete': 'Delete',
         'chat.placeholder': 'What should change? For example: change the sign-in button text to "Continue"',
         'chat.placeholderNext': 'Describe the next change',
         'chat.send': 'Send',
@@ -235,7 +253,7 @@ const LEGAL = {
         privacy: [
             ['我们不收集什么', 'Caret 没有账号，也没有应用服务器。榫卯 Tenon AI 收不到你的文件、需求、API Key 或模型回复。Caret 不使用统计或追踪工具。'],
             ['发送给模型服务的内容', '你写的需求，以及 Agent 为完成任务读取的文件内容和文件路径，会从浏览器直接发给你配置的模型服务。该服务按自己的隐私政策处理这些数据，是否出境取决于你选择的服务。.env、私钥等常见密钥文件不会被读取。'],
-            ['保存在这台设备上的内容', '模型设置和 API Key 保存在浏览器的 IndexedDB，主题和语言保存在 localStorage，文件夹访问授权和打开的标签页也保存在浏览器里。对话只保留在当前页面，刷新后消失。你可以在设置里清除 Key，或清除这个网站的数据来删除全部内容。'],
+            ['保存在这台设备上的内容', '模型设置、API Key、对话记录、文件夹访问授权和打开的标签页保存在浏览器的 IndexedDB，主题和语言保存在 localStorage。对话记录包含 Agent 读取过的文件内容，每个项目最多保留 100 条，不会上传。你可以在历史记录里删除对话，在设置里清除 Key，或清除这个网站的数据来删除全部内容。'],
             ['网页托管', '通过线上地址访问时，托管服务器会留下常规访问日志，例如 IP 地址和访问时间，用于安全和故障排查。'],
             ['联系我们', '如有问题，请发送邮件到 support@tenonai.cn。']
         ],
@@ -251,7 +269,7 @@ const LEGAL = {
         privacy: [
             ['What we do not collect', 'Caret has no accounts and no application server. Tenon AI never receives your files, requests, API keys or model replies. Caret uses no analytics or tracking.'],
             ['What goes to the model service', 'Your requests, plus the file contents and paths the Agent reads for the task, go directly from your browser to the model service you configured. That service handles the data under its own privacy policy, and whether data leaves your country depends on the service you choose. Common secret files such as .env and private keys are not read.'],
-            ['What stays on this device', 'Model settings and API keys are stored in the browser\'s IndexedDB. Theme and language are stored in localStorage. Folder access and open tabs are also kept in the browser. Conversations stay on the current page and disappear on refresh. You can clear the key in Settings, or clear this site\'s data to remove everything.'],
+            ['What stays on this device', 'Model settings, API keys, conversation history, folder access and open tabs are stored in the browser\'s IndexedDB. Theme and language are stored in localStorage. Conversation history includes the file contents the Agent read, keeps up to 100 conversations per project, and is never uploaded. You can delete conversations in History, clear the key in Settings, or clear this site\'s data to remove everything.'],
             ['Web hosting', 'When you use the hosted page, the server keeps ordinary access logs, such as IP addresses and timestamps, for security and troubleshooting.'],
             ['Contact', 'Questions? Email support@tenonai.cn.']
         ],

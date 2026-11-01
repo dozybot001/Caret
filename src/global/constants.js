@@ -10,12 +10,15 @@ export const STORAGE_CONSTANTS = {
     /** IndexedDB 数据库名称 */
     IDB_DB_NAME: 'CaretStore',
     /** IndexedDB 数据库版本 */
-    IDB_VERSION: 7,
+    IDB_VERSION: 8,
     /** IndexedDB Object Store 名称 */
     OBJECT_STORES: {
         FILE_HANDLES: 'fileHandles',
         CONFIG: 'config',
-        TABS: 'tabs'
+        TABS: 'tabs',
+        PROJECTS: 'projects',
+        SESSIONS: 'sessions',
+        SESSION_DATA: 'sessionData'
     },
     /** 主题和语言保存在 localStorage，首屏渲染前就要读取 */
     PREFERENCES_KEY: 'caret_preferences'
@@ -77,6 +80,18 @@ export const AGENT_CONSTANTS = {
     OUTLINE_LINES: 300,
     /** 项目说明文件保留的字符数 */
     RULES_CHARS: 8000
+};
+
+/**
+ * 会话历史相关常量
+ */
+export const HISTORY_CONSTANTS = {
+    /** 每个项目保留的会话数量，超出时删除最旧的 */
+    MAX_SESSIONS: 100,
+    /** 会话标题的最大字符数 */
+    TITLE_CHARS: 60,
+    /** 保存间隔（毫秒），连续变化时合并 */
+    SAVE_DELAY: 300
 };
 
 /**

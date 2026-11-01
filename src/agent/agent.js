@@ -18,6 +18,13 @@ You have three tools: read, write and edit. You cannot run commands, tests or bu
 - Never claim you tested anything. If something has to be run to be sure, say what the user should check.
 - Finish with one or two sentences on what changed. Reply in the language the user writes in.`;
 
+/**
+ * 项目记忆就是说明文件：Agent 用普通的工具修改，用户像审阅其他改动一样审阅
+ * @param {string} name - 说明文件名
+ * @returns {string}
+ */
+const memoryRule = name => `- When the user states a lasting rule for this project, such as "always do X here", add one short line to ${name} with edit, or create the file with write. Record only what the user said. Never record project overviews, summaries of your work, or things you inferred.`;
+
 /** 项目说明文件，按顺序取第一个存在的 */
 const PROJECT_RULES = ['AGENTS.md', 'CLAUDE.md'];
 
@@ -51,6 +58,16 @@ export class Agent {
     reset() {
         this.messages = [];
         this.pendingNotes = [];
+    }
+
+    /**
+     * 从历史记录恢复对话。这段时间文件可能变了，提醒模型重新读取
+     * @param {Array<Object>} messages - 保存的消息
+     */
+    restore(messages) {
+        this.messages = messages;
+        this.pendingNotes = ['[This conversation was resumed from history. Files may have changed since then, so read them again before editing.]'];
+        this._closeOpenCalls();
     }
 
     /**
@@ -103,17 +120,27 @@ export class Agent {
         }
     }
 
-    async _systemPrompt() {
+    /**
+     * 读取项目说明文件
+     * @private
+     * @returns {Promise<{name: string, text: string}>} 没有说明文件时 text 为空
+     */
+    async _projectRules() {
         const { workspace } = this;
-        let rules = '';
         for (const name of PROJECT_RULES) {
             const file = workspace.paths().includes(name) ? await workspace.getText(name) : null;
-            if (file?.text) {
-                rules = `\n\nProject instructions from ${name}:\n${file.text.slice(0, AGENT_CONSTANTS.RULES_CHARS)}`;
-                break;
-            }
+            if (file?.text) return { name, text: file.text };
         }
-        return `${SYSTEM_PROMPT}\n\nProject: ${workspace.name}\nFiles:\n${outline(workspace.paths())}${rules}`;
+        return { name: PROJECT_RULES[0], text: '' };
+    }
+
+    async _systemPrompt() {
+        const { workspace } = this;
+        const { name, text } = await this._projectRules();
+        const { RULES_CHARS } = AGENT_CONSTANTS;
+        const truncated = text.length > RULES_CHARS ? `\n[Truncated. Read ${name} for the rest.]` : '';
+        const rules = text ? `\n\nProject instructions from ${name}:\n${text.slice(0, RULES_CHARS)}${truncated}` : '';
+        return `${SYSTEM_PROMPT}\n${memoryRule(name)}\n\nProject: ${workspace.name}\nFiles:\n${outline(workspace.paths())}${rules}`;
     }
 
     _nextMessage(system, signal) {

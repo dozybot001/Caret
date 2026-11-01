@@ -70,9 +70,22 @@
         <aside id="chat-panel">
             <div class="panel-header">
                 <span class="panel-title">Agent</span>
-                <button type="button" id="btn-new-task" class="btn" data-i18n-title="chat.newTask">
-                    <i class="codicon codicon-add"></i>
-                </button>
+                <div class="panel-actions">
+                    <button type="button" id="btn-history" class="btn" data-i18n-title="history.title">
+                        <i class="codicon codicon-history"></i>
+                    </button>
+                    <button type="button" id="btn-new-task" class="btn" data-i18n-title="chat.newTask">
+                        <i class="codicon codicon-add"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="history-panel" class="hidden">
+                <div class="history-head">
+                    <span class="history-heading" data-i18n="history.title"></span>
+                    <button type="button" id="btn-clear-history" class="btn btn-text btn-text-chat hidden" data-i18n="history.clear"></button>
+                </div>
+                <div id="history-list"></div>
+                <p id="history-empty" class="hidden" data-i18n="history.empty"></p>
             </div>
             <div id="chat-messages" role="log" aria-live="polite"></div>
             <div id="changes-panel" class="hidden">

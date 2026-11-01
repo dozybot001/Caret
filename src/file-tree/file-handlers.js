@@ -18,6 +18,7 @@ export class FileHandlers {
      * @param {Object} context.file - 文件管理器实例
      * @param {Object} context.editor - 编辑器管理器实例
      * @param {Object} context.fileTreeUI - 文件树 UI 实例
+     * @param {Function} context.onFolderOpened - 打开新文件夹后调用
      */
     constructor(context) {
         this.context = context;
@@ -85,6 +86,7 @@ export class FileHandlers {
             await this.refreshTree();
             this.context.fileTreeUI.setFileTreeVisible(true);
             await editor.restoreTabsState();
+            await this.context.onFolderOpened();
             return true;
         } catch (error) {
             // 文件夹可能已被删除或移动
@@ -106,6 +108,7 @@ export class FileHandlers {
         await this.refreshTree();
         this.context.fileTreeUI.setFileTreeVisible(true);
         document.getElementById('chat-panel').classList.remove('collapsed');
+        await this.context.onFolderOpened();
         window.notify?.alert(t('folder.loaded', rootHandle.name), { type: 'success' });
     }
 
