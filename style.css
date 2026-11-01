@@ -1,5 +1,4 @@
-/* 全局样式入口 - 负责聚合主题、基础样式以及各个 UI 模块（侧边栏、编辑器、聊天）的 CSS 文件 */
-@import url('css/fonts/fonts.css');
+/* 全局样式入口 - 负责聚合主题、基础样式以及各个 UI 模块（侧边栏、编辑器、对话、设置）的 CSS 文件 */
 @import url('css/theme.css');
 @import url('css/base.css');
 
@@ -7,4 +6,5 @@
 @import url('css/explorer.css');
 @import url('css/editor.css');
 @import url('css/chat.css');
+@import url('css/settings.css');
 @import url('css/notification.css');

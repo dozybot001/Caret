@@ -1,25 +1,44 @@
 /**
  * @fileoverview 应用控制器
  * @description 核心协调者，负责初始化所有组件并协调它们之间的交互
- * 
+ *
  * ## 职责
- * - 初始化所有 UI 组件（ChatUI, FileTreeUI, Settings）
- * - 初始化所有管理器和服务
- * - 协调各个模块之间的交互
+ * - 初始化所有 UI 组件（ChatUI, ChangesUI, FileTreeUI, Settings）
+ * - 协调 Agent、编辑器和文件系统
  * - 绑定全局事件和回调
- * 
+ *
  * ## 数据流
- * 用户输入 → AppController → 各模块协调 → 业务逻辑执行
- * 
+ * 用户输入 → Agent → read/write/edit → 编辑器缓冲区 → 用户审阅 → 写入磁盘
+ *
  * @module AppController
  */
 
+import { Agent } from '../agent/agent.js';
+import { Workspace } from '../agent/workspace.js';
+import { ChangesUI } from '../chat/changes-ui.js';
 import { ChatUI } from '../chat/chat-ui.js';
+import { FileHandlers } from '../file-tree/file-handlers.js';
 import { FileTreeUI } from '../file-tree/file-tree-ui.js';
 import { Settings } from '../sidebar/settings.js';
-import { PlanHandler } from '../chat/plan.js';
-import { FileHandlers } from '../file-tree/file-handlers.js';
-import { PatchHandler } from '../chat/patch.js';
+import { applyTranslations, onLanguageChange, t } from './i18n.js';
+import { onThemeChange } from './preferences.js';
+
+/**
+ * 把错误转成用户能处理的说明
+ * @param {Error} error - 错误
+ * @returns {Function} 返回当前语言的文案
+ */
+function describeError(error) {
+    const { status, code, name, message } = error;
+    if (code === 'too-many-steps') return () => t('error.steps');
+    if (status === 401 || status === 403) return () => t('error.auth');
+    if (status === 402 || status === 429) return () => t('error.rate');
+    if (status === 400 && /context|token|length|too long/i.test(message)) return () => t('error.long');
+    if (status) return () => t('error.http', status, message);
+    if (name === 'NotAllowedError') return () => t('error.permission');
+    if (name === 'TypeError') return () => t('error.network');
+    return () => t('error.generic', message);
+}
 
 /**
  * 应用控制器
@@ -36,13 +55,31 @@ export class AppController {
         this.file = fileManager;
         this.editor = editorManager;
         this.store = store;
-        
-        // 初始化 UI 组件（需要在 store 赋值之后）
-        this._initUI();
+        this.workspace = new Workspace(fileManager, editorManager);
 
-        // 初始化 handlers
-        this.planHandler = null;
-        this.fileHandlers = null;
+        /** 选好文件夹或连好模型后要继续发送 */
+        this.waitingToSend = false;
+        this.stepStartedAt = 0;
+        this.replyRow = null;
+    }
+
+    /**
+     * 初始化应用
+     * @returns {Promise<void>}
+     */
+    async init() {
+        applyTranslations();
+        this._initUI();
+        this._initAgent();
+        this._bindEditor();
+        this._bindChat();
+        this._bindDragAndDrop();
+        this._bindWindow();
+
+        await this._restoreFolder();
+        await this.editor.restoreTabsState();
+        this._updateModelButton();
+        this.input.focus();
     }
 
     /**
@@ -50,296 +87,358 @@ export class AppController {
      * @private
      */
     _initUI() {
-        // DOM 元素引用
-        const fileTreeContainer = document.getElementById('file-tree');
-        const fileTreePanel = document.getElementById('file-tree-panel');
-        const chatPanel = document.getElementById('chat-panel');
-        const chatMessagesContainer = document.getElementById('chat-messages');
-        const chatInput = document.getElementById('chat-input');
-        const settingsMenu = document.getElementById('settings-menu');
-        this.btnSend = document.getElementById('btn-send-chat');
+        const element = id => document.getElementById(id);
+        this.input = element('chat-input');
+        this.sendButton = element('btn-send-chat');
+        this.modelButton = element('btn-model');
+        this.chatPanel = element('chat-panel');
+        this.welcome = element('welcome');
 
-        // 初始化各个 UI 模块
-        this.chatUI = new ChatUI(chatPanel, chatMessagesContainer, chatInput);
-        this.fileTreeUI = new FileTreeUI(fileTreeContainer, fileTreePanel);
-        this.settingsUI = new Settings(settingsMenu);
+        this.chatUI = new ChatUI(this.chatPanel, element('chat-messages'), this.input);
+        this.chatUI.onFileClick = path => this._openChange(path);
 
-        // 初始化 UI 事件监听器
-        this._initUIListeners();
-    }
+        this.fileTreeUI = new FileTreeUI(element('file-tree'), element('file-tree-panel'));
+        this.fileHandlers = new FileHandlers({ file: this.file, editor: this.editor, fileTreeUI: this.fileTreeUI });
 
-    /**
-     * 初始化 UI 事件监听器
-     * @private
-     */
-    _initUIListeners() {
-        // 文件树切换按钮
-        const btnToggleTree = document.getElementById('btn-toggle-tree');
-        if (btnToggleTree) {
-            btnToggleTree.addEventListener('click', () => {
-                this.fileTreeUI.fileTreePanel.classList.toggle('collapsed');
-            });
-        }
-
-        // 聊天面板切换按钮
-        const btnToggleChat = document.getElementById('btn-toggle-chat');
-        if (btnToggleChat) {
-            btnToggleChat.addEventListener('click', () => {
-                this.chatUI.chatPanel.classList.toggle('collapsed');
-            });
-        }
-
-        // 初始化设置 UI
-        this.settingsUI.init();
-    }
-
-    /**
-     * 绑定全局操作按钮
-     * @private
-     */
-    _bindGlobalActions() {
-        const btnOpenFolder = document.getElementById('btn-open-folder');
-        if (btnOpenFolder) {
-            btnOpenFolder.addEventListener('click', () => this.fileHandlers.handleOpenFolder());
-        }
-
-        const btnShowMap = document.getElementById('btn-show-map');
-        if (btnShowMap) {
-            btnShowMap.addEventListener('click', () => this.fileHandlers.handleShowMap());
-        }
-
-        const btnClearChat = document.getElementById('btn-clear-chat');
-        if (btnClearChat) {
-            btnClearChat.addEventListener('click', async () => {
-                await this.chatUI.clearMessages();
-                // 清除聊天历史
-                if (this.store) {
-                    await this.store.clearChatHistory();
-                }
-            });
-        }
-
-        const chatInput = this.chatUI.chatInput;
-
-        if (this.btnSend) {
-            this.btnSend.addEventListener('click', () => {
-                const isCancel = this.btnSend.dataset.isCancel === 'true';
-                if (isCancel) {
-                    // Cancel模式：取消所有正在进行的操作
-                    this._cancelAllOperations().catch(err => {
-                        if (window.notify) {
-                            window.notify.alert(`Error canceling operations: ${err.message}`, { type: 'error' });
-                        }
-                    });
-                } else {
-                    // Send模式：检查输入是否为空
-                    const inputValue = chatInput?.value?.trim();
-                    if (!inputValue) {
-                        if (window.notify) {
-                            window.notify.alert('Please enter a message', { type: 'warning' });
-                        }
-                        return;
-                    }
-                    this.planHandler.handleChatSubmit();
-                    this._setSendButtonState(true);
-                }
-            });
-        }
-        if (chatInput) {
-            chatInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    const isCancel = this.btnSend?.dataset.isCancel === 'true';
-                    // Cancel状态下，Enter键不触发
-                    if (!isCancel) {
-                        // 检查输入是否为空
-                        const inputValue = chatInput?.value?.trim();
-                        if (!inputValue) {
-                            if (window.notify) {
-                                window.notify.alert('Please enter a message', { type: 'warning' });
-                            }
-                            return;
-                        }
-                        this.planHandler.handleChatSubmit();
-                        this._setSendButtonState(true);
-                    }
-                }
-            });
-        }
-    }
-
-
-    /**
-     * 初始化应用
-     * @returns {Promise<void>}
-     */
-    async init() {
-        const initialConfig = this.store.getConfig();
-
-        this.settingsUI.updateSettingsView(initialConfig);
-        
-        // 初始化 handlers
-        this._initHandlers();
-        
-        // 初始化编辑器字号设置
-        if (initialConfig.fontSize !== undefined) {
-            this.editor.setFontSize(initialConfig.fontSize);
-        }
-        
-        // 监听字号变化并保存到store
-        this.editor.onFontSizeChange = async (fontSize) => {
-            await this.store.updateConfig({ fontSize });
+        this.settings = new Settings(element('settings-dialog'), this.store);
+        this.settings.init();
+        this.settings.onConnectionChange = () => this._updateModelButton();
+        this.settings.onClose = () => {
+            if (this.waitingToSend && this.settings.isReady()) this._submit();
+            this.waitingToSend = false;
         };
 
-        // 绑定配置更新事件
-        this.store.addEventListener('config-updated', (e) => {
-            const { fontSize } = e.detail;
-
-            this.settingsUI.updateSettingsView(e.detail);
-            
-            // 更新编辑器字号（如果从外部更改，避免循环更新）
-            if (fontSize !== undefined && fontSize !== this.editor.fontSize) {
-                this.editor.onFontSizeChange = null; // 临时禁用回调
-                this.editor.setFontSize(fontSize);
-                this.editor.onFontSizeChange = async (size) => {
-                    await this.store.updateConfig({ fontSize: size });
-                };
-            }
+        this.changesUI = new ChangesUI(element('changes-panel'), {
+            onOpen: path => this._openChange(path),
+            onDiscard: path => this._discard([path]),
+            onDiscardAll: () => this._discard(this.editor.getChanges().map(change => change.path)),
+            onApply: force => this._apply(force)
         });
 
-        // 绑定设置 UI 回调
-        this.settingsUI.onConfigSave = async (apiKey, baseUrl, model) => {
-            await this.store.updateConfig({ apiKey, baseUrl, model });
-        };
+        element('btn-toggle-tree').addEventListener('click', () => this.fileTreeUI.fileTreePanel.classList.toggle('collapsed'));
+        element('btn-toggle-chat').addEventListener('click', () => this.chatPanel.classList.toggle('collapsed'));
+        element('btn-open-folder').addEventListener('click', () => this.fileHandlers.handleOpenFolder());
+        element('btn-welcome-open').addEventListener('click', () => this.fileHandlers.handleOpenFolder());
+        element('btn-settings').addEventListener('click', () => this.settings.open());
+        element('btn-new-task').addEventListener('click', () => this._newTask());
+        this.modelButton.addEventListener('click', () => this.settings.open());
 
-        // 绑定文件树 UI 回调
+        this.fileTreeUI.onOpenFolder = () => this.fileHandlers.handleOpenFolder();
+        this.fileTreeUI.onResumeFolder = () => this.fileHandlers.handleResumeFolder();
         this.fileTreeUI.onFileClick = (handle, path, isPreview) => {
+            this.workspace.follow = false;
             this.editor.openFile(handle, path, isPreview);
+            if (this.fileTreeUI.isOverlay()) this.fileTreeUI.setFileTreeVisible(false);
         };
-        
-        // 绑定ChatUI文件点击回调
-        this.chatUI.onFileClick = async (filePath) => {
-            try {
-                const fileHandle = await this.file.getFileHandleByPath(filePath);
-                if (fileHandle) {
-                    await this.editor.openFile(fileHandle, filePath, false);
-                }
-            } catch (err) {
-                if (window.notify) {
-                    window.notify.alert(`Failed to open file: ${filePath}`, { type: 'error' });
-                }
+
+        // 窗口变窄时文件树改为覆盖式，先收起，避免挡住编辑器
+        window.matchMedia('(max-width: 900px)').addEventListener('change', () => {
+            this.fileTreeUI.setFileTreeVisible(this.file.hasRoot());
+        });
+
+        if (!('showDirectoryPicker' in window)) {
+            const note = element('welcome-note');
+            note.dataset.i18n = 'error.unsupported';
+            note.textContent = t('error.unsupported');
+            element('btn-welcome-open').classList.add('hidden');
+        }
+
+        onLanguageChange(() => this._renderStatic());
+    }
+
+    /**
+     * 查看某个文件的改动。用户开始自己看之后，编辑器不再跟随 Agent
+     * @private
+     * @param {string} path - 文件路径
+     */
+    _openChange(path) {
+        this.workspace.follow = false;
+        this.editor.showChange(path);
+        if (this._isNarrow()) this.chatPanel.classList.add('collapsed');
+    }
+
+    /** 窄屏时 Agent 面板和编辑器只显示一个 */
+    _isNarrow() {
+        return window.matchMedia('(max-width: 760px)').matches;
+    }
+
+    /**
+     * 更新不随 data-i18n 变化的文案
+     * @private
+     */
+    _renderStatic() {
+        this._updateModelButton();
+        this._updateSendButton();
+        if (!this.file.hasRoot()) {
+            if (this.file.pendingHandle) this.fileTreeUI.renderResume(this.file.pendingHandle.name);
+            else this.fileTreeUI.renderEmpty();
+        }
+    }
+
+    /**
+     * 连接 Agent 与界面
+     * @private
+     */
+    _initAgent() {
+        const { chatUI } = this;
+        this.agent = new Agent(this.workspace, () => this.settings.getConnection(), {
+            onThinking: () => chatUI.setStatus(this.replyRow ? null : 'chat.thinking'),
+            onToolCall: () => chatUI.setStatus('chat.generating'),
+            onText: (text) => {
+                chatUI.setStatus(null);
+                this.replyRow ||= chatUI.addReply();
+                chatUI.updateReply(this.replyRow, text);
+            },
+            onStepStart: (name, args) => {
+                this.replyRow = null;
+                chatUI.setStatus(null);
+                const verb = name === 'read' ? (args?.grep ? 'search' : 'read') : name;
+                return chatUI.addStep(verb, args?.grep || args?.path || '.');
+            },
+            onStepEnd: (row, result) => {
+                chatUI.finishStep(row, result);
+                chatUI.setStatus('chat.thinking');
             }
+        });
+    }
+
+    /**
+     * 绑定编辑器事件
+     * @private
+     */
+    _bindEditor() {
+        const { editor } = this;
+
+        editor.store = this.store;
+        editor.fileManager = this.file;
+        const config = this.store.getConfig();
+        if (config.fontSize !== undefined) editor.setFontSize(config.fontSize);
+        editor.onFontSizeChange = fontSize => this.store.updateConfig({ fontSize });
+
+        editor.onChangesUpdated = () => {
+            const changes = editor.getChanges();
+            this.changesUI.render(changes);
+            this.changesUI.setLocked(this.agent.running);
+            this.fileTreeUI.setChangedPaths(changes.map(change => change.path));
+        };
+        editor.onEmptyChange = (isEmpty) => {
+            this.welcome.classList.toggle('hidden', !isEmpty);
+        };
+        editor.onUserNavigate = () => {
+            this.workspace.follow = false;
         };
 
-        // 绑定全局操作按钮（handlers 已在 _initHandlers 中创建）
-        this._bindGlobalActions();
-
-        // 设置编辑器的store和fileManager引用（用于标签页状态持久化）
-        this.editor.store = this.store;
-        this.editor.fileManager = this.file;
-        
-        // 尝试恢复之前打开的文件夹
-        await this._restoreFolder();
-        
-        // 恢复标签页状态（在恢复文件夹之后）
-        await this.editor.restoreTabsState();
-
-        // 恢复聊天历史（在恢复文件夹之后，因为需要文件管理器）
-        await this._restoreChatHistory();
-
-        this.editor.onSaveRequest = async (fileHandle, content) => {
-            const writable = await fileHandle.createWritable();
-            await writable.write(content);
-            await writable.close();
-        };
+        onThemeChange(() => editor.applyTheme());
     }
 
     /**
-     * 初始化 handlers
+     * 绑定输入框和发送按钮
      * @private
      */
-    _initHandlers() {
-        // 创建共享的上下文对象
-        const context = {
-            file: this.file,
-            editor: this.editor,
-            store: this.store,
-            chatUI: this.chatUI,
-            fileTreeUI: this.fileTreeUI
-        };
+    _bindChat() {
+        const { input, sendButton } = this;
 
-        // 先创建 fileHandlers（因为它不依赖其他handlers）
-        this.fileHandlers = new FileHandlers(context);
+        sendButton.closest('form').addEventListener('submit', (event) => {
+            event.preventDefault();
+            if (this.agent.running) this.agent.stop();
+            else this._submit();
+        });
 
-        // 创建 planHandler
-        this.planHandler = new PlanHandler(context);
-        
-        // 创建 patchHandler 并设置到 chatUI
-        this.patchHandler = new PatchHandler(context);
-        this.chatUI.patchHandler = this.patchHandler;
-        this.chatUI.planHandler = this.planHandler;
-        
-        // 设置请求完成回调
-        this._setupRequestCompletionListener();
+        input.addEventListener('input', () => this._updateSendButton());
+        input.addEventListener('keydown', (event) => {
+            // 输入法组字时的回车不发送
+            if (event.key !== 'Enter' || event.shiftKey || event.isComposing || event.keyCode === 229) return;
+            event.preventDefault();
+            if ((event.metaKey || event.ctrlKey) && !input.value.trim()) this._apply(false);
+            else this._submit();
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && this.agent.running && !this.settings.dialog.open) this.agent.stop();
+        });
+        this._updateSendButton();
     }
 
     /**
-     * 取消所有正在进行的操作（Chat请求、Generate Patch等）
+     * 发送输入框里的内容。缺少文件夹或模型时先补齐，内容保留在输入框里
      * @private
      */
-    async _cancelAllOperations() {
-        // 取消Chat请求
-        if (this.planHandler) {
-            await this.planHandler.cancelCurrentRequest();
+    async _submit() {
+        const text = this.input.value.trim();
+        if (!text || this.agent.running) return;
+
+        if (!this.file.hasRoot()) {
+            const opened = this.file.pendingHandle
+                ? await this.fileHandlers.handleResumeFolder()
+                : await this.fileHandlers.handleOpenFolder();
+            if (!opened) return;
         }
-        // 取消Generate Patch
-        if (this.chatUI) {
-            this.chatUI.cancelGeneratePatch();
+        if (!this.settings.isReady()) {
+            this.waitingToSend = true;
+            this.settings.open();
+            this.settings.keyInput.focus();
+            return;
         }
-        if (this.patchHandler) {
-            this.patchHandler.cancelCurrentRequest();
-        }
-        // 重置Send按钮
-        this._setSendButtonState(false);
+
+        this.input.value = '';
+        this.chatUI.addUserMessage(text);
+        this._run(() => this.agent.send(text));
     }
 
     /**
-     * 设置发送按钮状态（Send或Cancel）
+     * 运行 Agent 并更新界面
      * @private
-     * @param {boolean} isCancel - true为Cancel状态，false为Send状态
+     * @param {Function} start - 启动函数
      */
-    _setSendButtonState(isCancel) {
-        if (!this.btnSend) return;
-        this.btnSend.dataset.isCancel = isCancel ? 'true' : 'false';
-        this.btnSend.innerHTML = isCancel 
-            ? '<i class="codicon codicon-close"></i>'
-            : '<i class="codicon codicon-arrow-up"></i>';
+    async _run(start) {
+        const startedAt = performance.now();
+        this.replyRow = null;
+        this.workspace.follow = true;
+        this.changesUI.setLocked(true);
+        this.chatUI.setStatus('chat.thinking');
+
+        const running = start();
+        this._updateSendButton();
+        try {
+            const outcome = await running;
+            if (outcome === 'stopped') {
+                this.chatUI.addNote(() => t('chat.stopped'));
+            } else {
+                const seconds = Math.max(1, Math.round((performance.now() - startedAt) / 1000));
+                this.chatUI.addNote(() => t('chat.finished', seconds));
+            }
+        } catch (error) {
+            const describe = describeError(error);
+            const canRetry = !error.code;
+            this.chatUI.addError(describe, canRetry ? () => this._run(() => this.agent.resume()) : null);
+        } finally {
+            this.chatUI.setStatus(null);
+            this.changesUI.setLocked(false);
+            this._updateSendButton();
+            this.input.focus();
+            // 运行结束后从第一个改动开始审阅
+            const [firstChange] = this.editor.getChanges();
+            if (firstChange && this.workspace.follow) {
+                this.editor.showChange(firstChange.path, { focus: false });
+            }
+        }
     }
 
     /**
-     * 设置请求完成监听器
+     * 写入改动
+     * @private
+     * @param {boolean} force - 忽略冲突
+     */
+    async _apply(force) {
+        const changes = this.editor.getChanges();
+        if (changes.length === 0 || this.agent.running) return;
+
+        this.changesUI.showConflict(null);
+        this.changesUI.setBusy(true);
+        try {
+            const { conflicts, applied } = await this.editor.applyChanges({ force });
+            if (conflicts) {
+                this.changesUI.showConflict(conflicts);
+                return;
+            }
+            this.agent.addNote('[The user applied the pending changes to disk.]');
+            const row = this.chatUI.addApplied(applied.length, () => this._undo(applied, row));
+            if (changes.some(change => change.isNew)) await this.fileHandlers.refreshTree();
+        } catch (error) {
+            this.chatUI.addError(describeError(error), null);
+        } finally {
+            this.changesUI.setBusy(false);
+        }
+    }
+
+    /**
+     * 撤销一次写入
      * @private
      */
-    _setupRequestCompletionListener() {
-        // 设置回调，在请求完成时重置按钮
-        if (this.planHandler) {
-            this.planHandler.onRequestComplete = () => {
-                this._setSendButtonState(false);
-            };
-            this.planHandler.onRequestCancel = () => {
-                this._setSendButtonState(false);
-            };
+    async _undo(applied, row) {
+        try {
+            await this.editor.undoApply(applied);
+            this.agent.addNote('[The user undid the last apply. Those changes are pending again.]');
+            row.markUndone();
+            await this.fileHandlers.refreshTree();
+        } catch (error) {
+            this.chatUI.addError(describeError(error), null);
         }
-        
-        // 设置ChatUI的Generate Patch回调
-        if (this.chatUI) {
-            this.chatUI.onGeneratePatchStart = () => {
-                this._setSendButtonState(true);
-            };
-            this.chatUI.onGeneratePatchCancel = () => {
-                this._setSendButtonState(false);
-            };
+    }
+
+    /**
+     * 放弃改动
+     * @private
+     * @param {string[]} paths - 文件路径
+     */
+    async _discard(paths) {
+        for (const path of paths) {
+            await this.editor.discardChange(path);
         }
+        this.agent.addNote(`[The user discarded the changes to: ${paths.join(', ')}.]`);
+    }
+
+    /**
+     * 开始新任务。未写入的改动保留在编辑器里
+     * @private
+     */
+    _newTask() {
+        if (this.agent.running) return;
+        this.agent.reset();
+        this.chatUI.clear();
+        this.input.focus();
+    }
+
+    _updateSendButton() {
+        const running = this.agent?.running;
+        const icon = this.sendButton.querySelector('i');
+        icon.className = `codicon codicon-${running ? 'debug-stop' : 'arrow-up'}`;
+        this.sendButton.dataset.running = String(Boolean(running));
+        this.sendButton.title = t(running ? 'chat.stop' : 'chat.send');
+        this.sendButton.setAttribute('aria-label', this.sendButton.title);
+        this.sendButton.disabled = !running && !this.input.value.trim();
+    }
+
+    _updateModelButton() {
+        this.modelButton.querySelector('span').textContent = this.settings.getModelLabel();
+        this.modelButton.classList.toggle('is-unset', !this.settings.isReady());
+    }
+
+    /**
+     * 支持把文件夹拖进页面
+     * @private
+     */
+    _bindDragAndDrop() {
+        const root = document.documentElement;
+        const hasFiles = event => [...event.dataTransfer.types].includes('Files');
+
+        window.addEventListener('dragover', (event) => {
+            if (!hasFiles(event)) return;
+            event.preventDefault();
+            root.classList.add('is-dropping');
+        });
+        window.addEventListener('dragleave', (event) => {
+            if (!event.relatedTarget) root.classList.remove('is-dropping');
+        });
+        window.addEventListener('drop', async (event) => {
+            event.preventDefault();
+            root.classList.remove('is-dropping');
+            const item = [...event.dataTransfer.items].find(entry => entry.kind === 'file');
+            const handle = await item?.getAsFileSystemHandle?.();
+            if (!handle) return;
+            if (handle.kind === 'directory') await this.fileHandlers.handleDroppedFolder(handle);
+            else window.notify?.alert(t('error.dropFile'), { type: 'warning' });
+        });
+    }
+
+    /**
+     * 关闭页面前提醒未写入的改动
+     * @private
+     */
+    _bindWindow() {
+        window.addEventListener('beforeunload', (event) => {
+            if (this.editor.getChanges().length > 0 || this.agent.running) event.preventDefault();
+        });
     }
 
     /**
@@ -347,95 +446,28 @@ export class AppController {
      * @private
      */
     async _restoreFolder() {
-        try {
-            const rootHandle = this.file.getRootHandle();
-            if (!rootHandle) return;
+        const rootHandle = this.file.getRootHandle();
+        if (this.file.pendingHandle) {
+            this.fileTreeUI.renderResume(this.file.pendingHandle.name);
+            return;
+        }
+        if (!rootHandle) {
+            // 欢迎页已经给出打开入口，这里不重复
+            this.fileTreeUI.renderEmpty();
+            this.fileTreeUI.setFileTreeVisible(false);
+            if (this._isNarrow()) this.chatPanel.classList.add('collapsed');
+            return;
+        }
 
-            // 渲染文件树（不清除存储的标签页状态，因为后面要恢复）
-            await this.editor.reset(false);
-            const treeData = await this.file.buildFileTree(rootHandle);
-            this.fileTreeUI.renderFileTree(rootHandle.name, treeData);
+        try {
+            await this.fileHandlers.refreshTree();
             this.fileTreeUI.setFileTreeVisible(true);
         } catch (err) {
-            if (window.notify) {
-                window.notify.alert(`Failed to restore folder: ${err.message}`, { type: 'warning' });
-            }
-            // 如果恢复失败，清除存储的句柄和内存中的句柄
-            if (this.file) {
-                this.file.rootDirHandle = null;
-            }
-            if (this.store) {
-                await this.store.clearDirectoryHandle();
-            }
+            // 文件夹可能已被删除或移动
+            this.file.rootDirHandle = null;
+            await this.store.clearDirectoryHandle();
+            this.fileTreeUI.renderEmpty();
+            window.notify?.alert(t('error.generic', err.message), { type: 'warning' });
         }
     }
-
-    /**
-     * 恢复聊天历史
-     * @private
-     */
-    async _restoreChatHistory() {
-        if (!this.chatUI || !this.store) return;
-        
-        try {
-            const messages = await this.store.getAllChatHistory();
-            if (!messages || messages.length === 0) return;
-
-            // 获取所有文件列表（用于plan消息的文件匹配）
-            let filePathMap = new Map();
-            if (this.file && this.file.hasRoot()) {
-                const allFiles = await this.file.getAllFiles();
-                allFiles.forEach(file => {
-                    filePathMap.set(file.path, file);
-                });
-            }
-
-            // 按顺序恢复消息
-            for (const msg of messages) {
-                if (msg.role === 'user') {
-                    // 恢复用户消息
-                    await this.chatUI.addMessage('user', msg.text, msg.messageId);
-                } else if (msg.role === 'ai') {
-                    // 恢复AI消息（thinking）
-                    const msgDiv = this.chatUI.createStreamingThinkingMessage(msg.messageId);
-                    const thinkingDiv = msgDiv.querySelector('.file-list-thinking');
-                    if (thinkingDiv) {
-                        thinkingDiv.textContent = msg.text;
-                    }
-
-                    // 根据类型重新渲染
-                    if (msg.type === 'plan' && this.planHandler) {
-                        // 恢复plan类型的消息
-                        // 检查是否已有文件列表UI，如果有则先清除
-                        const contentDiv = msgDiv.querySelector('.message-content');
-                        if (contentDiv) {
-                            const existingFileList = contentDiv.querySelector('.file-list-title');
-                            if (existingFileList) {
-                                // 清除已有的文件列表UI（保留thinking）
-                                existingFileList.nextElementSibling?.remove(); // file-list
-                                existingFileList.nextElementSibling?.remove(); // button-container
-                                existingFileList.remove();
-                            }
-                        }
-                        await this.planHandler._processPlanDataFromDB(msgDiv, this.store, filePathMap);
-                    } else if (msg.type === 'patch' && this.patchHandler) {
-                        // 恢复patch类型的消息
-                        // _loadPatchFileListFromDB 内部会检查是否已存在文件列表，所以不需要手动清除
-                        await this.patchHandler._loadPatchFileListFromDB(msgDiv, this.store);
-                    }
-                }
-            }
-
-            // 滚动到底部
-            if (this.chatUI.chatMessagesContainer) {
-                this.chatUI.chatMessagesContainer.scrollTop = this.chatUI.chatMessagesContainer.scrollHeight;
-            }
-        } catch (err) {
-            if (window.notify) {
-                window.notify.alert(`Failed to restore chat history: ${err.message}`, { type: 'warning' });
-            }
-        }
-    }
-
-
 }

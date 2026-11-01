@@ -26,6 +26,29 @@ export class Notify {
     }
 
     /**
+     * 请用户确认会丢失内容的操作
+     * @param {string} message - 说明
+     * @returns {Promise<boolean>} 用户是否确认
+     */
+    confirm(message) {
+        const dialog = document.getElementById('confirm-dialog');
+        document.getElementById('confirm-message').textContent = message;
+        dialog.showModal();
+
+        return new Promise((resolve) => {
+            const finish = (confirmed) => {
+                dialog.removeEventListener('close', onClose);
+                dialog.close();
+                resolve(confirmed);
+            };
+            const onClose = () => finish(false);
+            dialog.addEventListener('close', onClose);
+            document.getElementById('confirm-ok').onclick = () => finish(true);
+            document.getElementById('confirm-cancel').onclick = () => finish(false);
+        });
+    }
+
+    /**
      * 显示通知消息（替代 alert）
      * @param {string} message - 消息内容
      * @param {Object} options - 选项

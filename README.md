@@ -1,20 +1,48 @@
 # Caret
 
-浏览器端 AI IDE，无需安装，通过 File System Access API 读写本地文件。
+只有三个工具的 Coding Agent：`read`、`write`、`edit`。
+
+Caret 运行在浏览器里，不用安装。打开一个本地文件夹，说明要改什么，Agent 找到代码并做出改动。改动先出现在编辑器里，你看完 diff，也可以再手动调整，确认后写入磁盘。
+
+它不提供 bash，不执行命令，也不运行测试。适合看 diff 就能判断对错的改动，例如文案、配置、样式、文档和小 bug。
+
+## 三个工具
+
+| 工具 | 作用 |
+| --- | --- |
+| `read` | 读取文件、列出目录、搜索内容 |
+| `write` | 新建文件，或重写整个文件 |
+| `edit` | 精确替换文件里的一段文字，匹配到多处时拒绝修改 |
+
+Agent 的循环、工具和模型调用都在 [src/agent](src/agent)。
 
 ## 功能
 
-- **Monaco 编辑器** — 标签页（单击预览 / 双击固定）、大文件分块加载、`Ctrl/Cmd+S` 保存、`Ctrl/Cmd + =/- /0` 调整字号
-- **文件浏览器** — 打开本地文件夹，`.gitignore` 过滤
-- **AI 对话** — plan → patch → preview → apply，流式输出，支持取消
-- **Repo Map** — Tree-sitter 生成仓库结构图（`repo-map.txt`）
-- **设置** — 配置 Base URL、API Key、Model
-- **持久化** — IndexedDB 保存配置、标签页状态、聊天历史，恢复上次打开的文件夹
+- **编辑器** — Monaco 编辑器，标签页（单击预览，双击固定），`Ctrl/Cmd+S` 保存，`Ctrl/Cmd + =/- /0` 调整字号
+- **文件树** — 打开或拖入本地文件夹，按 `.gitignore` 过滤
+- **审阅** — 改动就是编辑器里未保存的内容，用 Monaco Diff 显示，可以直接编辑；Agent 和你改的是同一份内容
+- **写入** — `Ctrl/Cmd+Enter` 或点击按钮写入全部文件，磁盘内容变化时提示冲突，写入后可以撤销
+- **模型** — 从浏览器直连 OpenAI 兼容接口，内置 DeepSeek、Kimi、Qwen、OpenAI、OpenRouter，也可以填写自定义地址
+
+## 数据去向
+
+- Caret 没有账号，也没有应用服务器
+- 你的需求和 Agent 读取的文件内容只发给你配置的模型服务
+- `.env`、私钥等常见密钥文件不会被读取
+- API Key 只保存在这台设备的浏览器里
 
 ## 启动
 
+需要桌面版 Chrome 或 Edge。
+
 ```bash
-python -m http.server 8000
+python3 -m http.server 8000
 ```
 
-Chrome/Edge 打开 `http://localhost:8000`。
+打开 `http://localhost:8000`。
+
+## 测试
+
+```bash
+node --test test.mjs
+```

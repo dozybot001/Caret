@@ -5,11 +5,19 @@
     padding: 0;
 }
 
+html {
+    color-scheme: dark;
+}
+
+html[data-theme="light"] {
+    color-scheme: light;
+}
+
 body {
     background-color: var(--bg-1);
     color: var(--text-1);
     font-family: var(--font-family);
-    height: 100vh;
+    height: 100dvh;
     overflow: hidden;
     font-size: 13px;
     -webkit-font-smoothing: antialiased;
@@ -20,6 +28,16 @@ body {
     display: flex;
     height: 100%;
     width: 100%;
+    position: relative;
+}
+
+.hidden {
+    display: none !important;
+}
+
+:focus-visible {
+    outline: 2px solid var(--accent-text);
+    outline-offset: 1px;
 }
 
 .btn {
@@ -43,36 +61,69 @@ body {
 .btn:hover {
     background-color: var(--bg-3);
 }
+.btn:disabled {
+    cursor: default;
+    opacity: 0.5;
+}
+.btn:disabled:hover {
+    background-color: transparent;
+}
 
 .btn.btn-text {
     width: auto;
-    padding: 8px 14px;
+    min-height: 32px;
+    height: 32px;
+    padding: 0 12px;
     font-size: 12px;
     gap: 8px;
+    white-space: nowrap;
     background-color: var(--bg-2);
 }
 
 .btn.btn-text.btn-text-chat {
-    background-color: var(--bg-3);
+    background-color: var(--bg-4);
+    color: var(--text-1);
 }
 
 .btn.btn-text.btn-text-chat:hover {
+    background-color: var(--bg-5);
+}
+
+.btn.btn-text.btn-primary {
+    background-color: var(--text-1);
+    color: var(--bg-1);
+    font-weight: 600;
+}
+
+.btn.btn-text.btn-primary:hover {
+    background-color: var(--text-3);
+}
+
+.btn.btn-text:disabled:hover {
     background-color: var(--bg-4);
 }
 
-.btn.btn-text.btn-text-chat:disabled:hover,
-.btn.btn-text.btn-text-chat.no-hover:hover {
-    background-color: var(--bg-3);
+.btn.btn-text.btn-primary:disabled:hover {
+    background-color: var(--text-1);
 }
 
-/* 按钮修饰类 */
-.btn-small {
-    min-width: auto;
-    min-height: auto;
-    width: auto;
-    height: auto;
-    padding: 4px 8px;
-    font-size: 12px;
+/* 需要等待的操作：点击后立刻显示 */
+.btn.is-loading {
+    pointer-events: none;
+}
+
+.btn.is-loading::before {
+    content: "";
+    width: 12px;
+    height: 12px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+}
+
+.btn-inline {
+    margin-left: auto;
 }
 
 .btn-close {
@@ -83,18 +134,35 @@ body {
     padding: 0;
 }
 
-.btn-secondary {
-    background-color: var(--bg-3);
-    color: var(--text-1);
-}
-
-.btn-secondary:hover {
-    background-color: var(--bg-4);
-}
-
-.btn i {
+.btn .codicon {
     font-size: 20px;
     pointer-events: none;
+}
+
+.btn-close .codicon {
+    font-size: 16px;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes blink {
+    50% {
+        opacity: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+    }
 }
 
 ::-webkit-scrollbar {
@@ -112,4 +180,41 @@ body {
 }
 ::-webkit-scrollbar-corner {
     background-color: var(--bg-1);
+}
+
+/* 拖入文件夹 */
+#drop-overlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--overlay);
+    color: var(--text-1);
+    font-size: 16px;
+    pointer-events: none;
+}
+
+.is-dropping #drop-overlay {
+    display: flex;
+}
+
+/* 产品标志：字标加右上角 Tenon 标识 */
+.product-logo {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: max(4px, 0.18em);
+    font-family: var(--font-family);
+    font-weight: 600;
+    letter-spacing: 0.025em;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.product-logo-mark {
+    width: max(14px, 0.58em);
+    height: max(14px, 0.58em);
+    flex: 0 0 auto;
+    margin-top: -0.04em;
 }

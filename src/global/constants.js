@@ -15,41 +15,26 @@ export const STORAGE_CONSTANTS = {
     OBJECT_STORES: {
         FILE_HANDLES: 'fileHandles',
         CONFIG: 'config',
-        TABS: 'tabs',
-        CHAT_DATA: 'chatData',
-        CHAT_HISTORY: 'chatHistory'
+        TABS: 'tabs'
     },
-    /** IndexedDB 存储键名 */
-    STORAGE_KEYS: {
-        API_KEY: 'caret_api_key',
-        BASE_URL: 'caret_base_url',
-        MODEL: 'caret_model',
-        TOKEN_BUDGET: 'caret_token_budget',
-        COMPRESSION_STRATEGY: 'caret_compression_strategy',
-        FONT_SIZE: 'caret_font_size'
-    }
+    /** 主题和语言保存在 localStorage，首屏渲染前就要读取 */
+    PREFERENCES_KEY: 'caret_preferences'
 };
 
 /**
  * 默认配置值
  */
 export const DEFAULT_CONFIG = {
-    /** 默认 Token 预算 */
-    TOKEN_BUDGET: 4000,
-    /** 默认压缩策略 */
-    COMPRESSION_STRATEGY: 'smart',
     /** 默认字体大小 */
-    FONT_SIZE: 14
+    FONT_SIZE: 14,
+    /** 默认模型服务 */
+    PROVIDER: 'deepseek'
 };
 
 /**
- * UI 相关常量
+ * 文件树相关常量
  */
 export const UI_CONSTANTS = {
-    /** 聊天模式 */
-    MODE_CHAT: 'chat',
-    /** Composer 模式 */
-    MODE_COMPOSER: 'composer',
     /** 文件树懒加载阈值（超过此数量启用懒加载） */
     FILE_TREE_LAZY_LOAD_THRESHOLD: 50,
     /** 文件树初始渲染数量 */
@@ -61,69 +46,50 @@ export const UI_CONSTANTS = {
 };
 
 /**
- * AI 相关常量
- */
-export const AI_CONSTANTS = {
-    /** 文件识别温度 */
-    IDENTIFY_TEMPERATURE: 0.1,
-    /** 修复补丁温度 */
-    FIX_TEMPERATURE: 0.1,
-    /** 自动修复最大重试次数 */
-    AUTO_REPAIR_MAX_RETRIES: 2
-};
-
-/**
  * 文件系统相关常量
  */
 export const FS_CONSTANTS = {
     /** 文件内容缓存最大大小 */
-    FILE_CACHE_MAX_SIZE: 50,
-    /** Repo Map 删除文件阈值（超过此数量触发全量重建） */
-    REPO_MAP_DELETE_THRESHOLD: 10,
-    /** 大文件阈值（字节），超过此大小启用分块处理 */
-    LARGE_FILE_THRESHOLD: 10 * 1024 * 1024, // 10MB
-    /** 大文件分块大小（字节） */
-    LARGE_FILE_CHUNK_SIZE: 1024 * 1024, // 1MB
-    /** 虚拟滚动可见行数 */
-    VIRTUAL_SCROLL_VISIBLE_LINES: 50
+    FILE_CACHE_MAX_SIZE: 200,
+    /** 大文件阈值（字节），超过后关闭编辑器的部分功能 */
+    LARGE_FILE_THRESHOLD: 10 * 1024 * 1024,
+    /** Agent 能读取的最大文件（字节） */
+    AGENT_FILE_LIMIT: 2 * 1000 * 1000
 };
 
 /**
- * 补丁引擎相关常量
+ * Agent 相关常量
  */
-export const PATCH_CONSTANTS = {
-    /** DMP 匹配阈值 */
-    DMP_MATCH_THRESHOLD: 0.2,
-    /** DMP 删除阈值 */
-    DMP_DELETE_THRESHOLD: 0.5
+export const AGENT_CONSTANTS = {
+    /** 单次运行最多调用模型的轮数 */
+    MAX_STEPS: 40,
+    /** read 一次返回的最大行数 */
+    READ_LINES: 2000,
+    /** read 一次返回的最大字符数 */
+    READ_CHARS: 60000,
+    /** grep 最多返回的匹配行 */
+    GREP_HITS: 100,
+    /** grep 结果每行保留的字符数 */
+    GREP_LINE_CHARS: 200,
+    /** grep 同时读取的文件数 */
+    GREP_CONCURRENCY: 16,
+    /** 目录概览的最大行数 */
+    OUTLINE_LINES: 300,
+    /** 项目说明文件保留的字符数 */
+    RULES_CHARS: 8000
 };
 
 /**
- * 上下文管理器相关常量
+ * 模型服务。只列出实测允许网页直连的服务，其他服务用「自定义」
  */
-export const CONTEXT_CONSTANTS = {
-    /** Token 估算：每字符 Token 数（代码） */
-    CHARS_PER_TOKEN: 3.5,
-    /** Token 估算：标识符每字符 Token 数 */
-    IDENTIFIER_CHARS_PER_TOKEN: 4,
-    /** Token 估算：最小剩余预算（低于此值跳过文件） */
-    MIN_REMAINING_BUDGET: 100,
-    /** 文件重要性权重：被引用次数 */
-    IMPORTANCE_WEIGHT_IMPORT_COUNT: 0.4,
-    /** 文件重要性权重：导出数量 */
-    IMPORTANCE_WEIGHT_EXPORT: 0.3,
-    /** 文件重要性权重：目录深度 */
-    IMPORTANCE_WEIGHT_DEPTH: 0.2,
-    /** 文件重要性权重：文件大小 */
-    IMPORTANCE_WEIGHT_SIZE: 0.1
+export const PROVIDERS = {
+    deepseek: { name: 'DeepSeek', url: 'https://api.deepseek.com', keyPage: 'https://platform.deepseek.com/api_keys', prefer: /flash|chat/ },
+    kimi: { name: 'Kimi', url: 'https://api.moonshot.cn/v1', keyPage: 'https://platform.moonshot.cn/console/api-keys', prefer: /k2/ },
+    qwen: { name: 'Qwen', url: 'https://dashscope.aliyuncs.com/compatible-mode/v1', keyPage: 'https://bailian.console.aliyun.com/', prefer: /coder|max/ },
+    openai: { name: 'OpenAI', url: 'https://api.openai.com/v1', keyPage: 'https://platform.openai.com/api-keys', prefer: /^gpt-5/ },
+    openrouter: { name: 'OpenRouter', url: 'https://openrouter.ai/api/v1', keyPage: 'https://openrouter.ai/keys', prefer: /deepseek|qwen/ },
+    custom: { name: '', url: '', keyPage: '', prefer: null }
 };
 
-/**
- * 编辑器相关常量
- */
-export const EDITOR_CONSTANTS = {
-    /** 大文件处理：启用虚拟滚动的最小行数 */
-    VIRTUAL_SCROLL_MIN_LINES: 10000,
-    /** 大文件处理：分块加载大小（行数） */
-    CHUNK_LOAD_LINES: 5000
-};
+/** 当前版本 */
+export const VERSION = '0.3.0';

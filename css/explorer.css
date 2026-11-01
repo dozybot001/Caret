@@ -21,6 +21,7 @@
     flex: 1;
     overflow-y: auto;
     overflow-x: auto;
+    overscroll-behavior: contain;
     white-space: nowrap;
     padding: 16px 0 16px 10px;
     color: var(--text-2);
@@ -68,10 +69,74 @@
     font-weight: 500;
 }
 
+/* 有未写入的改动 */
+.tree-node.is-changed .tree-name {
+    color: var(--accent-text);
+}
+
 .tree-node:hover {
     background-color: var(--bg-3);
 }
 
+.tree-node.is-root {
+    cursor: default;
+}
+
+.tree-node.is-root:hover {
+    background-color: transparent;
+}
+
+.tree-more {
+    color: var(--text-5);
+    cursor: default;
+}
+
 .tree-children.hidden {
     display: none;
+}
+
+/* 空状态与恢复入口 */
+.tree-notice {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 8px 16px 8px 6px;
+    white-space: normal;
+    color: var(--text-4);
+    line-height: 1.6;
+}
+
+.tree-notice .btn {
+    white-space: normal;
+    height: auto;
+    padding: 8px 12px;
+    text-align: left;
+}
+
+/* 窄屏时文件树覆盖在编辑器上方 */
+@media (max-width: 900px) {
+    #file-tree-panel {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 64px;
+        z-index: 20;
+        box-shadow: var(--popup-shadow);
+    }
+
+    #file-tree-panel.collapsed {
+        box-shadow: none;
+    }
+}
+
+@media (max-width: 760px) {
+    #file-tree-panel {
+        left: 52px;
+        width: min(260px, calc(100vw - 52px));
+    }
+
+    #file-tree-panel > * {
+        min-width: 0;
+    }
 }

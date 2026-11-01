@@ -1,4 +1,4 @@
-/* 侧边栏样式 - 定义侧边栏、菜单和设置相关的样式 */
+/* 侧边栏样式 - 定义左侧导航栏 */
 #sidebar {
     width: 64px;
     background-color: var(--bg-1);
@@ -7,7 +7,7 @@
     align-items: center;
     padding-top: 16px;
     padding-bottom: 16px;
-    z-index: 10;
+    z-index: 30;
     flex-shrink: 0;
 }
 
@@ -20,131 +20,31 @@
     padding: 0 12px;
 }
 
+.sidebar-mark {
+    width: 24px;
+    height: 24px;
+    margin-bottom: 4px;
+}
+
 .sidebar-bottom {
     margin-top: auto;
     width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
-    position: relative;
     gap: 12px;
     padding: 0 12px;
     padding-bottom: 12px;
 }
 
-.popup-menu {
-    background-color: var(--bg-2);
-    padding: 8px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    z-index: 100;
-    width: 240px;
-    max-width: 280px;
-    max-height: calc(100vh - 40px);
-    overflow-y: auto;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-}
+@media (max-width: 760px) {
+    #sidebar {
+        width: 52px;
+    }
 
-.sidebar-bottom .popup-menu {
-    position: absolute;
-    top: var(--menu-top, 0);
-    left: var(--menu-left, 0);
-    max-height: var(--menu-max-height, calc(100vh - 40px));
-}
-
-.popup-menu.hidden {
-    display: none;
-    opacity: 0;
-    pointer-events: none;
-}
-
-.popup-menu .menu-item-editable {
-    display: flex;
-    align-items: stretch;
-    gap: 6px;
-    padding: 8px;
-    min-height: 0;
-    cursor: text;
-    flex-direction: column;
-    position: relative;
-    background-color: var(--bg-3);
-}
-
-.popup-menu .menu-item-editable:hover {
-    background-color: var(--bg-4);
-}
-
-.popup-menu .menu-item-label {
-    flex: 0 0 auto;
-    width: auto;
-    font-size: 10px;
-    font-weight: 600;
-    color: var(--text-3);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin: 0;
-    padding: 0;
-}
-
-.popup-menu .menu-item-editable .menu-item-label {
-    pointer-events: none;
-}
-
-.popup-menu .menu-item-editable .menu-item-input {
-    flex: 1 1 auto;
-    width: 100%;
-    margin: 0;
-    padding: 6px 8px;
-    color: var(--text-1);
-    font-size: 12px;
-    font-family: inherit;
-    text-align: left;
-    line-height: 1.2;
-    box-sizing: border-box;
-    background: var(--bg-2);
-    border: none;
-    outline: none;
-    cursor: text;
-}
-
-.popup-menu .menu-item-editable .menu-item-input::placeholder {
-    color: var(--text-4);
-    text-align: left;
-}
-
-.popup-menu .menu-item-editable .menu-item-input:hover,
-.popup-menu .menu-item-editable .menu-item-input:focus {
-    background: var(--bg-2);
-    border: none;
-    outline: none;
-}
-
-.popup-menu .menu-item-editable .menu-item-input::selection {
-    background-color: var(--bg-5);
-    color: var(--text-1);
-}
-
-.popup-menu .menu-item-action {
-    display: flex;
-    padding: 0;
-    min-height: 0;
-    align-items: center;
-}
-
-.popup-menu .menu-item-action .btn-text {
-    width: 100%;
-    justify-content: flex-start;
-    align-items: center;
-    gap: 8px;
-    background-color: var(--bg-3);
-    padding: 8px 10px;
-}
-
-.popup-menu .menu-item-action .btn-text:hover {
-    background-color: var(--bg-4);
-}
-
-.hidden {
-    display: none !important;
+    .sidebar-top,
+    .sidebar-bottom {
+        padding-left: 6px;
+        padding-right: 6px;
+    }
 }

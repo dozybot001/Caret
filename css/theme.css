@@ -1,5 +1,10 @@
-/* 主题变量定义 - 定义 CSS 自定义属性（变量），包括颜色系统、背景色、文字颜色和功能色 */
+/* 主题变量定义 - 定义 CSS 自定义属性（变量），包括字体、颜色系统、背景色、文字颜色和功能色 */
 :root {
+    --font-family: ui-monospace, "SF Mono", SFMono-Regular, "JetBrains Mono", "Cascadia Code", Menlo, Consolas, "PingFang SC", "Microsoft YaHei", monospace;
+
+    /* 品牌橙：只用于标志和图形，小字用 --accent-text */
+    --accent: #f06b32;
+    --accent-text: #f58a5b;
 
     /* 灰阶背景颜色 - 7个层级 */
     --bg-1: #000000;
@@ -19,29 +24,62 @@
     --text-6: #707070;
     --text-7: #585858;
 
-    /* 功能色 - 四个点缀色：红、黄、蓝、绿 */
-    --color-red: #ff4444;
-    --color-yellow: #ffaa00;
-    --color-blue: #4488ff;
-    --color-green: #44ff44;
-
-    /* 功能色变体 - 用于图表等场景 */
-    --color-red-variant: #ff6666;
-    --color-yellow-variant: #ffbb33;
-    --color-blue-variant: #6699ff;
-    --color-green-variant: #66ff66;
-    --color-purple: #8844ff;
-    --color-cyan: #44ffaa;
-    --color-orange: #ff8844;
-    --color-pink: #ff4488;
-    --color-teal: #44aaff;
-    --color-lime: #88ff44;
-    --color-magenta: #aa44ff;
-    --color-amber: #ffaa44;
+    /* 功能色 */
+    --color-red: #ff7b72;
+    --color-yellow: #e3b341;
+    --color-blue: #6ea8ff;
+    --color-green: #5fd38a;
 
     /* 功能色背景（半透明） */
-    --bg-red-dim: rgba(255, 68, 68, 0.15);
-    --bg-yellow-dim: rgba(255, 170, 0, 0.15);
-    --bg-blue-dim: rgba(68, 136, 255, 0.15);
-    --bg-green-dim: rgba(68, 255, 68, 0.15);
+    --bg-red-dim: rgba(255, 123, 114, 0.15);
+    --bg-yellow-dim: rgba(227, 179, 65, 0.15);
+    --bg-blue-dim: rgba(110, 168, 255, 0.15);
+    --bg-green-dim: rgba(95, 211, 138, 0.15);
+
+    /* Diff 配色，Monaco 只接受十六进制 */
+    --diff-add-line: #5fd38a1f;
+    --diff-add-text: #5fd38a40;
+    --diff-remove-line: #ff7b721f;
+    --diff-remove-text: #ff7b7240;
+
+    --overlay: rgba(0, 0, 0, 0.6);
+    --popup-shadow: 0 12px 32px #00000066, 0 2px 6px #00000033;
+}
+
+:root[data-theme="light"] {
+    --accent-text: #b8430f;
+
+    --bg-1: #ffffff;
+    --bg-2: #f6f5f3;
+    --bg-3: #ecebe7;
+    --bg-4: #e1dfda;
+    --bg-5: #d5d3cd;
+    --bg-6: #c6c3bc;
+    --bg-7: #b4b1a9;
+
+    --text-1: #1a1917;
+    --text-2: #2f2e2b;
+    --text-3: #474541;
+    --text-4: #5c5a55;
+    --text-5: #6d6a64;
+    --text-6: #8a8780;
+    --text-7: #aeaba4;
+
+    --color-red: #c62a22;
+    --color-yellow: #a06300;
+    --color-blue: #1f5fd1;
+    --color-green: #1a7f3c;
+
+    --bg-red-dim: rgba(198, 42, 34, 0.1);
+    --bg-yellow-dim: rgba(160, 99, 0, 0.12);
+    --bg-blue-dim: rgba(31, 95, 209, 0.1);
+    --bg-green-dim: rgba(26, 127, 60, 0.1);
+
+    --diff-add-line: #1a7f3c18;
+    --diff-add-text: #1a7f3c38;
+    --diff-remove-line: #c62a2218;
+    --diff-remove-text: #c62a2238;
+
+    --overlay: rgba(0, 0, 0, 0.35);
+    --popup-shadow: 0 12px 32px #00000016, 0 2px 6px #00000008;
 }

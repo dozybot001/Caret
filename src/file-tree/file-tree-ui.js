@@ -4,6 +4,7 @@
  */
 
 import { UI_CONSTANTS } from '../global/constants.js';
+import { t } from '../global/i18n.js';
 
 /**
  * 文件树 UI 管理器
@@ -18,12 +19,20 @@ export class FileTreeUI {
         this.fileTreeContainer = fileTreeContainer;
         this.fileTreePanel = fileTreePanel;
         this.onFileClick = null;
-        
+        this.onOpenFolder = null;
+        this.onResumeFolder = null;
+
         /** @type {Array|null} 当前文件树数据 */
         this.currentTreeData = null;
-        
+
         /** @type {Map<string, number>} 文件路径到定时器ID的映射，用于双击检测 */
         this.clickTimers = new Map();
+
+        /** @type {Set<string>} 展开的目录，刷新文件树时保留 */
+        this.expandedPaths = new Set();
+
+        /** @type {string[]} 有未写入改动的文件 */
+        this.changedPaths = [];
     }
 
     /**
@@ -31,11 +40,48 @@ export class FileTreeUI {
      * @param {boolean} isVisible - 是否可见
      */
     setFileTreeVisible(isVisible) {
-        if (isVisible) {
+        if (isVisible && !this.isOverlay()) {
             this.fileTreePanel.classList.remove('collapsed');
         } else {
             this.fileTreePanel.classList.add('collapsed');
         }
+    }
+
+    /** 窄屏时文件树覆盖在编辑器上方，由用户手动打开 */
+    isOverlay() {
+        return window.matchMedia('(max-width: 900px)').matches;
+    }
+
+    /** 清除展开状态，用于切换文件夹 */
+    clearExpanded() {
+        this.expandedPaths.clear();
+    }
+
+    /** 显示空状态：说明没有文件夹，并给出打开入口 */
+    renderEmpty() {
+        this._renderNotice(t('tree.empty'), t('tree.open'), () => this.onOpenFolder?.());
+    }
+
+    /**
+     * 显示恢复入口：浏览器要求用户点击后才能再次访问上次的文件夹
+     * @param {string} name - 文件夹名称
+     */
+    renderResume(name) {
+        this._renderNotice(name, t('tree.resume', name), () => this.onResumeFolder?.());
+    }
+
+    _renderNotice(message, action, onClick) {
+        const notice = document.createElement('div');
+        notice.className = 'tree-notice';
+        const text = document.createElement('p');
+        text.textContent = message;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'btn btn-text btn-text-chat';
+        button.textContent = action;
+        button.addEventListener('click', onClick);
+        notice.append(text, button);
+        this.fileTreeContainer.replaceChildren(notice);
     }
 
     /**
@@ -44,46 +90,45 @@ export class FileTreeUI {
      * @param {Array} treeData - 树形数据
      */
     renderFileTree(rootName, treeData) {
-        // 存储树数据以便后续使用（例如 autocomplete）
         this.currentTreeData = treeData;
-        
-        // 使用 requestIdleCallback 进行非关键渲染
-        if ('requestIdleCallback' in window) {
-            requestIdleCallback(() => {
-                this._renderFileTreeSync(rootName, treeData);
-            }, { timeout: 100 });
-        } else {
-            // 不支持 requestIdleCallback 的浏览器回退方案
-            setTimeout(() => {
-                this._renderFileTreeSync(rootName, treeData);
-            }, 0);
-        }
-    }
-    
-    /**
-     * 同步渲染文件树
-     * @private
-     * @param {string} rootName - 根目录名称
-     * @param {Array} treeData - 树形数据
-     */
-    _renderFileTreeSync(rootName, treeData) {
         this.fileTreeContainer.innerHTML = '';
 
         const fragment = document.createDocumentFragment();
         const rootLabel = document.createElement('div');
         rootLabel.className = 'tree-node is-root';
-        
+
         const rootNameSpan = document.createElement('span');
         rootNameSpan.className = 'tree-name';
         rootNameSpan.textContent = `${rootName}/`;
         rootLabel.appendChild(rootNameSpan);
-        
+
         fragment.appendChild(rootLabel);
 
         this._renderTreeNodes(treeData, fragment, "");
-        
+
         // 批量追加
         this.fileTreeContainer.appendChild(fragment);
+        this._markChanged();
+    }
+
+    /**
+     * 标记有未写入改动的文件及其上级目录
+     * @param {string[]} paths - 文件路径
+     */
+    setChangedPaths(paths) {
+        this.changedPaths = paths;
+        this._markChanged();
+    }
+
+    _markChanged() {
+        const marked = new Set();
+        for (const path of this.changedPaths) {
+            const parts = path.split('/');
+            parts.forEach((_, index) => marked.add(parts.slice(0, index + 1).join('/')));
+        }
+        this.fileTreeContainer.querySelectorAll('.tree-node[data-path]').forEach(row => {
+            row.classList.toggle('is-changed', marked.has(row.dataset.path));
+        });
     }
 
     /**
@@ -97,6 +142,19 @@ export class FileTreeUI {
         this.clickTimers.clear();
     }
 
+    /**
+     * 切换目录展开状态
+     * @private
+     * @param {string} path - 目录路径
+     * @param {HTMLElement} childContainer - 子项容器
+     * @returns {boolean} 是否已展开
+     */
+    _toggleDirectory(path, childContainer) {
+        const isOpen = childContainer.classList.toggle('hidden') === false;
+        if (isOpen) this.expandedPaths.add(path);
+        else this.expandedPaths.delete(path);
+        return isOpen;
+    }
 
     /**
      * 渲染树节点
@@ -110,19 +168,19 @@ export class FileTreeUI {
      * @param {number} options.maxNodes - 最大节点数
      */
     _renderTreeNodes(nodes, parent, prefix, options = {}) {
-        const { 
-            maxDepth = Infinity, 
-            currentDepth = 0, 
-            maxNodes = UI_CONSTANTS.FILE_TREE_MAX_NODES 
+        const {
+            maxDepth = Infinity,
+            currentDepth = 0,
+            maxNodes = UI_CONSTANTS.FILE_TREE_MAX_NODES
         } = options;
         let renderedCount = 0;
-        
+
         // 对于大型树，实现懒加载渲染
         const shouldLazyRender = nodes.length > UI_CONSTANTS.FILE_TREE_LAZY_LOAD_THRESHOLD;
-        
+
         nodes.forEach((node, index) => {
             if (renderedCount >= maxNodes) return;
-            
+
             const isLast = index === nodes.length - 1;
 
             const row = document.createElement('div');
@@ -133,11 +191,11 @@ export class FileTreeUI {
             const connector = document.createElement('span');
             connector.className = 'tree-connector';
             connector.textContent = `${prefix}${isLast ? '└ ' : '├ '}`;
-            
+
             const fileName = document.createElement('span');
             fileName.className = 'tree-name';
             fileName.textContent = node.name;
-            
+
             row.appendChild(connector);
             row.appendChild(fileName);
 
@@ -146,13 +204,13 @@ export class FileTreeUI {
                 // 单击立刻显示文件（预览Tab），在固定时间内再次点击同一文件则转为固定Tab
                 row.addEventListener('click', () => {
                     const filePath = node.path;
-                    
+
                     // 检查是否已有定时器（说明是第二次点击）
                     if (this.clickTimers.has(filePath)) {
                         // 第二次点击：清除定时器，将预览Tab转为固定Tab
                         clearTimeout(this.clickTimers.get(filePath));
                         this.clickTimers.delete(filePath);
-                        
+
                         if (this.onFileClick) {
                             this.onFileClick(node.handle, filePath, false); // false 表示固定Tab
                         }
@@ -160,84 +218,83 @@ export class FileTreeUI {
                         // 第一次点击：立即打开预览Tab
                         // 清除其他文件的定时器（切换文件时）
                         this._clearAllClickTimers();
-                        
+
                         if (this.onFileClick) {
                             this.onFileClick(node.handle, filePath, true); // true 表示预览Tab
                         }
-                        
+
                         // 设置定时器，如果在时间窗口内没有第二次点击，定时器会自动清除
                         const timerId = setTimeout(() => {
                             this.clickTimers.delete(filePath);
                         }, UI_CONSTANTS.FILE_TREE_DOUBLE_CLICK_TIMEOUT);
-                        
+
                         this.clickTimers.set(filePath, timerId);
                     }
                 });
-                
+
                 parent.appendChild(row);
                 renderedCount++;
             } else {
                 // 目录节点：创建子容器（默认关闭）
                 const childContainer = document.createElement('div');
-                childContainer.classList.add('tree-children', 'hidden');
-                
+                childContainer.classList.add('tree-children');
+                if (!this.expandedPaths.has(node.path)) childContainer.classList.add('hidden');
+
                 // 对于大型目录，实现懒加载
                 if (shouldLazyRender && node.children && node.children.length > 20) {
                     childContainer.classList.add('lazy-loaded');
                     // 初始只渲染前几个项
                     const initialChildren = node.children.slice(0, UI_CONSTANTS.FILE_TREE_INITIAL_RENDER_COUNT);
                     const remainingCount = node.children.length - initialChildren.length;
-                    
+                    let moreIndicator = null;
+
+                    const renderRemaining = () => {
+                        moreIndicator?.remove();
+                        moreIndicator = null;
+                        const nextPrefix = prefix + (isLast ? ' ' : '│');
+                        this._renderTreeNodes(
+                            node.children.slice(UI_CONSTANTS.FILE_TREE_INITIAL_RENDER_COUNT),
+                            childContainer,
+                            nextPrefix,
+                            { ...options, currentDepth: currentDepth + 1 }
+                        );
+                        this._markChanged();
+                    };
+
                     row.addEventListener('click', (e) => {
                         e.stopPropagation();
-                        const isHidden = childContainer.classList.contains('hidden');
-                        childContainer.classList.toggle('hidden');
-                        
                         // 展开时懒加载剩余子项
-                        if (!isHidden && remainingCount > 0 && 
-                            childContainer.querySelectorAll('.tree-node').length <= initialChildren.length) {
-                            const renderRemaining = () => {
-                                const nextPrefix = prefix + (isLast ? ' ' : '│');
-                                this._renderTreeNodes(
-                                    node.children.slice(UI_CONSTANTS.FILE_TREE_INITIAL_RENDER_COUNT), 
-                                    childContainer, 
-                                    nextPrefix,
-                                    { ...options, currentDepth: currentDepth + 1 }
-                                );
-                            };
-                            if ('requestIdleCallback' in window) {
-                                requestIdleCallback(renderRemaining);
-                            } else {
-                                setTimeout(renderRemaining, 0);
-                            }
+                        if (this._toggleDirectory(node.path, childContainer) && moreIndicator) {
+                            renderRemaining();
                         }
                     });
-                    
+
                     if (currentDepth < maxDepth) {
                         const nextPrefix = prefix + (isLast ? ' ' : '│');
-                        this._renderTreeNodes(initialChildren, childContainer, nextPrefix, { 
-                            ...options, 
-                            currentDepth: currentDepth + 1 
+                        this._renderTreeNodes(initialChildren, childContainer, nextPrefix, {
+                            ...options,
+                            currentDepth: currentDepth + 1
                         });
                         if (remainingCount > 0) {
-                            const moreIndicator = document.createElement('div');
+                            moreIndicator = document.createElement('div');
                             moreIndicator.className = 'tree-node tree-more';
-                            moreIndicator.textContent = `${prefix}${isLast ? ' ' : '│'}... (${remainingCount} more)`;
+                            moreIndicator.textContent = `${prefix}${isLast ? ' ' : '│'}... (${remainingCount})`;
                             childContainer.appendChild(moreIndicator);
+                            if (this.expandedPaths.has(node.path)) renderRemaining();
                         }
                     }
                 } else {
                     // 普通目录：直接渲染所有子项
                     row.addEventListener('click', (e) => {
                         e.stopPropagation();
-                        childContainer.classList.toggle('hidden');
+                        this._toggleDirectory(node.path, childContainer);
                     });
 
                     if (node.children && node.children.length > 0 && currentDepth < maxDepth) {
                         const nextPrefix = prefix + (isLast ? ' ' : '│');
-                        this._renderTreeNodes(node.children, childContainer, nextPrefix, { 
-                            ...options, 
-                            currentDepth: currentDepth + 1 
+                        this._renderTreeNodes(node.children, childContainer, nextPrefix, {
+                            ...options,
+                            currentDepth: currentDepth + 1
                         });
                     }
                 }
@@ -250,4 +307,3 @@ export class FileTreeUI {
     }
 
 }
-

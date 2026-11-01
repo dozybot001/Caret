@@ -1,90 +1,101 @@
 /**
  * @fileoverview 编辑器管理器
  * @description 封装 Monaco Editor 实例，管理多标签页系统、代码编辑及文件保存逻辑
- * 
+ *
  * ## 职责
  * - 管理 Monaco Editor 实例的创建和销毁
  * - 管理多标签页系统
  * - 处理文件打开、保存、关闭等操作
- * 
+ * - 管理未写入的改动：改动就是编辑器缓冲区，Agent 和用户改的是同一份内容
+ *
  * @module EditorManager
  */
 import { FS_CONSTANTS } from '../global/constants.js';
+import { decodeBytes } from '../file-tree/file-manager.js';
+import { getLanguage, t } from '../global/i18n.js';
+import { resolvedTheme } from '../global/preferences.js';
+
+const MONACO_BASE = 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min';
+
+/** 根据偏移量计算行列，文本使用 LF 换行 */
+function positionAt(text, offset) {
+    const head = text.slice(0, offset);
+    return { lineNumber: head.split('\n').length, column: offset - head.lastIndexOf('\n') };
+}
 
 export class EditorManager {
     constructor(editorContainer, tabsContainer) {
         this.container = editorContainer;
         this.tabsContainer = tabsContainer;
         this.editorInstance = null;
+        this.diffEditor = null;
         this.stdWrapper = null;
+        this.diffWrapper = null;
 
         this.tabs = [];
         this.currentTabId = null;
         this.previewTabId = null; // 当前预览的tab ID（预览tab在切换到其他文件时会被自动关闭）
 
-        this.onSaveRequest = null;
         this.onFontSizeChange = null; // 字号变化回调
-        
+        this.onChangesUpdated = null; // 未写入改动变化回调
+        this.onEmptyChange = null; // 是否没有打开的标签页
+        this.onUserNavigate = null; // 用户手动切换标签页
+
         // 存储实例（用于持久化标签页状态）
         this.store = null;
         // 文件管理器实例（用于通过路径获取文件句柄）
         this.fileManager = null;
         // 是否正在恢复标签页状态（避免在恢复过程中触发保存）
         this._isRestoringTabs = false;
-        
+        this._changesTimer = null;
+
         // 字体大小配置
         this.fontSize = 14;
         this.minFontSize = 8;
         this.maxFontSize = 72;
-        
-        // 欢迎页面模型
-        this.welcomeModel = null;
     }
 
     async init() {
-        // 动态加载 Monaco Editor loader
-        if (typeof window !== 'undefined' && window.loadMonacoEditor) {
-            window.loadMonacoEditor();
+        try {
+            await this._loadMonaco();
+            this.applyTheme();
+            this._createEditors();
+            this._bindTabEvents();
+
+            this.resizeObserver = new ResizeObserver(() => this.layout());
+            this.resizeObserver.observe(this.container);
+        } catch (error) {
+            window.notify?.alert(t('error.editorLoad'), { type: 'error' });
+            const message = document.createElement('div');
+            message.className = 'editor-error-container';
+            message.textContent = t('error.editorLoad');
+            this.container.appendChild(message);
         }
-        
-        return new Promise((resolve) => {
-            // 等待 Monaco loader 加载完成
-            const checkMonaco = () => {
-                if (typeof require !== 'undefined') {
-                    // 配置 Monaco Editor 路径
-                    const MONACO_CDN_BASE = 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min';
-                    require.config({ paths: { 'vs': `${MONACO_CDN_BASE}/vs` } });
-                    
-                    require(['vs/editor/editor.main'], () => {
-                        this._defineTheme();
-                        this._createEditors();
-                        this._bindTabEvents();
+    }
 
-                        this.resizeObserver = new ResizeObserver(() => this.layout());
-                        this.resizeObserver.observe(this.container);
+    /**
+     * 从 CDN 加载 Monaco。Worker 跨域，需要通过 data URL 中转
+     * @private
+     */
+    _loadMonaco() {
+        window.MonacoEnvironment = {
+            getWorkerUrl: () => `data:text/javascript;charset=utf-8,${encodeURIComponent(
+                `self.MonacoEnvironment={baseUrl:'${MONACO_BASE}/'};importScripts('${MONACO_BASE}/vs/base/worker/workerMain.js');`
+            )}`
+        };
 
-                        resolve();
-                    }, (error) => {
-                        if (window.notify) {
-                            window.notify.alert(`Failed to load Monaco Editor: ${error.message}`, { type: 'error' });
-                        }
-                        // Provide fallback: show error message in container
-                        this.container.innerHTML = `
-                            <div class="editor-error-container">
-                                <div class="editor-error-content">
-                                    <i class="codicon codicon-warning editor-error-icon"></i>
-                                    <h3>Editor Failed to Load</h3>
-                                    <p>Unable to load Monaco Editor. Please check your network connection or refresh the page.</p>
-                                </div>
-                            </div>
-                        `;
-                        resolve(); // Resolve anyway to prevent hanging
-                    });
-                } else {
-                    setTimeout(checkMonaco, 50);
-                }
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = `${MONACO_BASE}/vs/loader.min.js`;
+            script.onerror = reject;
+            script.onload = () => {
+                window.require.config({
+                    paths: { vs: `${MONACO_BASE}/vs` },
+                    'vs/nls': getLanguage() === 'zh' ? { availableLanguages: { '*': 'zh-cn' } } : {}
+                });
+                window.require(['vs/editor/editor.main'], resolve, reject);
             };
-            checkMonaco();
+            document.head.appendChild(script);
         });
     }
 
@@ -93,151 +104,104 @@ export class EditorManager {
             this.resizeObserver.disconnect();
             this.resizeObserver = null;
         }
-        if (this.editorInstance) {
-            this.editorInstance.dispose();
-            this.editorInstance = null;
-        }
+        this.diffEditor?.dispose();
+        this.editorInstance?.dispose();
+        this.diffEditor = null;
+        this.editorInstance = null;
         // Clear tabs and models
         this.tabs.forEach(tab => {
-            if (tab.model) tab.model.dispose();
+            tab.model.dispose();
+            tab.baseModel?.dispose();
         });
         this.tabs = [];
         this.currentTabId = null;
-        
-        // Dispose welcome model
-        if (this.welcomeModel) {
-            this.welcomeModel.dispose();
-            this.welcomeModel = null;
-        }
     }
 
-    _defineTheme() {
-        const getStyle = (varName, fallback = '') => {
-            const value = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
-            return value || fallback;
-        };
+    /** 根据当前主题的 CSS 变量设置编辑器配色 */
+    applyTheme() {
+        if (typeof monaco === 'undefined') return;
+        const styles = getComputedStyle(document.documentElement);
+        const color = name => styles.getPropertyValue(name).trim();
+        const themeName = resolvedTheme() === 'dark' ? 'caret-dark' : 'caret-light';
 
-        monaco.editor.defineTheme('gemini-dark', {
-            base: 'vs-dark',
+        monaco.editor.defineTheme(themeName, {
+            base: resolvedTheme() === 'dark' ? 'vs-dark' : 'vs',
             inherit: true,
             rules: [],
             colors: {
-                'editor.background': getStyle('--bg-1', '#000000'),
-                'editor.foreground': getStyle('--text-1', '#e8e8e8'),
-                'editor.lineHighlightBackground': getStyle('--bg-2', '#0f0f0f'),
-                'editorIndentGuide.background': getStyle('--bg-4', '#2d2d2d'),
-                'editorLineNumber.foreground': getStyle('--text-4', '#a0a0a0')
+                'editor.background': color('--bg-1'),
+                'editor.foreground': color('--text-1'),
+                'editor.lineHighlightBackground': color('--bg-2'),
+                'editorIndentGuide.background1': color('--bg-4'),
+                'editorLineNumber.foreground': color('--text-6'),
+                'diffEditor.insertedLineBackground': color('--diff-add-line'),
+                'diffEditor.insertedTextBackground': color('--diff-add-text'),
+                'diffEditor.removedLineBackground': color('--diff-remove-line'),
+                'diffEditor.removedTextBackground': color('--diff-remove-text'),
+                'diffEditorGutter.insertedLineBackground': color('--diff-add-line'),
+                'diffEditorGutter.removedLineBackground': color('--diff-remove-line')
             }
         });
+        monaco.editor.setTheme(themeName);
     }
 
     _createEditors() {
-
         this.stdWrapper = document.createElement('div');
         this.stdWrapper.id = 'std-editor-wrapper';
-        this.stdWrapper.className = 'editor-instance-wrapper';
+        this.stdWrapper.className = 'editor-instance-wrapper hidden';
         this.container.appendChild(this.stdWrapper);
 
-        // 创建欢迎页面模型
-        this.welcomeModel = monaco.editor.createModel(this._getWelcomeContent(), 'plaintext');
-        
+        this.diffWrapper = document.createElement('div');
+        this.diffWrapper.id = 'diff-editor-wrapper';
+        this.diffWrapper.className = 'editor-instance-wrapper hidden';
+        this.container.appendChild(this.diffWrapper);
+
         // 从 CSS 变量获取字体
-        const fontFamily = getComputedStyle(document.documentElement)
-            .getPropertyValue('--font-family')
-            .trim() || "'Maple Mono', monospace";
-        
-        this.editorInstance = monaco.editor.create(this.stdWrapper, {
-            value: this._getWelcomeContent(),
-            language: 'plaintext',
-            theme: 'gemini-dark',
-            fontFamily: fontFamily,
+        const fontFamily = getComputedStyle(document.documentElement).getPropertyValue('--font-family').trim();
+        const sharedOptions = {
+            fontFamily,
             fontSize: this.fontSize,
             automaticLayout: true,
             wordWrap: 'on',
             minimap: { enabled: false },
-            readOnly: true,
+            scrollBeyondLastLine: false
+        };
+
+        this.editorInstance = monaco.editor.create(this.stdWrapper, { ...sharedOptions, model: null });
+
+        // 审阅改动用行内 diff；右侧内容可以直接编辑，只折叠没有变化的部分
+        this.diffEditor = monaco.editor.createDiffEditor(this.diffWrapper, {
+            ...sharedOptions,
+            diffWordWrap: 'on',
+            renderSideBySide: false,
+            originalEditable: false,
+            ignoreTrimWhitespace: false,
+            renderMarginRevertIcon: false,
+            renderGutterMenu: false,
+            renderOverviewRuler: false,
+            hideUnchangedRegions: { enabled: true, contextLineCount: 3, minimumLineCount: 3, revealLineCount: 20 }
         });
 
-        // 保存快捷键
-        this.editorInstance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-            this.saveCurrentTab();
-        });
-
-        // 字体大小调整快捷键
-        this._setupFontSizeShortcuts();
-    }
-
-
-    /**
-     * 显示欢迎页面
-     * @private
-     */
-    _showWelcomePage() {
-        if (this.welcomeModel && this.editorInstance) {
-            this.showStandardMode(this.welcomeModel);
-        }
-    }
-
-    /**
-     * 获取欢迎页面内容
-     * @private
-     * @returns {string}
-     */
-    _getWelcomeContent() {
-        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-        const modKey = isMac ? 'Cmd' : 'Ctrl';
-        
-        return `Welcome to Caret
-
-Basic Operations:
-
-• Open Folder: Click the folder icon on the left
-• Open File: Click file in tree (preview) or double-click (pin)
-• Pin Tab: Double-click a preview tab to pin it
-• Save File: ${modKey} + S
-• Find Text: ${modKey} + F
-
-Font Size:
-
-• Increase Font: ${modKey} + =
-• Decrease Font: ${modKey} + -
-• Reset Font: ${modKey} + 0
-
-Tips:
-
-• Clicking a file opens it in preview mode, which closes automatically when switching to another file
-• Double-clicking a file or tab pin it, pinned files won't close automatically
-• Modified files show a marker on the tab indicating unsaved changes`;
+        this._bindCommands(this.editorInstance);
+        this._bindCommands(this.diffEditor.getModifiedEditor());
     }
 
     /**
-     * 设置字体大小调整快捷键
+     * 绑定保存和字号快捷键
      * @private
+     * @param {Object} editor - Monaco 编辑器
      */
-    _setupFontSizeShortcuts() {
-        // Ctrl/Cmd + Plus (或 =) 增大字体
-        this.editorInstance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Equal, () => {
-            this._adjustFontSize(1);
-        });
-        this.editorInstance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.NumpadAdd, () => {
-            this._adjustFontSize(1);
-        });
+    _bindCommands(editor) {
+        const { KeyMod, KeyCode } = monaco;
+        const shortcut = (key, run) => editor.addCommand(KeyMod.CtrlCmd | key, run);
 
-        // Ctrl/Cmd + Minus 减小字体
-        this.editorInstance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Minus, () => {
-            this._adjustFontSize(-1);
-        });
-        this.editorInstance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.NumpadSubtract, () => {
-            this._adjustFontSize(-1);
-        });
-
-        // Ctrl/Cmd + 0 重置字体大小
-        this.editorInstance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Digit0, () => {
-            this._resetFontSize();
-        });
-        this.editorInstance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Numpad0, () => {
-            this._resetFontSize();
-        });
+        shortcut(KeyCode.KeyS, () => this.saveCurrentTab());
+        shortcut(KeyCode.Equal, () => this._adjustFontSize(1));
+        shortcut(KeyCode.NumpadAdd, () => this._adjustFontSize(1));
+        shortcut(KeyCode.Minus, () => this._adjustFontSize(-1));
+        shortcut(KeyCode.NumpadSubtract, () => this._adjustFontSize(-1));
+        shortcut(KeyCode.Digit0, () => this._resetFontSize());
+        shortcut(KeyCode.Numpad0, () => this._resetFontSize());
     }
 
     /**
@@ -262,10 +226,7 @@ Tips:
         if (newSize !== this.fontSize) {
             this.fontSize = newSize;
             this._updateFontSize();
-            // 通知字号变化
-            if (this.onFontSizeChange) {
-                this.onFontSizeChange(this.fontSize);
-            }
+            this.onFontSizeChange?.(this.fontSize);
         }
     }
 
@@ -276,10 +237,7 @@ Tips:
     _resetFontSize() {
         this.fontSize = 14;
         this._updateFontSize();
-        // 通知字号变化
-        if (this.onFontSizeChange) {
-            this.onFontSizeChange(this.fontSize);
-        }
+        this.onFontSizeChange?.(this.fontSize);
     }
 
     /**
@@ -287,9 +245,8 @@ Tips:
      * @private
      */
     _updateFontSize() {
-        if (this.editorInstance) {
-            this.editorInstance.updateOptions({ fontSize: this.fontSize });
-        }
+        this.editorInstance?.updateOptions({ fontSize: this.fontSize });
+        this.diffEditor?.updateOptions({ fontSize: this.fontSize });
     }
 
     _bindTabEvents() {
@@ -302,19 +259,23 @@ Tips:
         });
     }
 
+    _getTab(tabId) {
+        return this.tabs.find(tab => tab.id === tabId);
+    }
+
     /**
      * 将预览Tab转为固定Tab
      * @param {string} tabId - Tab ID
      */
     convertPreviewToFixed(tabId) {
-        const tab = this.tabs.find(t => t.id === tabId);
+        const tab = this._getTab(tabId);
         if (tab && tab.isPreview) {
             tab.isPreview = false;
             if (this.previewTabId === tabId) {
                 this.previewTabId = null;
             }
             this._renderTabs();
-            
+
             // 保存标签页状态
             this._saveTabsState();
         }
@@ -323,16 +284,13 @@ Tips:
     async openFile(fileHandle, fullPath, isPreview = false) {
         // Check if Monaco is loaded
         if (!this.editorInstance) {
-            if (window.notify) {
-                window.notify.alert('Editor not initialized. Unable to open file. Please refresh the page.', { type: 'error' });
-            }
+            window.notify?.alert(t('error.editorLoad'), { type: 'error' });
             return;
         }
 
-        const fileName = fileHandle.name;
-        const tabId = fullPath || fileName;
+        const tabId = fullPath || fileHandle.name;
 
-        const existingTab = this.tabs.find(t => t.id === tabId);
+        const existingTab = this._getTab(tabId);
         if (existingTab) {
             // 如果传入 isPreview=false，且当前tab是预览tab，则转为固定tab
             if (!isPreview && existingTab.isPreview) {
@@ -343,268 +301,448 @@ Tips:
         }
 
         try {
-            const file = await fileHandle.getFile();
-            const fileSize = file.size;
-            
-            // Check if file is large
-            const isLargeFile = fileSize > FS_CONSTANTS.LARGE_FILE_THRESHOLD;
-            
-            let text;
-            if (isLargeFile) {
-                // For large files, load in chunks
-                text = await this._loadLargeFile(file);
-            } else {
-                text = await file.text();
-            }
-            
-            const language = EditorManager.getLanguage(fileName);
-            
-            const model = monaco.editor.createModel(text, language);
-            
-            // Configure editor for large files using Monaco's built-in optimizations
-            if (isLargeFile) {
-                // Monaco Editor automatically handles large files with optimizations
-                // We just need to disable some expensive features
-                this.editorInstance.updateOptions({
-                    wordWrap: 'on',
-                    minimap: { enabled: false },
-                    renderWhitespace: 'none',
-                    renderLineHighlight: 'none',
-                    renderIndentGuides: false,
-                    occurrencesHighlight: false,
-                    selectionHighlight: false,
-                    codeLens: false
-                });
-            } else {
-                // Reset options for normal files (in case they were changed)
-                this.editorInstance.updateOptions({
-                    wordWrap: 'on',
-                    minimap: { enabled: false }
-                });
-            }
-
-            model.onDidChangeContent(() => {
-                const tab = this.tabs.find(t => t.id === tabId);
-                if (tab) {
-                    // 如果编辑了预览tab，将其转为固定tab
-                    if (tab.isPreview) {
-                        tab.isPreview = false;
-                        if (this.previewTabId === tabId) {
-                            this.previewTabId = null;
-                        }
-                    }
-                    // Pending change tabs (SR preview) don't show dirty indicator
-                    // They are preview copies, not actual file modifications
-                    if (!tab.isDirty && !tab.isPendingChange) {
-                        tab.isDirty = true;
-                        this._renderTabs();
-                        // 保存标签页状态（编辑时转为固定标签页）
-                        this._saveTabsState();
-                    }
-                }
-            });
-
-            // 如果是预览tab，先关闭之前的预览tab
-            if (isPreview && this.previewTabId && this.previewTabId !== tabId) {
-                const prevPreviewTab = this.tabs.find(t => t.id === this.previewTabId);
-                if (prevPreviewTab && prevPreviewTab.isPreview && !prevPreviewTab.isDirty) {
-                    const prevIndex = this.tabs.findIndex(t => t.id === this.previewTabId);
-                    if (prevIndex !== -1) {
-                        prevPreviewTab.model.dispose();
-                        this.tabs.splice(prevIndex, 1);
-                    }
-                }
-                this.previewTabId = null;
-            }
-
-            const newTab = {
-                id: tabId,
-                name: fileName,
-                handle: fileHandle,
-                model: model,
-                viewState: null,
-                isDirty: false,
-                isLargeFile: isLargeFile,
-                isPreview: isPreview
-            };
-            this.tabs.push(newTab);
-
-            if (isPreview) {
-                this.previewTabId = tabId;
-            }
-
+            await this._createTab(fileHandle, tabId, isPreview);
             this.switchTab(tabId);
-            
+
             // 保存标签页状态
             await this._saveTabsState();
         } catch (error) {
-            if (window.notify) {
-                window.notify.alert(`Failed to open file ${fileName}: ${error.message}`, { type: 'error' });
-            }
+            window.notify?.alert(t('error.openFile', fileHandle.name, error.message), { type: 'error' });
         }
     }
-    
+
     /**
-     * 分块加载大文件
+     * 创建标签页。没有句柄时表示尚未写入磁盘的新文件
      * @private
-     * @param {File} file - 文件对象
-     * @returns {Promise<string>} 文件内容
+     * @param {FileSystemFileHandle|null} fileHandle - 文件句柄
+     * @param {string} tabId - 标签页 ID，即文件路径
+     * @param {boolean} isPreview - 是否为预览标签页
+     * @returns {Promise<Object>} 标签页
      */
-    async _loadLargeFile(file) {
-        const chunkSize = FS_CONSTANTS.LARGE_FILE_CHUNK_SIZE;
-        const chunks = [];
-        let offset = 0;
-        
-        while (offset < file.size) {
-            const chunk = await file.slice(offset, offset + chunkSize).text();
-            chunks.push(chunk);
-            offset += chunkSize;
-            
-            // Yield to prevent blocking
-            if (offset % (chunkSize * 10) === 0) {
-                await new Promise(resolve => setTimeout(resolve, 0));
+    async _createTab(fileHandle, tabId, isPreview) {
+        const name = tabId.split('/').pop();
+        let decoded = { text: '', bom: false, editable: true };
+        let isLargeFile = false;
+        if (fileHandle) {
+            const file = await fileHandle.getFile();
+            isLargeFile = file.size > FS_CONSTANTS.LARGE_FILE_THRESHOLD;
+            decoded = decodeBytes(await file.arrayBuffer());
+            if (!decoded.editable) {
+                window.notify?.alert(t('notice.readOnly', name), { type: 'warning' });
             }
         }
-        
-        return chunks.join('');
-    }
 
+        const model = monaco.editor.createModel(decoded.text, EditorManager.getLanguage(name));
 
-    switchTab(tabId) {
-        // 关闭之前的预览tab（如果存在且不是当前要切换到的tab）
-        if (this.previewTabId && this.previewTabId !== tabId) {
-            const previewTab = this.tabs.find(t => t.id === this.previewTabId);
-            if (previewTab && previewTab.isPreview && !previewTab.isDirty) {
-                // 预览tab未被编辑，可以安全关闭
-                const previewIndex = this.tabs.findIndex(t => t.id === this.previewTabId);
-                if (previewIndex !== -1) {
-                    previewTab.model.dispose();
-                    this.tabs.splice(previewIndex, 1);
+        // 如果是预览tab，先关闭之前的预览tab
+        if (isPreview && this.previewTabId && this.previewTabId !== tabId) {
+            this._closePreviewTab();
+        }
+
+        const tab = {
+            id: tabId,
+            name,
+            handle: fileHandle,
+            model,
+            baseModel: null,
+            /** 磁盘上的内容（LF 换行），diff 的基准 */
+            original: model.getValue(monaco.editor.EndOfLinePreference.LF),
+            savedVersion: model.getAlternativeVersionId(),
+            viewState: null,
+            bom: decoded.bom,
+            readOnly: !decoded.editable,
+            isDirty: !fileHandle,
+            isNew: !fileHandle,
+            showDiff: false,
+            isLargeFile,
+            isPreview
+        };
+        this.tabs.push(tab);
+        if (isPreview) this.previewTabId = tabId;
+
+        model.onDidChangeContent(() => {
+            // 如果编辑了预览tab，将其转为固定tab
+            if (tab.isPreview) {
+                tab.isPreview = false;
+                if (this.previewTabId === tabId) {
+                    this.previewTabId = null;
                 }
             }
-            this.previewTabId = null;
+            this._refreshDirty(tab);
+            this._notifyChanges();
+        });
+
+        this._notifyEmpty();
+        return tab;
+    }
+
+    /**
+     * 重新计算标签页是否有未写入的改动
+     * @private
+     */
+    _refreshDirty(tab) {
+        const wasDirty = tab.isDirty;
+        if (tab.isNew) {
+            tab.isDirty = true;
+        } else if (tab.model.getAlternativeVersionId() === tab.savedVersion) {
+            tab.isDirty = false;
+        } else {
+            tab.isDirty = tab.isLargeFile || this._modelText(tab) !== tab.original;
+        }
+        if (wasDirty !== tab.isDirty) {
+            this._renderTabs();
+            this._saveTabsState();
+        }
+    }
+
+    _modelText(tab) {
+        return tab.model.getValue(monaco.editor.EndOfLinePreference.LF);
+    }
+
+    /** 改动变化后通知界面，连续输入时合并 */
+    _notifyChanges() {
+        clearTimeout(this._changesTimer);
+        this._changesTimer = setTimeout(() => this.onChangesUpdated?.(), 80);
+    }
+
+    _notifyEmpty() {
+        this.onEmptyChange?.(this.tabs.length === 0);
+    }
+
+    _disposeTab(tab) {
+        if (this.diffEditor.getModel()?.modified === tab.model) this.diffEditor.setModel(null);
+        if (this.editorInstance.getModel() === tab.model) this.editorInstance.setModel(null);
+        tab.model.dispose();
+        tab.baseModel?.dispose();
+        this.tabs.splice(this.tabs.indexOf(tab), 1);
+    }
+
+    /** 关闭未被编辑的预览标签页 */
+    _closePreviewTab() {
+        const previewTab = this._getTab(this.previewTabId);
+        if (previewTab && previewTab.isPreview && !previewTab.isDirty) {
+            this._disposeTab(previewTab);
+        }
+        this.previewTabId = null;
+    }
+
+    switchTab(tabId, { focus = true } = {}) {
+        // 关闭之前的预览tab（如果存在且不是当前要切换到的tab）
+        if (this.previewTabId && this.previewTabId !== tabId) {
+            this._closePreviewTab();
         }
 
-        if (this.currentTabId) {
-            const currentTab = this.tabs.find(t => t.id === this.currentTabId);
-            if (currentTab) {
-                currentTab.viewState = this.editorInstance.saveViewState();
-            }
+        const currentTab = this._getTab(this.currentTabId);
+        if (currentTab && !currentTab.showDiff) {
+            currentTab.viewState = this.editorInstance.saveViewState();
         }
 
-        const targetTab = this.tabs.find(t => t.id === tabId);
+        const targetTab = this._getTab(tabId);
         if (!targetTab) return;
 
-        this.showStandardMode(targetTab.model, targetTab.viewState);
-
         this.currentTabId = tabId;
+        this._present(targetTab, focus);
         this._renderTabs();
-        
+
         // 保存标签页状态
         this._saveTabsState();
     }
 
-    async closeTab(tabId) {
-        const index = this.tabs.findIndex(t => t.id === tabId);
-        if (index === -1) return;
-
-        const tabToClose = this.tabs[index];
-
-        // 如果是pending change（SR预览），直接关闭，不警告（原文件未修改）
-        // 只有真正的dirty（用户编辑）才需要警告
-        if (tabToClose.isDirty && !tabToClose.isPendingChange) {
-            if (!confirm(`${tabToClose.name} has unsaved changes. Close anyway?`)) return;
+    /**
+     * 显示标签页：有待审阅的改动时显示 diff，否则显示普通编辑器
+     * @private
+     */
+    _present(tab, focus = true) {
+        if (tab.showDiff) {
+            this.stdWrapper.classList.add('hidden');
+            this.diffWrapper.classList.remove('hidden');
+            if (!tab.baseModel) {
+                tab.baseModel = monaco.editor.createModel(tab.original, tab.model.getLanguageId());
+            }
+            this.diffEditor.setModel({ original: tab.baseModel, modified: tab.model });
+            if (focus) this.diffEditor.getModifiedEditor().focus();
+            return;
         }
 
-        // SR预览只是编辑器中的副本，关闭时直接丢弃，原文件安全
-        tabToClose.model.dispose();
+        this.diffWrapper.classList.add('hidden');
+        this.stdWrapper.classList.remove('hidden');
+        this.editorInstance.setModel(tab.model);
+        this.editorInstance.updateOptions({ readOnly: tab.readOnly });
+        if (tab.viewState) this.editorInstance.restoreViewState(tab.viewState);
+        if (focus) this.editorInstance.focus();
+    }
+
+    async closeTab(tabId, { force = false } = {}) {
+        const tabToClose = this._getTab(tabId);
+        if (!tabToClose) return;
+        const index = this.tabs.indexOf(tabToClose);
+
+        if (tabToClose.isDirty && !force && !(await window.notify.confirm(t('editor.closeConfirm', tabToClose.name)))) return;
+
+        this._disposeTab(tabToClose);
 
         // 如果关闭的是预览tab，清理引用
         if (this.previewTabId === tabId) {
             this.previewTabId = null;
         }
 
-        this.tabs.splice(index, 1);
-
         if (this.currentTabId === tabId) {
+            this.currentTabId = null;
             if (this.tabs.length > 0) {
-                const newIndex = Math.max(0, index - 1);
-                this.switchTab(this.tabs[newIndex].id);
+                this.switchTab(this.tabs[Math.max(0, index - 1)].id);
             } else {
-                this.currentTabId = null;
-                this._showWelcomePage();
+                this.stdWrapper.classList.add('hidden');
+                this.diffWrapper.classList.add('hidden');
                 this._renderTabs();
             }
         } else {
             this._renderTabs();
         }
-        
+
+        this._notifyEmpty();
+        this._notifyChanges();
+
         // 保存标签页状态
         await this._saveTabsState();
     }
 
     async saveCurrentTab() {
-        if (!this.currentTabId) return;
-
-        const tab = this.tabs.find(t => t.id === this.currentTabId);
-        if (!tab) return;
+        const tab = this._getTab(this.currentTabId);
+        if (!tab || tab.readOnly) return;
 
         try {
-            const content = tab.model.getValue();
-
-            if (this.onSaveRequest) {
-                await this.onSaveRequest(tab.handle, content);
-            }
-
-            tab.isDirty = false;
-            this._renderTabs();
-            
-            // 保存标签页状态
-            await this._saveTabsState();
-
-            const tabEl = document.querySelector(`.tab[data-id="${tab.id}"]`);
+            await this._writeTab(tab);
+            const tabEl = this.tabsContainer.querySelector(`.tab[data-id="${CSS.escape(tab.id)}"]`);
             if (tabEl) {
                 tabEl.classList.add('save-success');
                 setTimeout(() => tabEl.classList.remove('save-success'), 500);
             }
         } catch (err) {
-            if (window.notify) {
-                window.notify.alert(`Save failed or cancelled: ${err.message}`, { type: 'error' });
-            }
+            window.notify?.alert(t('error.save', err.message), { type: 'error' });
+        }
+    }
 
+    /**
+     * 把标签页内容写入磁盘，并恢复普通编辑状态
+     * @private
+     */
+    async _writeTab(tab) {
+        await this.fileManager.writeFile(tab.id, `${tab.bom ? '﻿' : ''}${tab.model.getValue()}`);
+        tab.handle ||= await this.fileManager.getFileHandleByPath(tab.id);
+        tab.isNew = false;
+        tab.showDiff = false;
+        this._setBase(tab, this._modelText(tab));
+        tab.savedVersion = tab.model.getAlternativeVersionId();
+        this._refreshDirty(tab);
+        this._renderTabs();
+        if (this.currentTabId === tab.id) this._present(tab, false);
+        this._notifyChanges();
+    }
+
+    /**
+     * 更新 diff 基准
+     * @private
+     */
+    _setBase(tab, text) {
+        tab.original = text;
+        tab.savedVersion = null;
+        tab.baseModel?.setValue(text);
+    }
+
+    // ==================== Agent 改动 ====================
+
+    /**
+     * 读取已打开文件的内容
+     * @param {string} path - 文件路径
+     * @returns {string|null} 未打开或不能修改时返回 null
+     */
+    getTabText(path) {
+        const tab = this._getTab(path);
+        return tab && !tab.readOnly ? this._modelText(tab) : null;
+    }
+
+    /**
+     * 列出未写入的改动
+     * @returns {Array<{path: string, name: string, base: string, text: string, isNew: boolean}>}
+     */
+    getChanges() {
+        return this.tabs.filter(tab => tab.isDirty).map(tab => ({
+            path: tab.id,
+            name: tab.name,
+            base: tab.original,
+            text: this._modelText(tab),
+            isNew: tab.isNew
+        }));
+    }
+
+    /**
+     * 把新内容放进编辑器缓冲区，显示为待审阅的改动，不写入磁盘
+     * @param {string} path - 文件路径
+     * @param {string} text - 新内容（LF 换行）
+     * @param {Object} options - 选项
+     * @param {boolean} options.reveal - 是否切换到这个文件，不抢占输入焦点
+     */
+    async stageText(path, text, { reveal = true } = {}) {
+        let tab = this._getTab(path);
+        if (!tab) {
+            const handle = await this.fileManager.getFileHandleByPath(path).catch(() => null);
+            tab = await this._createTab(handle, path, false);
+        }
+
+        this._replaceText(tab, text);
+        // 新文件全部是新增内容，直接显示文件本身
+        tab.showDiff = !tab.isNew && this._modelText(tab) !== tab.original;
+        this._refreshDirty(tab);
+
+        if (reveal) this.switchTab(path, { focus: false });
+        else if (this.currentTabId === path) this._present(tab, false);
+        else this._renderTabs();
+        this._notifyChanges();
+    }
+
+    /**
+     * 只替换变化的部分，保留编辑器的撤销记录
+     * @private
+     */
+    _replaceText(tab, text) {
+        const before = this._modelText(tab);
+        if (before === text) return;
+
+        let start = 0;
+        let endBefore = before.length;
+        let endAfter = text.length;
+        while (start < endBefore && start < endAfter && before[start] === text[start]) start++;
+        while (endBefore > start && endAfter > start && before[endBefore - 1] === text[endAfter - 1]) {
+            endBefore--;
+            endAfter--;
+        }
+
+        const range = monaco.Range.fromPositions(positionAt(before, start), positionAt(before, endBefore));
+        tab.model.pushStackElement();
+        tab.model.pushEditOperations(null, [{ range, text: text.slice(start, endAfter) }], () => null);
+        tab.model.pushStackElement();
+    }
+
+    /**
+     * 显示某个文件的改动
+     * @param {string} path - 文件路径
+     * @param {Object} options - 选项
+     * @param {boolean} options.focus - 是否把输入焦点移到编辑器
+     */
+    showChange(path, { focus = true } = {}) {
+        const tab = this._getTab(path);
+        if (!tab) return;
+        tab.showDiff = !tab.isNew;
+        this.switchTab(path, { focus });
+    }
+
+    /**
+     * 放弃某个文件的改动
+     * @param {string} path - 文件路径
+     */
+    async discardChange(path) {
+        const tab = this._getTab(path);
+        if (!tab) return;
+        if (tab.isNew) {
+            await this.closeTab(path, { force: true });
+            return;
+        }
+        this._replaceText(tab, tab.original);
+        tab.showDiff = false;
+        this._refreshDirty(tab);
+        if (this.currentTabId === path) this._present(tab, false);
+        this._notifyChanges();
+    }
+
+    /**
+     * 把所有改动写入磁盘。写入前检查磁盘内容，避免覆盖其他程序的修改
+     * @param {Object} options - 选项
+     * @param {boolean} options.force - 忽略冲突
+     * @returns {Promise<{conflicts?: string[], applied?: Array}>}
+     */
+    async applyChanges({ force = false } = {}) {
+        const tabs = this.tabs.filter(tab => tab.isDirty);
+
+        if (!force) {
+            const conflicts = [];
+            for (const tab of tabs) {
+                const disk = await this.fileManager.readText(tab.id);
+                const changed = tab.isNew ? disk !== null : disk?.text !== tab.original;
+                if (changed) conflicts.push(tab.id);
+            }
+            if (conflicts.length > 0) return { conflicts };
+        }
+
+        const applied = [];
+        try {
+            for (const tab of tabs) {
+                const before = await this.fileManager.readBytes(tab.id);
+                const after = this._modelText(tab);
+                await this._writeTab(tab);
+                applied.push({ path: tab.id, before, after });
+            }
+        } catch (error) {
+            await this.undoApply(applied);
+            throw error;
+        }
+        return { applied };
+    }
+
+    /**
+     * 撤销一次写入：恢复磁盘内容，改动回到待写入状态
+     * @param {Array<{path: string, before: ArrayBuffer|null, after: string}>} applied - 写入记录
+     */
+    async undoApply(applied) {
+        for (const { path, before, after } of [...applied].reverse()) {
+            const tab = this._getTab(path);
+            if (before === null) {
+                await this.fileManager.deleteFile(path);
+                if (tab) {
+                    tab.handle = null;
+                    tab.isNew = true;
+                    this._setBase(tab, '');
+                }
+            } else {
+                await this.fileManager.writeFile(path, before);
+                if (tab) this._setBase(tab, decodeBytes(before).text.replace(/\r\n/g, '\n'));
+            }
+            await this.stageText(path, after, { reveal: false });
         }
     }
 
     _renderTabs() {
-        this.tabsContainer.innerHTML = '';
+        this.tabsContainer.replaceChildren();
 
         this.tabs.forEach(tab => {
             const tabEl = document.createElement('div');
-            let className = 'tab';
-            // Pending change tabs don't show dirty indicator (they're preview copies)
-            if (tab.isDirty && !tab.isPendingChange) {
-                className += ' is-dirty';
-            }
-            if (tab.isPendingChange) {
-                className += ' is-pending-change';
-            }
-            tabEl.className = className;
-            tabEl.setAttribute('data-id', tab.id);
+            tabEl.className = `tab${tab.isDirty ? ' is-dirty' : ''}${tab.id === this.currentTabId ? ' is-active' : ''}${tab.isPreview ? ' is-preview' : ''}`;
+            tabEl.dataset.id = tab.id;
+            tabEl.title = tab.id;
+            tabEl.role = 'tab';
+            tabEl.setAttribute('aria-selected', String(tab.id === this.currentTabId));
 
-            tabEl.innerHTML = `
-                <div class="tab-name">${tab.name}</div>
-                <div class="tab-actions">
-                    <div class="dirty-dot"></div>
-                    <div class="pending-indicator"></div>
-                    <button type="button" class="btn btn-close close-icon">
-                        <i class="codicon codicon-close"></i>
-                    </button>
-                </div>
-            `;
+            const nameEl = document.createElement('div');
+            nameEl.className = 'tab-name';
+            nameEl.textContent = tab.name;
 
-            tabEl.addEventListener('click', () => this.switchTab(tab.id));
+            const actions = document.createElement('div');
+            actions.className = 'tab-actions';
+            const dot = document.createElement('div');
+            dot.className = 'dirty-dot';
+            const closeBtn = document.createElement('button');
+            closeBtn.type = 'button';
+            closeBtn.className = 'btn btn-close close-icon';
+            closeBtn.setAttribute('aria-label', t('settings.close'));
+            closeBtn.innerHTML = '<i class="codicon codicon-close"></i>';
+            actions.append(dot, closeBtn);
+            tabEl.append(nameEl, actions);
 
-            const closeBtn = tabEl.querySelector('.close-icon');
+            tabEl.addEventListener('click', () => {
+                this.onUserNavigate?.();
+                this.switchTab(tab.id);
+            });
+            tabEl.addEventListener('dblclick', () => this.convertPreviewToFixed(tab.id));
+
             closeBtn.addEventListener('click', async (e) => {
                 e.stopPropagation();
                 await this.closeTab(tab.id);
@@ -612,35 +750,39 @@ Tips:
 
             this.tabsContainer.appendChild(tabEl);
         });
+
+        this._revealActiveTab();
+    }
+
+    /** 让当前标签页在标签栏内可见，只滚动标签栏 */
+    _revealActiveTab() {
+        const active = this.tabsContainer.querySelector('.tab.is-active');
+        if (!active) return;
+        const bar = this.tabsContainer;
+        const left = active.offsetLeft - bar.offsetLeft;
+        if (left < bar.scrollLeft) {
+            bar.scrollLeft = left;
+        } else if (left + active.offsetWidth > bar.scrollLeft + bar.clientWidth) {
+            bar.scrollLeft = left + active.offsetWidth - bar.clientWidth;
+        }
     }
 
     layout() {
-        if (this.editorInstance) this.editorInstance.layout();
+        this.editorInstance?.layout();
+        this.diffEditor?.layout();
     }
 
-    showStandardMode(model, viewState = null) {
-        this.stdWrapper.classList.remove('hidden');
-
-        this.editorInstance.setModel(model);
-        // 如果是欢迎页面，设置为只读；否则设置为可编辑
-        const isWelcomePage = model === this.welcomeModel;
-        this.editorInstance.updateOptions({ readOnly: isWelcomePage });
-        
-        if (viewState) {
-            this.editorInstance.restoreViewState(viewState);
-        }
-        this.editorInstance.focus();
-    }
-
+    /** 关闭所有标签页，用于切换文件夹 */
     async reset(clearStoredState = true) {
         // 在重置过程中禁用状态保存，避免覆盖存储的状态
         const wasRestoring = this._isRestoringTabs;
         this._isRestoringTabs = true;
-        
+
         try {
-            // Close all tabs and clean up
-            await Promise.all([...this.tabs].map(t => this.closeTab(t.id)));
-            
+            for (const tab of [...this.tabs]) {
+                await this.closeTab(tab.id, { force: true });
+            }
+
             // 清除标签页状态（仅在明确要求时清除，恢复文件夹时不应清除）
             if (clearStoredState && this.store) {
                 await this.store.clearTabsState();
@@ -648,11 +790,6 @@ Tips:
         } finally {
             // 恢复之前的状态保存标志
             this._isRestoringTabs = wasRestoring;
-        }
-        
-        // Force garbage collection hint (if available)
-        if (window.gc) {
-            window.gc();
         }
     }
 
@@ -662,7 +799,7 @@ Tips:
      */
     async _saveTabsState() {
         if (!this.store || this._isRestoringTabs) return;
-        
+
         try {
             await this.store.saveTabsState({
                 tabs: this.tabs,
@@ -670,9 +807,7 @@ Tips:
                 previewTabId: this.previewTabId
             });
         } catch (err) {
-            if (window.notify) {
-                window.notify.alert(`Failed to save tabs state: ${err.message}`, { type: 'warning', duration: 3000 });
-            }
+            window.notify?.alert(t('error.generic', err.message), { type: 'warning', duration: 3000 });
         }
     }
 
@@ -682,7 +817,7 @@ Tips:
      */
     async restoreTabsState() {
         if (!this.store || !this.fileManager) return;
-        
+
         try {
             this._isRestoringTabs = true;
             const tabsState = await this.store.restoreTabsState();
@@ -697,43 +832,27 @@ Tips:
 
             // 恢复所有标签页
             for (const tabData of tabsState.tabs) {
-                try {
-                    // 检查是否已存在（避免重复打开）
-                    if (this.tabs.find(t => t.id === tabData.id)) continue;
-                    
-                    const fileHandle = await this.fileManager.getFileHandleByPath(tabData.id);
-                    if (fileHandle) {
-                        await this.openFile(fileHandle, tabData.id, tabData.isPreview || false);
-                    }
-                } catch (err) {
-                    if (window.notify) {
-                        window.notify.alert(`Failed to restore tab ${tabData.id}: ${err.message}`, { type: 'warning', duration: 3000 });
-                    }
+                // 文件可能已被删除或移动，跳过即可
+                const fileHandle = await this.fileManager.getFileHandleByPath(tabData.id).catch(() => null);
+                if (fileHandle && !this._getTab(tabData.id)) {
+                    await this.openFile(fileHandle, tabData.id, tabData.isPreview || false);
                 }
             }
 
             // 恢复当前活动的标签页
-            if (tabsState.currentTabId) {
-                const targetTab = this.tabs.find(t => t.id === tabsState.currentTabId);
-                if (targetTab) {
-                    this.switchTab(tabsState.currentTabId);
-                }
+            if (tabsState.currentTabId && this._getTab(tabsState.currentTabId)) {
+                this.switchTab(tabsState.currentTabId);
             }
 
             // 恢复预览标签页ID（应该在恢复所有标签页后设置）
-            if (tabsState.previewTabId) {
-                const previewTab = this.tabs.find(t => t.id === tabsState.previewTabId);
-                if (previewTab) {
-                    this.previewTabId = tabsState.previewTabId;
-                }
+            if (tabsState.previewTabId && this._getTab(tabsState.previewTabId)) {
+                this.previewTabId = tabsState.previewTabId;
             }
-            
+
             // 恢复完成后，重新渲染标签页以确保状态正确
             this._renderTabs();
         } catch (err) {
-            if (window.notify) {
-                window.notify.alert(`Failed to restore tabs state: ${err.message}`, { type: 'warning', duration: 3000 });
-            }
+            window.notify?.alert(t('error.generic', err.message), { type: 'warning', duration: 3000 });
         } finally {
             this._isRestoringTabs = false;
             // 恢复完成后保存最终状态
@@ -757,4 +876,3 @@ Tips:
         return map[ext] || 'plaintext';
     }
 }
-

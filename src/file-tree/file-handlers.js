@@ -1,9 +1,11 @@
 /**
  * @fileoverview 文件操作业务逻辑处理器
- * @description 处理文件相关的所有业务逻辑，包括打开文件夹、生成仓库地图、文件审查、接受/拒绝变更等
- * 
+ * @description 处理打开文件夹、恢复访问、刷新文件树
+ *
  * @module FileHandlers
  */
+
+import { t } from '../global/i18n.js';
 
 /**
  * 文件操作业务逻辑处理器
@@ -15,7 +17,6 @@ export class FileHandlers {
      * @param {Object} context - 上下文对象，包含所有需要的依赖
      * @param {Object} context.file - 文件管理器实例
      * @param {Object} context.editor - 编辑器管理器实例
-     * @param {Object} context.chatUI - 聊天 UI 实例
      * @param {Object} context.fileTreeUI - 文件树 UI 实例
      */
     constructor(context) {
@@ -23,72 +24,98 @@ export class FileHandlers {
     }
 
     /**
+     * 切换文件夹前确认未写入的改动
+     * @private
+     * @returns {Promise<boolean>} 是否继续
+     */
+    async _confirmSwitch() {
+        return this.context.editor.getChanges().length === 0 || window.notify.confirm(t('changes.switchFolder'));
+    }
+
+    /**
      * 处理打开文件夹
-     * @returns {Promise<void>}
+     * @returns {Promise<boolean>} 是否打开了文件夹
      */
     async handleOpenFolder() {
-        const { file, editor, chatUI, fileTreeUI } = this.context;
-        
-        window.notify?.alert("Waiting for folder selection...", { type: 'info' });
+        if (!('showDirectoryPicker' in window)) {
+            window.notify?.alert(t('error.unsupported'), { type: 'error', duration: 6000 });
+            return false;
+        }
+        if (!(await this._confirmSwitch())) return false;
 
         try {
-            const rootHandle = await file.openDirectoryHandle();
-
-            if (!rootHandle) {
-                window.notify?.alert("Folder selection cancelled.", { type: 'info' });
-                return;
-            }
-
-            await chatUI.runTask(
-                'Scanning project structure...',
-                async () => {
-                    await editor.reset();
-                    const treeData = await file.buildFileTree(rootHandle);
-                    fileTreeUI.renderFileTree(rootHandle.name, treeData);
-                    fileTreeUI.setFileTreeVisible(true);
-                },
-                `Project "${rootHandle.name}" loaded successfully.`
-            );
-
-        } catch (e) {
-            if (e.name === 'AbortError') {
-                return;
-            }
-            if (window.notify) {
-                window.notify.alert(`Open folder error: ${e.message}`, { type: 'error' });
-            }
-            const message = `Failed to open folder.\n${e.message || 'Please try again.'}`;
-            window.notify?.alert(message, { type: 'error', duration: 5000 });
+            const rootHandle = await this.context.file.openDirectoryHandle();
+            if (!rootHandle) return false;
+            await this._load(rootHandle);
+            return true;
+        } catch (error) {
+            window.notify?.alert(t('error.generic', error.message), { type: 'error', duration: 5000 });
+            return false;
         }
     }
 
     /**
-     * 处理显示仓库地图
-     * @returns {Promise<void>}
+     * 打开拖入的文件夹
+     * @param {FileSystemDirectoryHandle} handle - 文件夹句柄
+     * @returns {Promise<boolean>} 是否打开了文件夹
      */
-    async handleShowMap() {
-        const { file, chatUI, editor } = this.context;
-        
-        if (!file.hasRoot()) {
-            window.notify?.alert("Please open a folder first.", { type: 'error', duration: 5000 });
-            return;
-        }
-
+    async handleDroppedFolder(handle) {
+        if (!(await this._confirmSwitch())) return false;
         try {
-            await chatUI.runTask(
-                'Generating Repository Map...',
-                async () => {
-                    const mapContent = await file.getRepoMap();
-                    await file.writeFile('repo-map.txt', mapContent);
-                },
-                'Repository map saved to repo-map.txt'
-            );
-        } catch (e) {
-            // Error already shown by runTask
-            if (window.notify) {
-                window.notify.alert(`Repo map generation error: ${e.message}`, { type: 'error' });
-            }
+            if (!(await this.context.file.useDirectory(handle))) return false;
+            await this._load(handle);
+            return true;
+        } catch (error) {
+            window.notify?.alert(t('error.generic', error.message), { type: 'error', duration: 5000 });
+            return false;
         }
     }
 
+    /**
+     * 恢复上次打开的文件夹，需要用户点击后调用
+     * @returns {Promise<boolean>} 是否恢复成功
+     */
+    async handleResumeFolder() {
+        const { file, editor } = this.context;
+        const handle = file.pendingHandle;
+        if (!handle) return false;
+
+        try {
+            if (!(await file.useDirectory(handle))) return false;
+            await this.refreshTree();
+            this.context.fileTreeUI.setFileTreeVisible(true);
+            await editor.restoreTabsState();
+            return true;
+        } catch (error) {
+            // 文件夹可能已被删除或移动
+            file.pendingHandle = null;
+            await file.store?.clearDirectoryHandle();
+            this.context.fileTreeUI.renderEmpty();
+            window.notify?.alert(t('error.generic', error.message), { type: 'warning' });
+            return false;
+        }
+    }
+
+    /**
+     * 显示已打开的文件夹
+     * @private
+     */
+    async _load(rootHandle) {
+        await this.context.editor.reset();
+        this.context.fileTreeUI.clearExpanded();
+        await this.refreshTree();
+        this.context.fileTreeUI.setFileTreeVisible(true);
+        document.getElementById('chat-panel').classList.remove('collapsed');
+        window.notify?.alert(t('folder.loaded', rootHandle.name), { type: 'success' });
+    }
+
+    /**
+     * 重新读取文件树，保留展开状态
+     */
+    async refreshTree() {
+        const { file, fileTreeUI } = this.context;
+        const rootHandle = file.getRootHandle();
+        if (!rootHandle) return;
+        fileTreeUI.renderFileTree(rootHandle.name, await file.buildFileTree(rootHandle));
+    }
 }
