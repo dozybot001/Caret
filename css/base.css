@@ -264,7 +264,7 @@ body {
     color: var(--text-3);
 }
 
-/* 产品标志：字标加右上角 Tenon 标识 */
+/* 完整标志：产品图形、字标和右上角 Tenon 标识 */
 .product-logo {
     display: inline-flex;
     align-items: flex-start;
@@ -274,6 +274,14 @@ body {
     letter-spacing: 0.025em;
     line-height: 1;
     white-space: nowrap;
+}
+
+.product-logo-icon {
+    width: 1em;
+    height: 1em;
+    flex: 0 0 auto;
+    align-self: center;
+    margin-right: calc(0.3em - max(4px, 0.18em));
 }
 
 .product-logo-mark {
