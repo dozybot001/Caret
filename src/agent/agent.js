@@ -5,7 +5,7 @@
  */
 
 import { AGENT_CONSTANTS } from '../global/constants.js';
-import { requestCompletion } from './model.js';
+import { isContextError, requestCompletion } from './model.js';
 import { executeTool } from './tools.js';
 
 const SYSTEM_PROMPT = `You are Caret, a small coding agent in a web page. You change files in the user's local project with three tools: read, write and edit. You cannot run commands, tests or builds.
@@ -23,6 +23,9 @@ Your changes stay in the editor until the user reviews the diff and applies them
  */
 const memoryRule = name => `- When the user states a lasting rule for this project, add one short line to ${name}. Record only what the user said.`;
 
+/** 清理后留在工具结果里的文字 */
+const CLEARED_OUTPUT = '[Output removed to save space. Read the file again if you need it.]';
+
 /** 项目说明文件，按顺序取第一个存在的 */
 const PROJECT_RULES = ['AGENTS.md', 'CLAUDE.md'];
 
@@ -37,7 +40,7 @@ export class Agent {
     /**
      * @param {Object} workspace - 工作区
      * @param {Function} getConnection - 返回当前模型连接
-     * @param {Object} events - 过程回调：onThinking、onToolCall、onText、onStepStart、onStepEnd
+     * @param {Object} events - 过程回调：onThinking、onToolCall、onText、onStepStart、onStepEnd、onCompact
      */
     constructor(workspace, getConnection, events) {
         this.workspace = workspace;
@@ -50,6 +53,11 @@ export class Agent {
 
     get running() {
         return this.controller !== null;
+    }
+
+    /** @returns {number} 上下文占压缩线的比例，0 到 99 */
+    get contextUsage() {
+        return Math.min(99, Math.floor(this._contextTokens() / AGENT_CONSTANTS.CONTEXT_TOKENS * 100));
     }
 
     /** 开始新任务，清空上下文 */
@@ -141,7 +149,45 @@ export class Agent {
         return `${SYSTEM_PROMPT}\n${memoryRule(name)}\n\nProject: ${workspace.name}${rules}`;
     }
 
-    _nextMessage(system, signal) {
+    _contextTokens() {
+        return JSON.stringify(this.messages).length / AGENT_CONSTANTS.CHARS_PER_TOKEN;
+    }
+
+    /**
+     * 清理较早的工具结果。这些内容都能重新读取，所以不丢失项目状态，也不用让模型写摘要
+     * @private
+     * @returns {boolean} 是否清理了内容
+     */
+    _compact() {
+        let kept = 0;
+        let isCleared = false;
+        for (const message of [...this.messages].reverse()) {
+            if (message.role !== 'tool' || message.content.length <= CLEARED_OUTPUT.length) continue;
+            kept += message.content.length;
+            if (kept > AGENT_CONSTANTS.CONTEXT_KEEP_CHARS) {
+                message.content = CLEARED_OUTPUT;
+                isCleared = true;
+            }
+        }
+        if (isCleared) this.events.onCompact?.();
+        return isCleared;
+    }
+
+    /**
+     * 请求下一条消息。上下文到压缩线时先清理；上限比压缩线还小的模型会报错，这时清理后再试一次
+     * @private
+     */
+    async _nextMessage(system, signal) {
+        if (this._contextTokens() >= AGENT_CONSTANTS.CONTEXT_TOKENS) this._compact();
+        try {
+            return await this._request(system, signal);
+        } catch (error) {
+            if (!isContextError(error) || !this._compact()) throw error;
+            return this._request(system, signal);
+        }
+    }
+
+    _request(system, signal) {
         const messages = [{ role: 'system', content: system }, ...this.messages];
         this.events.onThinking?.();
         return requestCompletion(this.getConnection(), messages, signal, {

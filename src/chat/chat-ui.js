@@ -37,11 +37,14 @@ export class ChatUI {
      * @param {HTMLElement} chatPanel - 对话面板容器
      * @param {HTMLElement} chatMessagesContainer - 消息容器
      * @param {HTMLElement} chatInput - 输入框
+     * @param {HTMLElement} contextRing - 上下文用量小圈
      */
-    constructor(chatPanel, chatMessagesContainer, chatInput) {
+    constructor(chatPanel, chatMessagesContainer, chatInput, contextRing) {
         this.chatPanel = chatPanel;
         this.chatMessagesContainer = chatMessagesContainer;
         this.chatInput = chatInput;
+        this.contextRing = contextRing;
+        this.contextUsage = 0;
         this.onFileClick = null; // 点击改动步骤时调用 (filePath) => void
 
         this.rows = [];
@@ -71,9 +74,11 @@ export class ChatUI {
         onLanguageChange(() => {
             this.rows.forEach(row => this._draw(row));
             this.setStatus(this.status);
+            this.setContextUsage(this.contextUsage);
             this.updatePlaceholder();
         });
         this.updatePlaceholder();
+        this.setContextUsage(0);
     }
 
     /** 根据对话状态更新输入提示 */
@@ -331,6 +336,20 @@ export class ChatUI {
         this.statusRow.classList.toggle('hidden', !key);
         this.statusRow.textContent = key ? t(key) : '';
         this._follow();
+    }
+
+    /**
+     * 显示上下文用量
+     * @param {number} percent - 已用比例，0 到 99
+     */
+    setContextUsage(percent) {
+        const { contextRing } = this;
+        this.contextUsage = percent;
+        const label = t('chat.context', percent);
+        contextRing.title = label;
+        contextRing.setAttribute('aria-label', label);
+        contextRing.querySelector('span').textContent = String(percent).padStart(2, '0');
+        contextRing.querySelector('.context-arc').style.strokeDasharray = `${percent} 100`;
     }
 
     /**

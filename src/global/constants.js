@@ -79,7 +79,13 @@ export const AGENT_CONSTANTS = {
     /** 目录概览的最大行数 */
     OUTLINE_LINES: 300,
     /** 项目说明文件保留的字符数 */
-    RULES_CHARS: 8000
+    RULES_CHARS: 8000,
+    /** 上下文到这个 token 数时清理较早的工具结果 */
+    CONTEXT_TOKENS: 100000,
+    /** 按字符数估算 token，这样不依赖各家接口返回的用量 */
+    CHARS_PER_TOKEN: 4,
+    /** 清理时保留的最近工具结果字符数，不小于 READ_CHARS */
+    CONTEXT_KEEP_CHARS: 60000
 };
 
 /**
@@ -109,4 +115,4 @@ export const PROVIDERS = {
 };
 
 /** 当前版本 */
-export const VERSION = '0.5.0';
+export const VERSION = '0.6.0';

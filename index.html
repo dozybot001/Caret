@@ -110,9 +110,18 @@
                 <textarea id="chat-input" rows="2"></textarea>
                 <div class="chat-input-foot">
                     <button type="button" id="btn-model" class="chat-chip" aria-haspopup="listbox"><i class="codicon codicon-plug"></i><span></span><i class="codicon codicon-chevron-up"></i></button>
-                    <button type="submit" id="btn-send-chat" class="btn">
-                        <i class="codicon codicon-arrow-up"></i>
-                    </button>
+                    <div class="chat-input-actions">
+                        <button type="button" id="context-ring">
+                            <svg viewBox="0 0 26 26" aria-hidden="true">
+                                <circle class="context-track" cx="13" cy="13" r="12" pathLength="100"></circle>
+                                <circle class="context-arc" cx="13" cy="13" r="12" pathLength="100"></circle>
+                            </svg>
+                            <span></span>
+                        </button>
+                        <button type="submit" id="btn-send-chat" class="btn">
+                            <i class="codicon codicon-arrow-up"></i>
+                        </button>
+                    </div>
                 </div>
             </form>
         </aside>
@@ -186,6 +195,7 @@
                     </div>
                 </div>
 
+                <button type="button" class="settings-link" data-go="context"><span data-i18n="context.title"></span><i class="codicon codicon-chevron-right"></i></button>
                 <button type="button" class="settings-link" data-go="about"><span data-i18n="settings.about"></span><i class="codicon codicon-chevron-right"></i></button>
             </section>
 
@@ -208,14 +218,18 @@
                 <p class="filing"><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">湘ICP备2026031578号-1</a><a href="https://beian.mps.gov.cn/#/query/webSearch?code=43132202001134" target="_blank" rel="noopener noreferrer">湘公网安备43132202001134号</a></p>
             </section>
 
+            <section data-page="context" class="hidden">
+                <div class="article-body"></div>
+            </section>
+
             <section data-page="privacy" class="hidden">
                 <p class="legal-meta" data-i18n="legal.meta"></p>
-                <div class="legal-body"></div>
+                <div class="article-body"></div>
             </section>
 
             <section data-page="terms" class="hidden">
                 <p class="legal-meta" data-i18n="legal.meta"></p>
-                <div class="legal-body"></div>
+                <div class="article-body"></div>
             </section>
         </div>
 

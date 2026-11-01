@@ -425,12 +425,16 @@
     font-size: 12px;
 }
 
-.legal-body h3 {
+.article-body h3 {
     margin: 16px 0 4px;
     font-size: 13px;
     font-weight: 600;
 }
 
-.legal-body p {
+[data-page="context"] h3:first-child {
+    margin-top: 0;
+}
+
+.article-body p {
     color: var(--text-2);
 }

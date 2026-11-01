@@ -569,6 +569,50 @@
     display: none;
 }
 
+.chat-input-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+/* 上下文用量：圈内是已用比例，到 100 时自动压缩 */
+#context-ring {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text-4);
+    font: inherit;
+    font-size: 10px;
+    cursor: pointer;
+}
+
+#context-ring:hover {
+    color: var(--text-1);
+}
+
+#context-ring svg {
+    position: absolute;
+    inset: 0;
+    fill: none;
+    stroke-width: 2;
+    transform: rotate(-90deg);
+}
+
+.context-track {
+    stroke: var(--bg-5);
+}
+
+.context-arc {
+    stroke: currentColor;
+}
+
 #btn-send-chat {
     width: 32px;
     height: 32px;

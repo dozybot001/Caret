@@ -4,7 +4,7 @@
  */
 
 import { PROVIDERS, VERSION } from '../global/constants.js';
-import { changeLanguage, getLanguage, legalText, onLanguageChange, t } from '../global/i18n.js';
+import { articleText, changeLanguage, getLanguage, onLanguageChange, t } from '../global/i18n.js';
 import { getTheme, setTheme } from '../global/preferences.js';
 import { listModels } from '../agent/model.js';
 
@@ -85,7 +85,7 @@ export class Settings {
 
         dialog.querySelector('#settings-close').addEventListener('click', () => dialog.close());
         dialog.querySelector('#settings-done').addEventListener('click', () => dialog.close());
-        this.backButton.addEventListener('click', () => this._showPage(this.page === 'about' ? 'main' : 'about'));
+        this.backButton.addEventListener('click', () => this._showPage(['privacy', 'terms'].includes(this.page) ? 'about' : 'main'));
         dialog.addEventListener('close', () => {
             this._hideTooltip();
             this.onClose?.();
@@ -215,18 +215,18 @@ export class Settings {
         this.dialog.querySelectorAll('[data-page]').forEach(section => {
             section.classList.toggle('hidden', section.dataset.page !== page);
         });
-        const titles = { main: 'settings.title', about: 'settings.about', privacy: 'about.privacy', terms: 'about.terms' };
+        const titles = { main: 'settings.title', about: 'settings.about', context: 'context.title', privacy: 'about.privacy', terms: 'about.terms' };
         this.title.textContent = t(titles[page]);
         this.backButton.classList.toggle('hidden', page === 'main');
         this.footer.classList.toggle('hidden', page !== 'main');
-        if (page === 'privacy' || page === 'terms') this._renderLegal(page);
+        if (articleText(page)) this._renderArticle(page);
         this.dialog.querySelector('.dialog-body').scrollTop = 0;
     }
 
-    _renderLegal(page) {
-        const container = this.dialog.querySelector(`[data-page="${page}"] .legal-body`);
+    _renderArticle(page) {
+        const container = this.dialog.querySelector(`[data-page="${page}"] .article-body`);
         container.replaceChildren();
-        for (const [heading, body] of legalText(page)) {
+        for (const [heading, body] of articleText(page)) {
             const title = document.createElement('h3');
             title.textContent = heading;
             const paragraph = document.createElement('p');

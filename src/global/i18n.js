@@ -41,6 +41,8 @@ const MESSAGES = {
         'chat.stop': '停止',
         'chat.copy': '复制',
         'chat.copied': '已复制',
+        'chat.context': percent => `上下文已用 ${percent}%，点击查看说明`,
+        'chat.compacted': '已压缩上下文：清理了较早的读取内容，Agent 需要时会重新读取。',
         'chat.copyFailed': '复制失败，请手动选中文字复制。',
         'layout.resizeTree': '调整文件树宽度',
         'layout.resizeChat': '调整 Agent 面板宽度',
@@ -106,6 +108,7 @@ const MESSAGES = {
         'settings.themeDark': '深色',
         'settings.language': '语言',
         'settings.about': '关于 Caret',
+        'context.title': '上下文与压缩',
         'settings.done': '完成',
         'settings.info': '说明',
         'settings.back': '返回',
@@ -175,6 +178,8 @@ const MESSAGES = {
         'chat.stop': 'Stop',
         'chat.copy': 'Copy',
         'chat.copied': 'Copied',
+        'chat.context': percent => `Context used: ${percent}%. Click for details.`,
+        'chat.compacted': 'Context compacted. Older file contents were cleared, and the Agent reads them again when needed.',
         'chat.copyFailed': 'Could not copy. Select the text and copy it by hand.',
         'layout.resizeTree': 'Resize the file tree',
         'layout.resizeChat': 'Resize the Agent panel',
@@ -240,6 +245,7 @@ const MESSAGES = {
         'settings.themeDark': 'Dark',
         'settings.language': 'Language',
         'settings.about': 'About Caret',
+        'context.title': 'Context and compaction',
         'settings.done': 'Done',
         'settings.info': 'More information',
         'settings.back': 'Back',
@@ -276,8 +282,16 @@ const MESSAGES = {
     }
 };
 
-const LEGAL = {
+const ARTICLES = {
     zh: {
+        context: [
+            ['什么是上下文', '模型每次回复前，都要重新读一遍这段对话：你的消息、Agent 的回复、读过的文件内容和改动记录。这些内容合起来就是上下文。对话越长，每次发送的内容越多。'],
+            ['小圈的数字', '输入栏右下角的小圈显示已用比例，100% 约等于 10 万 token。这个数字按字符数估算，和模型服务的实际用量会有出入。'],
+            ['自动压缩', '到 100% 时，Caret 自动清理较早的工具结果，只保留最近的部分。这些结果主要是 Agent 读到的文件内容，文件还在项目里，需要时 Agent 会重新读取。压缩不调用模型写摘要。'],
+            ['保留什么', '你的消息、Agent 的回复和改动记录都会保留，对话界面上的内容也不变。未写入的改动留在编辑器里，不受影响。每次压缩时，对话里会出现一行说明。'],
+            ['重新开始', '点 Agent 面板右上角的 + 开始新任务，上下文从 0 算起。之前的对话留在历史记录里。'],
+            ['上限更小的模型', '如果模型的上限低于 10 万 token，超限时 Caret 会先清理再重试一次。仍然超限时，需要开始新任务。']
+        ],
         privacy: [
             ['我们不收集什么', 'Caret 没有账号，也没有应用服务器。榫卯 Tenon AI 收不到你的文件、需求、API Key 或模型回复。Caret 不使用统计或追踪工具。'],
             ['发送给模型服务的内容', '你写的需求，以及 Agent 为完成任务读取的文件内容和文件路径，会从浏览器直接发给你配置的模型服务。该服务按自己的隐私政策处理这些数据，是否出境取决于你选择的服务。.env、私钥等常见密钥文件不会被读取。'],
@@ -294,6 +308,14 @@ const LEGAL = {
         ]
     },
     en: {
+        context: [
+            ['What context is', 'Before each reply, the model reads this conversation again: your messages, the Agent\'s replies, the file contents it read and the changes it made. Together they are the context. The longer the conversation, the more is sent each time.'],
+            ['The number in the ring', 'The ring at the bottom right of the input bar shows how much is used. 100% is about 100,000 tokens. The number is estimated from the character count, so it can differ from what the model service reports.'],
+            ['Automatic compaction', 'At 100%, Caret clears older tool results and keeps only the most recent ones. These are mostly file contents the Agent read. The files are still in your project, so the Agent reads them again when needed. Compaction does not call the model to write a summary.'],
+            ['What stays', 'Your messages, the Agent\'s replies and the record of changes stay, and the conversation on screen does not change. Unapplied changes stay in the editor. A short note appears in the conversation each time compaction runs.'],
+            ['Starting over', 'Click + at the top right of the Agent panel to start a new task. Context starts from 0, and the previous conversation stays in the history.'],
+            ['Models with a smaller limit', 'If a model allows fewer than 100,000 tokens, Caret clears older results and retries once when the limit is exceeded. If that still fails, start a new task.']
+        ],
         privacy: [
             ['What we do not collect', 'Caret has no accounts and no application server. Tenon AI never receives your files, requests, API keys or model replies. Caret uses no analytics or tracking.'],
             ['What goes to the model service', 'Your requests, plus the file contents and paths the Agent reads for the task, go directly from your browser to the model service you configured. That service handles the data under its own privacy policy, and whether data leaves your country depends on the service you choose. Common secret files such as .env and private keys are not read.'],
@@ -332,7 +354,7 @@ export function t(key, ...args) {
  * @param {'privacy'|'terms'} page - 页面
  * @returns {Array<[string, string]>} 标题和正文
  */
-export const legalText = page => LEGAL[getLang()][page];
+export const articleText = page => ARTICLES[getLang()][page];
 
 /**
  * 更新页面上的静态文案

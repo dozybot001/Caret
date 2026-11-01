@@ -13,6 +13,15 @@ const NON_CHAT_MODEL = /embed|tts|whisper|audio|image|dall-e|moderation|realtime
 const RETRYABLE_STATUS = new Set([408, 429, 500, 502, 503, 504, 529]);
 const RETRY_DELAYS = [1500, 4000];
 
+/**
+ * 判断错误是否因为上下文超出了模型上限
+ * @param {{status?: number, message?: string}} error - 错误
+ * @returns {boolean}
+ */
+export function isContextError({ status, message }) {
+    return status === 413 || (status === 400 && /context|token|length|too long/i.test(message));
+}
+
 function endpoint(url, path) {
     return `${url.replace(/\/+$/, '').replace(/\/chat\/completions$/, '')}${path}`;
 }

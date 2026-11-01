@@ -14,6 +14,7 @@
  */
 
 import { Agent } from '../agent/agent.js';
+import { isContextError } from '../agent/model.js';
 import { Workspace } from '../agent/workspace.js';
 import { ChangesUI } from '../chat/changes-ui.js';
 import { ChatUI } from '../chat/chat-ui.js';
@@ -37,7 +38,7 @@ function describeError(error) {
     if (code === 'too-many-steps') return () => t('error.steps');
     if (status === 401 || status === 403) return () => t('error.auth');
     if (status === 402 || status === 429) return () => t('error.rate');
-    if (status === 400 && /context|token|length|too long/i.test(message)) return () => t('error.long');
+    if (isContextError(error)) return () => t('error.long');
     if (status) return () => t('error.http', status, message);
     if (name === 'NotAllowedError') return () => t('error.permission');
     if (name === 'TypeError') return () => t('error.network');
@@ -105,7 +106,7 @@ export class AppController {
         this.historyButton = element('btn-history');
         this.welcome = element('welcome');
 
-        this.chatUI = new ChatUI(this.chatPanel, element('chat-messages'), this.input);
+        this.chatUI = new ChatUI(this.chatPanel, element('chat-messages'), this.input, element('context-ring'));
         this.chatUI.onFileClick = path => this._openChange(path);
 
         this.fileTreeUI = new FileTreeUI(element('file-tree'), element('file-tree-panel'));
@@ -136,6 +137,7 @@ export class AppController {
         element('btn-open-folder').addEventListener('click', () => this._openFolder());
         element('btn-welcome-open').addEventListener('click', () => this._openFolder());
         element('btn-settings').addEventListener('click', () => this.settings.open());
+        element('context-ring').addEventListener('click', () => this.settings.open('context'));
         element('btn-new-task').addEventListener('click', () => this._newTask());
         this.historyButton.addEventListener('click', () => this._setHistoryVisible(!this.historyUI.isVisible));
         this.modelButton.addEventListener('click', () => this.settings.openModelSwitcher(this.modelButton));
@@ -222,7 +224,12 @@ export class AppController {
             onStepEnd: (row, result) => {
                 chatUI.finishStep(row, result);
                 chatUI.setStatus('chat.thinking');
+                this._updateContextUsage();
                 this._saveSession();
+            },
+            onCompact: () => {
+                chatUI.addNote('chat.compacted');
+                this._updateContextUsage();
             }
         });
     }
@@ -368,6 +375,7 @@ export class AppController {
             this.chatUI.addError(describe, canRetry ? () => this._run(() => this.agent.resume()) : null);
         } finally {
             this.chatUI.setStatus(null);
+            this._updateContextUsage();
             this.changesUI.setLocked(false);
             this._updateSendButton();
             this.input.focus();
@@ -455,6 +463,11 @@ export class AppController {
         this.agent.reset();
         this.chatUI.clear();
         this.settings.resetSessionModel();
+        this._updateContextUsage();
+    }
+
+    _updateContextUsage() {
+        this.chatUI.setContextUsage(this.agent.contextUsage);
     }
 
     /**
@@ -526,6 +539,7 @@ export class AppController {
         this.agent.restore(session.messages);
         this.chatUI.restore(session.timeline);
         this.settings.resetSessionModel();
+        this._updateContextUsage();
         this.historyUI.render(this.sessions, id);
         this._setHistoryVisible(false);
         this.input.focus();
