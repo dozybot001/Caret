@@ -6,7 +6,7 @@ set -euo pipefail
 SERVER=agenthub-prod
 ROOT=/opt/caret
 ORIGIN=https://caret.tenon.asia
-FILES=(404.html LICENSE index.html main.js style.css og.png .well-known css src)
+FILES=(404.html LICENSE index.html .well-known assets css src)
 SSH=(ssh -o BatchMode=yes -o ConnectTimeout=15 "$SERVER")
 
 cd "$(dirname "$0")/.."
@@ -62,7 +62,7 @@ done
 body=$(fetch "$ORIGIN/") || fail '首页不可用'
 [[ $body == *'<title>Caret</title>'* ]] || fail '首页内容不对'
 
-body=$(fetch "$ORIGIN/src/global/constants.js") || fail '脚本不可用'
+body=$(fetch "$ORIGIN/src/app/constants.js") || fail '脚本不可用'
 [[ $body == *"VERSION = '$EXPECTED'"* ]] || fail '线上版本不对'
 
 headers=$(fetch -I "$ORIGIN/") || fail '读不到响应头'
@@ -71,10 +71,10 @@ for name in strict-transport-security content-security-policy x-content-type-opt
 done
 grep -qi "frame-ancestors 'none'" <<<"$headers" || fail 'CSP 缺少 frame-ancestors'
 
-headers=$(fetch -I "$ORIGIN/main.js") || fail 'main.js 不可用'
+headers=$(fetch -I "$ORIGIN/src/main.js") || fail 'main.js 不可用'
 grep -qi '^content-type: text/javascript' <<<"$headers" || fail 'main.js 类型不对'
 [ "$(status_of css/codicons/codicon.ttf)" = 200 ] || fail '图标字体不可用'
-[ "$(status_of og.png)" = 200 ] || fail '分享图不可用'
+[ "$(status_of assets/og.png)" = 200 ] || fail '分享图不可用'
 
 body=$(fetch "$ORIGIN/.well-known/security.txt") || fail 'security.txt 不可用'
 [[ $body == *'Contact: mailto:support@tenonai.cn'* ]] || fail 'security.txt 不对'
@@ -83,7 +83,7 @@ body=$(fetch "$ORIGIN/.well-known/security.txt") || fail 'security.txt 不可用
 body=$(curl -s --retry 3 --retry-delay 2 -m 15 "$ORIGIN/not-a-page")
 [[ $body == *'Page not found'* ]] || fail '404 页面不对'
 
-for path in test.mjs deploy/release.sh README.md .git/config; do
+for path in tests/agent.test.mjs docs/design-guidelines.md deploy/release.sh README.md .git/config; do
     [ "$(status_of "$path")" = 404 ] || fail "$path 不应该被发布"
 done
 REMOTE
@@ -97,7 +97,7 @@ EOS
 }
 
 version_of() {
-    sed -n "s/^export const VERSION = '\(.*\)';$/\1/p" src/global/constants.js
+    sed -n "s/^export const VERSION = '\(.*\)';$/\1/p" src/app/constants.js
 }
 
 if [ "${1:-}" = rollback ]; then
@@ -111,7 +111,7 @@ fi
 
 [ -z "$(git status --porcelain)" ] || { echo '工作区有未提交的改动' >&2; exit 1; }
 SHA=$(git rev-parse HEAD)
-node --test test.mjs >/dev/null
+node --test >/dev/null
 
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT

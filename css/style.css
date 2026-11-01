@@ -1,0 +1,16 @@
+/* 全局样式入口 - 负责聚合主题、基础样式以及各个 UI 模块（侧边栏、编辑器、对话、设置）的 CSS 文件 */
+@import url('theme.css');
+@import url('base.css');
+
+@import url('sidebar.css');
+@import url('explorer.css');
+@import url('editor.css');
+@import url('chat.css');
+@import url('chat-history.css');
+@import url('chat-input.css');
+@import url('markdown.css');
+@import url('changes.css');
+@import url('controls.css');
+@import url('popups.css');
+@import url('settings.css');
+@import url('notification.css');

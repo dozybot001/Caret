@@ -4,7 +4,7 @@
  */
 
 import { countChanges } from '../agent/diff.js';
-import { t, onLanguageChange } from '../global/i18n.js';
+import { t, onLanguageChange } from '../i18n/index.js';
 
 /**
  * 改动列表 UI

@@ -31,7 +31,7 @@ export class Workspace {
      * @returns {string[]}
      */
     paths() {
-        const newFiles = this.editor.getChanges().filter(change => change.isNew).map(change => change.path);
+        const newFiles = this.editor.changes.list().filter(change => change.isNew).map(change => change.path);
         return [...new Set([...this.files, ...newFiles])];
     }
 
@@ -61,6 +61,6 @@ export class Workspace {
      * @param {string} text - 新内容
      */
     async setText(path, text) {
-        await this.editor.stageText(path, text, { reveal: this.follow });
+        await this.editor.changes.stage(path, text, { reveal: this.follow });
     }
 }

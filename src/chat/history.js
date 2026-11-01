@@ -3,7 +3,7 @@
  * @description 按项目保存对话，只存在这个浏览器里，隔离由浏览器用户和站点提供
  */
 
-import { HISTORY_CONSTANTS } from '../global/constants.js';
+import { HISTORY_CONSTANTS } from '../app/constants.js';
 
 const { MAX_SESSIONS, MAX_PROMPTS, TITLE_CHARS, SAVE_DELAY } = HISTORY_CONSTANTS;
 

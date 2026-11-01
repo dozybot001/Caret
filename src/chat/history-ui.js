@@ -3,7 +3,7 @@
  * @description 显示当前项目的对话，支持打开、删除和清空
  */
 
-import { getLanguage, onLanguageChange, t } from '../global/i18n.js';
+import { getLanguage, onLanguageChange, t } from '../i18n/index.js';
 
 /**
  * 历史记录列表 UI

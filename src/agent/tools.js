@@ -8,7 +8,7 @@
  * @module tools
  */
 
-import { AGENT_CONSTANTS, FS_CONSTANTS } from '../global/constants.js';
+import { AGENT_CONSTANTS, FS_CONSTANTS } from '../app/constants.js';
 
 const { READ_LINES, READ_CHARS, GREP_HITS, GREP_LINE_CHARS, OUTLINE_LINES, GREP_CONCURRENCY } = AGENT_CONSTANTS;
 

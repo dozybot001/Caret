@@ -16,11 +16,11 @@
  * @module main
  */
 
-import { EditorManager } from './src/editor/editor-manager.js';
-import { FileManager } from './src/file-tree/file-manager.js';
-import { AppController } from './src/global/app-controller.js';
-import { AppStore } from './src/global/store.js';
-import { Notify } from './src/global/notification-system.js';
+import { EditorManager } from './editor/editor-manager.js';
+import { FileManager } from './file-tree/file-manager.js';
+import { AppController } from './app/app-controller.js';
+import { AppStore } from './app/store.js';
+import { Notify } from './app/notification-system.js';
 
 // 初始化通知系统（全局单例）
 window.notify = new Notify(document.getElementById('notification-container'));

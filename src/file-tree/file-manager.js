@@ -12,7 +12,7 @@
 
 import { fetchIgnoreRules, parseIgnoreFile, isIgnored } from './ignore-manager.js';
 import { readGitStatus } from './git-status.js';
-import { FS_CONSTANTS } from '../global/constants.js';
+import { FS_CONSTANTS } from '../app/constants.js';
 
 /**
  * LRU 缓存实现

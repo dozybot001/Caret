@@ -5,7 +5,7 @@
  * @module FileHandlers
  */
 
-import { t } from '../global/i18n.js';
+import { t } from '../i18n/index.js';
 
 /**
  * 文件操作业务逻辑处理器
@@ -33,7 +33,7 @@ export class FileHandlers {
      * @returns {Promise<boolean>} 是否继续
      */
     async _confirmSwitch() {
-        return this.context.editor.getChanges().length === 0 || window.notify.confirm(t('changes.switchFolder'));
+        return this.context.editor.changes.list().length === 0 || window.notify.confirm(t('changes.switchFolder'));
     }
 
     /**
@@ -88,7 +88,7 @@ export class FileHandlers {
             if (!(await file.useDirectory(handle))) return false;
             await this.refreshTree();
             this.context.fileTreeUI.setFileTreeVisible(true);
-            await editor.restoreTabsState();
+            await editor.tabState.restore();
             await this.context.onFolderOpened();
             return true;
         } catch (error) {

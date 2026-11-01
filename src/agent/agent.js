@@ -4,7 +4,7 @@
  * @module agent
  */
 
-import { AGENT_CONSTANTS, DEFAULT_PREFERENCES } from '../global/constants.js';
+import { AGENT_CONSTANTS, DEFAULT_PREFERENCES } from '../app/constants.js';
 import { isContextError, requestCompletion } from './model.js';
 import { executeTool } from './tools.js';
 

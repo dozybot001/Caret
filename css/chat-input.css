@@ -1,0 +1,165 @@
+/* 输入栏样式 - 定义输入框、模型菜单入口和上下文小圈 */
+/* 输入框：随内容增高 */
+#chat-input-area {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    padding: 10px 8px 8px 16px;
+    background-color: var(--bg-3);
+    cursor: text;
+}
+
+#chat-input {
+    display: block;
+    width: 100%;
+    field-sizing: content;
+    min-height: 44px;
+    padding-right: 8px;
+    background-color: transparent;
+    border: none;
+    outline: none;
+    resize: none;
+    color: var(--text-1);
+    font-family: inherit;
+    font-size: var(--chat-font-size);
+    line-height: 1.7;
+}
+
+#chat-input::placeholder {
+    color: var(--text-5);
+}
+
+.chat-input-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 2px;
+}
+
+.chat-chips {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    min-width: 0;
+}
+
+.chat-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    max-width: 240px;
+    height: 28px;
+    padding: 0 8px;
+    margin-left: -8px;
+    border: 0;
+    background: transparent;
+    color: var(--text-4);
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.chat-chip:hover {
+    background-color: var(--bg-4);
+}
+
+#btn-effort {
+    flex-shrink: 0;
+    margin-left: 0;
+}
+
+.chat-chip.is-unset {
+    color: var(--accent-text);
+}
+
+.chat-chip .codicon {
+    font-size: 14px;
+}
+
+.chat-chip span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chat-chip .codicon-chevron-up {
+    font-size: 12px;
+}
+
+.chat-chip.is-unset .codicon-chevron-up {
+    display: none;
+}
+
+.chat-input-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+/* 上下文用量：圈内是已用比例，到 100 时自动压缩 */
+#context-ring {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text-4);
+    font: inherit;
+    font-size: 9px;
+    cursor: pointer;
+}
+
+/* 图形小，点击范围单独放大 */
+#context-ring::after {
+    content: "";
+    position: absolute;
+    inset: -5px;
+}
+
+#context-ring:hover {
+    color: var(--text-1);
+}
+
+#context-ring svg {
+    position: absolute;
+    inset: 0;
+    fill: none;
+    stroke-width: 2;
+    transform: rotate(-90deg);
+}
+
+.context-track {
+    stroke: var(--bg-5);
+}
+
+.context-arc {
+    stroke: currentColor;
+}
+
+#btn-send-chat {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+    padding: 0;
+    color: var(--text-1);
+}
+
+#btn-send-chat:hover {
+    background-color: var(--bg-4);
+}
+
+#btn-send-chat[data-running="true"] {
+    color: var(--color-red);
+}
+
+#btn-send-chat[data-running="true"]:hover {
+    background-color: var(--bg-red-dim);
+}

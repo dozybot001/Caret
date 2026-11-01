@@ -3,8 +3,8 @@
  * @description 负责文件树的渲染、交互
  */
 
-import { UI_CONSTANTS } from '../global/constants.js';
-import { t } from '../global/i18n.js';
+import { UI_CONSTANTS } from '../app/constants.js';
+import { t } from '../i18n/index.js';
 
 /** 目录里有改动时的标记 */
 const GIT_FOLDER_MARK = '•';

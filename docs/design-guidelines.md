@@ -34,7 +34,7 @@
 
 ## 表单与菜单
 
-- 输入框、下拉菜单和分段选择的样式都在 `settings.css`
+- 输入框、分段选择和胶囊开关的样式在 `controls.css`，下拉菜单和说明提示在 `popups.css`
 - 下拉菜单统一用 `#select-menu`，说明提示统一用 `#tooltip`，不使用浏览器默认样式
 - 设置里的单行设置用 `.setting-row`，布尔项用 `.switch`，控件带上 `data-setting` 后由 `settings.js` 统一读写
 
@@ -47,5 +47,5 @@
 
 ## 文本规范
 
-- 所有显示文本放在 `src/global/i18n.js`，同时提供简体中文和英文
+- 所有显示文本放在 `src/i18n/zh.js` 和 `src/i18n/en.js`，两个文件同时修改
 - 文件注释可以用中文

@@ -5,7 +5,7 @@
  * 每一行由一条可保存的记录生成，会话历史保存这些记录，恢复时重新渲染。
  */
 
-import { t, onLanguageChange } from '../global/i18n.js';
+import { t, onLanguageChange } from '../i18n/index.js';
 import { renderMarkdown } from './markdown.js';
 
 /** 离底部小于这个距离时继续跟随最新内容 */

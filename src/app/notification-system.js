@@ -4,7 +4,7 @@
  * @module Notify
  */
 
-import { t } from './i18n.js';
+import { t } from '../i18n/index.js';
 
 /** 图标类型映射 */
 const ICON_MAP = {

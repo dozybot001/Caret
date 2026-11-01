@@ -1,22 +1,19 @@
 /**
  * @fileoverview 应用状态管理
- * @description 管理全局应用状态（配置/上下文），负责本地存储持久化与事件驱动的数据同步
+ * @description 管理全局应用状态，负责 IndexedDB 里的配置、文件夹句柄、标签页、项目和会话
  */
 
 import { STORAGE_CONSTANTS, DEFAULT_CONFIG, DEFAULT_PREFERENCES } from './constants.js';
-import { t } from './i18n.js';
+import { t } from '../i18n/index.js';
 
 const { OBJECT_STORES } = STORAGE_CONSTANTS;
 
 /**
  * 应用状态存储
  * @class AppStore
- * @extends EventTarget
  */
-export class AppStore extends EventTarget {
+export class AppStore {
     constructor() {
-        super();
-
         this.state = {
             config: {
                 provider: DEFAULT_CONFIG.PROVIDER,
@@ -68,7 +65,6 @@ export class AppStore extends EventTarget {
     async updateConfig(newConfig) {
         this.state.config = { ...this.state.config, ...newConfig };
         await this._dbOp(OBJECT_STORES.CONFIG, 'put', 'appConfig', this.state.config);
-        this.dispatchEvent(new CustomEvent('config-updated', { detail: this.state.config }));
     }
 
     /**
