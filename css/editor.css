@@ -149,7 +149,7 @@
 
 .welcome-inner {
     margin: auto;
-    width: min(440px, 100%);
+    width: min(560px, 100%);
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -165,9 +165,15 @@
     color: var(--text-2);
 }
 
+.welcome-intro {
+    margin-top: 12px;
+    color: var(--text-3);
+    line-height: 1.7;
+}
+
 .welcome-tools {
     width: 100%;
-    margin-top: 32px;
+    margin-top: 28px;
     display: grid;
     gap: 2px;
 }
@@ -191,13 +197,34 @@
 }
 
 .welcome-note {
-    margin: 16px 0 24px;
+    margin-top: 12px;
     color: var(--text-4);
+    line-height: 1.7;
+}
+
+.welcome-points {
+    width: 100%;
+    margin-top: 24px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px 24px;
+}
+
+.welcome-points dt {
+    color: var(--text-1);
+    font-weight: 600;
+}
+
+.welcome-points dd {
+    margin-top: 4px;
+    color: var(--text-4);
+    font-size: 12px;
     line-height: 1.7;
 }
 
 .welcome-inner .btn.btn-primary {
     height: 40px;
+    margin-top: 20px;
     padding: 0 16px;
     font-size: 13px;
 }
