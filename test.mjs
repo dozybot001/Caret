@@ -85,7 +85,9 @@ test('路径限制在项目内', async () => {
     assert.equal(normalizePath('src\\a.js'), 'src/a.js');
     assert.throws(() => normalizePath('../secret'));
     assert.throws(() => normalizePath('.git/config'));
+    assert.throws(() => normalizePath('.intent/snaps/a.json'));
     assert.equal((await run(workspace(), 'read', { path: '../secret' })).ok, false);
+    assert.equal((await run(workspace(), 'write', { path: '.intent/intents/a.json', content: '{}' })).ok, false);
 });
 
 test('write 新建文件，并保留原文件末尾换行的习惯', async () => {

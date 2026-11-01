@@ -13,6 +13,7 @@
 const DEFAULT_IGNORE_CONTENT = `
 # --- Version Control & IDEs ---
 .git
+.intent
 .svn
 .hg
 .idea

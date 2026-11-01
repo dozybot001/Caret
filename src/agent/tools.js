@@ -75,7 +75,7 @@ export const TOOL_SCHEMAS = [
 export function normalizePath(path) {
     const parts = String(path ?? '.').replace(/\\/g, '/').split('/').filter(part => part && part !== '.');
     if (parts.includes('..')) throw new Error(`Path must stay inside the project: ${path}`);
-    if (parts[0] === '.git') throw new Error('The .git directory is not available.');
+    if (parts[0] === '.git' || parts[0] === '.intent') throw new Error(`The ${parts[0]} directory is not available.`);
     return parts.join('/') || '.';
 }
 
