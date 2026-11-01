@@ -6,7 +6,7 @@ set -euo pipefail
 SERVER=agenthub-prod
 ROOT=/opt/caret
 ORIGIN=https://caret.tenon.asia
-FILES=(404.html LICENSE index.html .well-known assets css src vendor)
+FILES=(404.html LICENSE index.html .well-known assets css src)
 SSH=(ssh -o BatchMode=yes -o ConnectTimeout=15 "$SERVER")
 
 cd "$(dirname "$0")/.."
@@ -127,6 +127,21 @@ git archive --format=tar "$SHA" "${FILES[@]}" | gzip -n > "$WORK/site.tar.gz"
 DIGEST=$(shasum -a 256 "$WORK/site.tar.gz" | cut -d' ' -f1)
 
 "${SSH[@]}" "sudo -n install -d -m 0755 $ROOT $ROOT/releases $ROOT/state && sudo -n install -d -o ubuntu -g ubuntu -m 0700 $ROOT/incoming"
+
+# Monaco 很大而且很少变，所有版本共用服务器上的一份，内容变化时才上传
+VENDOR=$(git rev-parse "$SHA:vendor")
+if [ "$("${SSH[@]}" "cat $ROOT/state/vendor 2>/dev/null || true")" != "$VENDOR" ]; then
+    git archive --format=tar "$SHA" vendor | gzip -n > "$WORK/vendor.tar.gz"
+    scp -q -o BatchMode=yes "$WORK/vendor.tar.gz" "$SERVER:$ROOT/incoming/vendor.tar.gz"
+    remote <<EOS
+set -euo pipefail
+tar -xzf $ROOT/incoming/vendor.tar.gz -C $ROOT
+chown -R root:root $ROOT/vendor
+chmod -R u=rwX,go=rX $ROOT/vendor
+rm -f $ROOT/incoming/vendor.tar.gz
+echo $VENDOR > $ROOT/state/vendor
+EOS
+fi
 scp -q -o BatchMode=yes "$WORK/site.tar.gz" "$SERVER:$ROOT/incoming/$SHA.tar.gz"
 scp -q -o BatchMode=yes deploy/caret.Caddyfile "$SERVER:$ROOT/incoming/caret.Caddyfile"
 
@@ -142,6 +157,7 @@ else
     tar -xzf "\$archive" -C "\$staging"
     chown -R root:root "\$staging"
     chmod -R u=rwX,go=rX "\$staging"
+    ln -s \$ROOT/vendor "\$staging/vendor"
     echo "$DIGEST" > "\$target.sha256"
     mv "\$staging" "\$target"
 fi
