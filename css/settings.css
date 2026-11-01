@@ -287,9 +287,9 @@
     margin: 0;
     padding: 4px;
     border: 0;
-    max-height: min(280px, calc(100dvh - 32px));
-    overflow-y: auto;
-    overscroll-behavior: contain;
+    max-width: calc(100vw - 32px);
+    max-height: min(320px, calc(100dvh - 32px));
+    overflow: hidden;
     background-color: var(--bg-3);
     color: var(--text-1);
     box-shadow: var(--popup-shadow);
@@ -298,9 +298,50 @@
 #select-menu:popover-open {
     display: flex;
     flex-direction: column;
+    gap: 4px;
+}
+
+.select-options {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.select-search {
+    flex-shrink: 0;
+    height: 32px;
+    padding: 0 8px;
+    border: 0;
+    outline: none;
+    background-color: var(--bg-2);
+    color: var(--text-1);
+    font: inherit;
+    font-size: 13px;
+}
+
+.select-search::placeholder {
+    color: var(--text-5);
+}
+
+.select-search:focus {
+    outline: 2px solid var(--accent-text);
+    outline-offset: -2px;
+}
+
+.select-empty {
+    padding: 6px 8px;
+    color: var(--text-4);
+    font-size: 12px;
+}
+
+.select-trigger .is-placeholder {
+    color: var(--text-5);
 }
 
 .select-option {
+    flex-shrink: 0;
     min-height: 32px;
     padding: 4px 8px;
     border: 0;
@@ -309,6 +350,7 @@
     font: inherit;
     font-size: 13px;
     text-align: left;
+    overflow-wrap: anywhere;
     cursor: pointer;
 }
 
@@ -321,6 +363,10 @@
 .select-option[aria-selected="true"] {
     color: var(--accent-text);
     font-weight: 600;
+}
+
+.select-option.is-action {
+    color: var(--text-3);
 }
 
 /* 关于与法律页面 */

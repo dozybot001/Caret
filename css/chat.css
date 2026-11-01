@@ -474,6 +474,14 @@
     white-space: nowrap;
 }
 
+.chat-chip .codicon-chevron-up {
+    font-size: 12px;
+}
+
+.chat-chip.is-unset .codicon-chevron-up {
+    display: none;
+}
+
 #btn-send-chat {
     width: 32px;
     height: 32px;

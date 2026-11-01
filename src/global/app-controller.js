@@ -134,7 +134,7 @@ export class AppController {
         element('btn-settings').addEventListener('click', () => this.settings.open());
         element('btn-new-task').addEventListener('click', () => this._newTask());
         this.historyButton.addEventListener('click', () => this._setHistoryVisible(!this.historyUI.isVisible));
-        this.modelButton.addEventListener('click', () => this.settings.open());
+        this.modelButton.addEventListener('click', () => this.settings.openModelSwitcher(this.modelButton));
 
         this.historyUI = new HistoryUI(element('history-panel'), {
             onOpen: id => this._openSession(id),
@@ -423,6 +423,7 @@ export class AppController {
     _resetConversation() {
         this.agent.reset();
         this.chatUI.clear();
+        this.settings.resetSessionModel();
     }
 
     /**
@@ -492,6 +493,7 @@ export class AppController {
         }
         this.agent.restore(session.messages);
         this.chatUI.restore(session.timeline);
+        this.settings.resetSessionModel();
         this.historyUI.render(this.sessions, id);
         this._setHistoryVisible(false);
         this.input.focus();
@@ -536,6 +538,7 @@ export class AppController {
     _updateModelButton() {
         this.modelButton.querySelector('span').textContent = this.settings.getModelLabel();
         this.modelButton.classList.toggle('is-unset', !this.settings.isReady());
+        this.modelButton.title = t(this.settings.isReady() ? 'model.switch' : 'model.connect');
     }
 
     /**

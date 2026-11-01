@@ -23,6 +23,8 @@ export class AppStore extends EventTarget {
                 /** 每个服务商各自的 Key 和模型 */
                 keys: {},
                 models: {},
+                /** 每个服务商的模型列表 */
+                modelLists: {},
                 customUrl: '',
                 fontSize: DEFAULT_CONFIG.FONT_SIZE
             }

@@ -107,7 +107,7 @@
             <form id="chat-input-area">
                 <textarea id="chat-input" rows="2"></textarea>
                 <div class="chat-input-foot">
-                    <button type="button" id="btn-model" class="chat-chip"><i class="codicon codicon-plug"></i><span></span></button>
+                    <button type="button" id="btn-model" class="chat-chip" aria-haspopup="listbox"><i class="codicon codicon-plug"></i><span></span><i class="codicon codicon-chevron-up"></i></button>
                     <button type="submit" id="btn-send-chat" class="btn">
                         <i class="codicon codicon-arrow-up"></i>
                     </button>
@@ -159,8 +159,11 @@
                     <button type="button" id="btn-clear-key" class="field-link hidden" data-i18n="settings.clearKey"></button>
                 </div>
                 <div class="field">
-                    <label class="field-label" for="input-model-name" data-i18n="settings.modelName"></label>
-                    <input id="input-model-name" type="text" autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list">
+                    <div class="field-label">
+                        <span id="model-label" data-i18n="settings.defaultModel"></span>
+                        <button type="button" class="info" data-tip="settings.defaultModelTip" data-i18n-label="settings.info"><i class="codicon codicon-info"></i></button>
+                    </div>
+                    <button type="button" id="model-trigger" class="select-trigger" aria-haspopup="listbox" aria-labelledby="model-label"><span></span><i class="codicon codicon-chevron-down"></i></button>
                 </div>
                 <p id="connection-status" role="status"></p>
 
