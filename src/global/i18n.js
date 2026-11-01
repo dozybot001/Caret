@@ -105,6 +105,7 @@ const MESSAGES = {
         'about.website': 'Tenon 官网',
         'about.feedback': '反馈',
         'about.source': '源代码',
+        'about.license': '许可证',
         'about.privacy': '隐私政策',
         'about.terms': '用户协议',
         'legal.meta': '版本 1.0 · 生效日期：2026年11月1日',
@@ -225,6 +226,7 @@ const MESSAGES = {
         'about.website': 'Tenon website',
         'about.feedback': 'Feedback',
         'about.source': 'Source code',
+        'about.license': 'License',
         'about.privacy': 'Privacy Policy',
         'about.terms': 'Terms of Service',
         'legal.meta': 'Version 1.0 · Effective Nov 1, 2026',
@@ -258,7 +260,7 @@ const LEGAL = {
             ['联系我们', '如有问题，请发送邮件到 support@tenonai.cn。']
         ],
         terms: [
-            ['服务内容', 'Caret 免费提供，按现状提供，不保证改动结果正确，也不保证持续可用。'],
+            ['服务内容', 'Caret 免费提供，源代码按 MIT 许可证开源。服务按现状提供，不保证改动结果正确，也不保证持续可用。'],
             ['你的责任', '写入前请阅读 diff。Caret 不运行代码，也不验证改动，写入后的结果由你负责。建议在 Git 仓库里使用，以便回退。'],
             ['模型服务', '你需要自备模型服务账号和 API Key，相关费用和条款由你与服务商约定。'],
             ['合规使用', '不得将 Caret 用于违法用途，也不得处理你无权处理的代码和数据。'],
@@ -274,7 +276,7 @@ const LEGAL = {
             ['Contact', 'Questions? Email support@tenonai.cn.']
         ],
         terms: [
-            ['The service', 'Caret is free and provided as is. We do not guarantee that changes are correct or that the service stays available.'],
+            ['The service', 'Caret is free, and its source code is open under the MIT License. The service is provided as is. We do not guarantee that changes are correct or that the service stays available.'],
             ['Your responsibility', 'Read the diff before you apply it. Caret does not run or verify code, and you are responsible for what you apply. We suggest working in a Git repository so you can roll back.'],
             ['Model services', 'You bring your own model service account and API key. Costs and terms are between you and that provider.'],
             ['Acceptable use', 'Do not use Caret for illegal purposes, or on code and data you have no right to process.'],

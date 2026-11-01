@@ -54,3 +54,7 @@ python3 -m http.server 8000
 ```bash
 node --test test.mjs
 ```
+
+## 许可证
+
+[MIT](LICENSE)
