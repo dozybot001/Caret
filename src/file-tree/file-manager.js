@@ -11,6 +11,7 @@
  */
 
 import { fetchIgnoreRules, parseIgnoreFile, isIgnored } from './ignore-manager.js';
+import { readGitStatus } from './git-status.js';
 import { FS_CONSTANTS } from '../global/constants.js';
 
 /**
@@ -144,6 +145,15 @@ export class FileManager {
         this.pendingHandle = null;
         this.fileCache.clear();
         await this.store?.clearDirectoryHandle();
+    }
+
+    /**
+     * 读取 Git 状态
+     * @returns {Promise<Object|null>} 没有打开文件夹或不是 Git 仓库时返回 null
+     */
+    async getGitStatus() {
+        if (!this.rootDirHandle) return null;
+        return readGitStatus(this.rootDirHandle, await this.getAllFiles(), this.globalIgnoreRules);
     }
 
     hasRoot() {

@@ -256,6 +256,7 @@ export class AppController {
             this.changesUI.setLocked(this.agent.running);
             this.fileTreeUI.setChangedPaths(changes.map(change => change.path));
         };
+        editor.onFileSaved = () => this.fileHandlers.refreshGit();
         editor.onEmptyChange = (isEmpty) => {
             this.welcome.classList.toggle('hidden', !isEmpty);
         };
@@ -414,6 +415,7 @@ export class AppController {
             const row = this.chatUI.addApplied(applied.length, () => this._undo(applied, row));
             this._saveSession();
             if (changes.some(change => change.isNew)) await this.fileHandlers.refreshTree();
+            else this.fileHandlers.refreshGit();
         } catch (error) {
             this.chatUI.addError(describeError(error), null);
         } finally {
@@ -659,6 +661,8 @@ export class AppController {
         window.addEventListener('beforeunload', (event) => {
             if (this.editor.getChanges().length > 0 || this.agent.running) event.preventDefault();
         });
+        // 在终端里提交或切换分支后回到页面时更新
+        window.addEventListener('focus', () => this.fileHandlers.refreshGit());
     }
 
     /**

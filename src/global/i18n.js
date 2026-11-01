@@ -20,6 +20,10 @@ const MESSAGES = {
         'welcome.note': '不执行命令，不运行测试。改动先进编辑器，你看完 diff 再写入磁盘。',
         'welcome.open': '打开文件夹',
 
+        'git.branch': name => `当前分支：${name}`,
+        'git.M': '已修改',
+        'git.U': '未跟踪',
+        'git.D': '已删除',
         'tree.empty': '还没有打开文件夹',
         'tree.open': '打开文件夹',
         'tree.resume': name => `继续访问 ${name}`,
@@ -164,6 +168,10 @@ const MESSAGES = {
         'welcome.note': 'It runs no commands and no tests. Changes stay in the editor until you review the diff and apply them.',
         'welcome.open': 'Open folder',
 
+        'git.branch': name => `Current branch: ${name}`,
+        'git.M': 'Modified',
+        'git.U': 'Untracked',
+        'git.D': 'Deleted',
         'tree.empty': 'No folder is open',
         'tree.open': 'Open folder',
         'tree.resume': name => `Continue with ${name}`,

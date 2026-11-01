@@ -6,6 +6,15 @@
 import { UI_CONSTANTS } from '../global/constants.js';
 import { t } from '../global/i18n.js';
 
+/** 目录里有改动时的标记 */
+const GIT_FOLDER_MARK = '•';
+
+/** 路径和它的所有上级目录 */
+function withParents(path) {
+    const parts = path.split('/');
+    return parts.map((_, index) => parts.slice(0, index + 1).join('/'));
+}
+
 /**
  * 文件树 UI 管理器
  * @class FileTreeUI
@@ -34,6 +43,11 @@ export class FileTreeUI {
 
         /** @type {string[]} 有未写入改动的文件 */
         this.changedPaths = [];
+
+        /** @type {{branch: string, changes: Map<string, string>, deleted: string[]}|null} Git 状态 */
+        this.git = null;
+        this.branchLabel = null;
+        this.deletedList = null;
     }
 
     /**
@@ -109,6 +123,11 @@ export class FileTreeUI {
         rootNameSpan.textContent = `${rootName}/`;
         rootLabel.appendChild(rootNameSpan);
 
+        this.branchLabel = document.createElement('span');
+        this.branchLabel.className = 'tree-branch hidden';
+        this.branchLabel.innerHTML = '<i class="codicon codicon-git-branch"></i><span></span>';
+        rootLabel.appendChild(this.branchLabel);
+
         const release = document.createElement('button');
         release.type = 'button';
         release.className = 'btn btn-close tree-release';
@@ -122,8 +141,41 @@ export class FileTreeUI {
 
         this._renderTreeNodes(treeData, fragment, "");
 
+        this.deletedList = document.createElement('div');
+        fragment.appendChild(this.deletedList);
+
         // 批量追加
         this.fileTreeContainer.appendChild(fragment);
+        this._renderGit();
+    }
+
+    /**
+     * 显示 Git 状态
+     * @param {Object|null} git - Git 状态，不是 Git 仓库时为 null
+     */
+    setGitStatus(git) {
+        this.git = git;
+        this._renderGit();
+    }
+
+    _renderGit() {
+        const { git, branchLabel, deletedList } = this;
+        if (!branchLabel) return;
+
+        branchLabel.classList.toggle('hidden', !git);
+        branchLabel.lastChild.textContent = git?.branch || '';
+        branchLabel.title = git ? t('git.branch', git.branch) : '';
+        deletedList.replaceChildren(...(git?.deleted || []).map((path) => {
+            const row = document.createElement('div');
+            row.className = 'tree-node is-deleted';
+            row.dataset.git = 'D';
+            row.title = t('git.D');
+            const name = document.createElement('span');
+            name.className = 'tree-name';
+            name.textContent = path;
+            row.appendChild(name);
+            return row;
+        }));
         this._markChanged();
     }
 
@@ -137,13 +189,21 @@ export class FileTreeUI {
     }
 
     _markChanged() {
-        const marked = new Set();
-        for (const path of this.changedPaths) {
-            const parts = path.split('/');
-            parts.forEach((_, index) => marked.add(parts.slice(0, index + 1).join('/')));
+        const marked = new Set(this.changedPaths.flatMap(withParents));
+        const changes = this.git?.changes || new Map();
+        const deleted = this.git?.deleted || [];
+        const gitMarks = new Map();
+        for (const path of [...changes.keys(), ...deleted]) {
+            withParents(path).forEach(item => gitMarks.set(item, GIT_FOLDER_MARK));
         }
+        changes.forEach((code, path) => gitMarks.set(path, code));
+
         this.fileTreeContainer.querySelectorAll('.tree-node[data-path]').forEach(row => {
+            const code = gitMarks.get(row.dataset.path);
             row.classList.toggle('is-changed', marked.has(row.dataset.path));
+            if (code) row.dataset.git = code;
+            else delete row.dataset.git;
+            row.title = code && code !== GIT_FOLDER_MARK ? t(`git.${code}`) : '';
         });
     }
 

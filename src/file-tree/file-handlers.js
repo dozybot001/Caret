@@ -22,6 +22,7 @@ export class FileHandlers {
      */
     constructor(context) {
         this.context = context;
+        this.gitRequest = 0;
     }
 
     /**
@@ -103,6 +104,7 @@ export class FileHandlers {
         const { file, editor, fileTreeUI } = this.context;
         await editor.reset();
         await file.release();
+        await this.refreshGit();
         fileTreeUI.clearExpanded();
         fileTreeUI.renderEmpty();
         fileTreeUI.setFileTreeVisible(false);
@@ -130,5 +132,14 @@ export class FileHandlers {
         const rootHandle = file.getRootHandle();
         if (!rootHandle) return;
         fileTreeUI.renderFileTree(rootHandle.name, await file.buildFileTree(rootHandle));
+        this.refreshGit();
+    }
+
+    /** 重新读取 Git 状态，连续触发时只显示最新的结果。读取失败时不显示 */
+    async refreshGit() {
+        const { file, fileTreeUI } = this.context;
+        const request = ++this.gitRequest;
+        const git = await file.getGitStatus().catch(() => null);
+        if (request === this.gitRequest) fileTreeUI.setGitStatus(git);
     }
 }

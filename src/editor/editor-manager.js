@@ -38,6 +38,7 @@ export class EditorManager {
 
         this.onFontSizeChange = null; // 字号变化回调
         this.onChangesUpdated = null; // 未写入改动变化回调
+        this.onFileSaved = null; // 文件保存到磁盘后回调
         this.onEmptyChange = null; // 是否没有打开的标签页
         this.onUserNavigate = null; // 用户手动切换标签页
 
@@ -512,6 +513,7 @@ export class EditorManager {
 
         try {
             await this._writeTab(tab);
+            this.onFileSaved?.();
             const tabEl = this.tabsContainer.querySelector(`.tab[data-id="${CSS.escape(tab.id)}"]`);
             if (tabEl) {
                 tabEl.classList.add('save-success');

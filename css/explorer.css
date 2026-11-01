@@ -86,6 +86,62 @@
     background-color: transparent;
 }
 
+/* 当前分支 */
+.tree-branch {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    margin-left: 8px;
+    color: var(--text-5);
+    font-size: 12px;
+}
+
+.tree-branch span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tree-branch .codicon {
+    flex-shrink: 0;
+    font-size: 13px;
+}
+
+/* Git 标记：贴在行的右侧 */
+.tree-node[data-git]::after {
+    content: attr(data-git);
+    flex-shrink: 0;
+    margin-left: auto;
+    padding: 0 12px 0 8px;
+    color: var(--text-5);
+    font-size: 11px;
+}
+
+.tree-node[data-git="M"]::after {
+    color: var(--color-yellow);
+}
+
+.tree-node[data-git="U"]::after {
+    color: var(--color-green);
+}
+
+.tree-node[data-git="D"]::after {
+    color: var(--color-red);
+}
+
+.tree-node.is-deleted {
+    cursor: default;
+}
+
+.tree-node.is-deleted:hover {
+    background-color: transparent;
+}
+
+.tree-node.is-deleted .tree-name {
+    color: var(--text-5);
+    text-decoration: line-through;
+}
+
 .tree-release {
     margin: 0 4px 0 auto;
     color: var(--text-5);
