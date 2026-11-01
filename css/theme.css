@@ -1,5 +1,8 @@
 /* 主题变量定义 - 定义 CSS 自定义属性（变量），包括字体、颜色系统、背景色、文字颜色和功能色 */
 :root {
+    --tree-width: 260px;
+    --chat-width: 360px;
+
     --font-family: ui-monospace, "SF Mono", SFMono-Regular, "JetBrains Mono", "Cascadia Code", Menlo, Consolas, "PingFang SC", "Microsoft YaHei", monospace;
 
     /* 品牌橙：只用于标志和图形，小字用 --accent-text */

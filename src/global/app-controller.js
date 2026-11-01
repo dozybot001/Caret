@@ -19,11 +19,13 @@ import { ChangesUI } from '../chat/changes-ui.js';
 import { ChatUI } from '../chat/chat-ui.js';
 import { SessionHistory } from '../chat/history.js';
 import { HistoryUI } from '../chat/history-ui.js';
+import { PromptRecall } from '../chat/prompt-recall.js';
 import { FileHandlers } from '../file-tree/file-handlers.js';
 import { FileTreeUI } from '../file-tree/file-tree-ui.js';
 import { Settings } from '../sidebar/settings.js';
 import { applyTranslations, onLanguageChange, t } from './i18n.js';
 import { onThemeChange } from './preferences.js';
+import { initResizers } from './resizers.js';
 
 /**
  * 把错误转成用户能处理的说明
@@ -59,6 +61,7 @@ export class AppController {
         this.store = store;
         this.workspace = new Workspace(fileManager, editorManager);
         this.history = new SessionHistory(store);
+        this.promptRecall = new PromptRecall();
         this.sessions = [];
 
         /** 选好文件夹或连好模型后要继续发送 */
@@ -79,6 +82,7 @@ export class AppController {
         this._bindChat();
         this._bindDragAndDrop();
         this._bindWindow();
+        initResizers();
 
         await this._restoreFolder();
         await this.editor.restoreTabsState();
@@ -265,10 +269,18 @@ export class AppController {
             else this._submit();
         });
 
-        input.addEventListener('input', () => this._updateSendButton());
+        input.addEventListener('input', () => {
+            this.promptRecall.reset();
+            this._updateSendButton();
+        });
         input.addEventListener('keydown', (event) => {
-            // 输入法组字时的回车不发送
-            if (event.key !== 'Enter' || event.shiftKey || event.isComposing || event.keyCode === 229) return;
+            // 输入法组字时的按键不处理
+            if (event.isComposing || event.keyCode === 229) return;
+            if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+                this._recallPrompt(event);
+                return;
+            }
+            if (event.key !== 'Enter' || event.shiftKey) return;
             event.preventDefault();
             if ((event.metaKey || event.ctrlKey) && !input.value.trim()) this._apply(false);
             else this._submit();
@@ -277,6 +289,23 @@ export class AppController {
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape' && this.agent.running && !this.settings.dialog.open) this.agent.stop();
         });
+        this._updateSendButton();
+    }
+
+    /**
+     * 用上下键翻看发过的提示词
+     * @private
+     * @param {KeyboardEvent} event - 按键事件
+     */
+    _recallPrompt(event) {
+        if (event.shiftKey || event.altKey || event.metaKey || event.ctrlKey) return;
+        const { input, promptRecall } = this;
+        const value = event.key === 'ArrowUp' ? promptRecall.previous(input) : promptRecall.next(input);
+        if (value === null) return;
+
+        event.preventDefault();
+        input.value = value;
+        input.setSelectionRange(value.length, value.length);
         this._updateSendButton();
     }
 
@@ -302,6 +331,8 @@ export class AppController {
         }
 
         this.input.value = '';
+        this.history.rememberPrompt(text);
+        this.promptRecall.load(this.history.prompts());
         this._setHistoryVisible(false);
         this.history.begin(text);
         this.chatUI.addUserMessage(text);
@@ -440,6 +471,7 @@ export class AppController {
      */
     async _openProject() {
         await this.history.openProject(this.file.getRootHandle());
+        this.promptRecall.load(this.history.prompts());
         this._resetConversation();
         await this._refreshHistory();
         this._setHistoryVisible(this.sessions.length > 0);

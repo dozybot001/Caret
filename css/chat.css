@@ -1,6 +1,6 @@
 /* 对话面板样式 - 定义 Agent 面板、消息、工具步骤、改动列表和输入框的样式 */
 #chat-panel {
-    width: 360px;
+    width: var(--chat-width);
     background-color: var(--bg-2);
     display: flex;
     flex-direction: column;
@@ -11,7 +11,7 @@
 }
 
 #chat-panel > * {
-    min-width: 360px;
+    min-width: var(--chat-width);
 }
 
 #chat-panel.collapsed {
@@ -151,20 +151,107 @@
 }
 
 .message {
+    position: relative;
     font-size: 13px;
     line-height: 1.65;
     overflow-wrap: anywhere;
     margin: 10px 0;
 }
 
-.message p {
+.message-copy {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    opacity: 0;
+    background-color: var(--bg-3);
+}
+
+.message-copy:hover {
+    background-color: var(--bg-4);
+}
+
+.message:hover .message-copy,
+.message-copy:focus-visible {
+    opacity: 1;
+}
+
+/* Agent 回复的 Markdown */
+.message.ai .message-content > * + * {
+    margin-top: 8px;
+}
+
+.message.ai p,
+.message.ai li {
     white-space: pre-wrap;
 }
 
-.message p + p,
-.message p + pre,
-.message pre + p {
-    margin-top: 8px;
+.message.ai :is(h1, h2, h3, h4, h5, h6) {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.message.ai .message-content > * + :is(h1, h2, h3, h4, h5, h6) {
+    margin-top: 14px;
+}
+
+.message.ai h1 {
+    font-size: 15px;
+}
+
+.message.ai h2 {
+    font-size: 14px;
+}
+
+.message.ai ul,
+.message.ai ol {
+    padding-left: 20px;
+}
+
+.message.ai li + li {
+    margin-top: 2px;
+}
+
+.message.ai li > ul,
+.message.ai li > ol {
+    margin-top: 2px;
+}
+
+.message.ai a {
+    color: var(--accent-text);
+}
+
+.message.ai blockquote {
+    padding: 2px 0 2px 10px;
+    color: var(--text-3);
+    background-color: var(--bg-3);
+}
+
+.message.ai hr {
+    height: 1px;
+    border: 0;
+    background-color: var(--bg-4);
+}
+
+.table-wrap {
+    overflow-x: auto;
+}
+
+.message.ai table {
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.message.ai th,
+.message.ai td {
+    padding: 4px 8px;
+    text-align: left;
+    white-space: nowrap;
+    background-color: var(--bg-3);
+    outline: 1px solid var(--bg-2);
+}
+
+.message.ai th {
+    font-weight: 600;
 }
 
 .message.user {
@@ -501,16 +588,6 @@
 
 #btn-send-chat[data-running="true"]:hover {
     background-color: var(--bg-red-dim);
-}
-
-@media (max-width: 1100px) {
-    #chat-panel {
-        width: 320px;
-    }
-
-    #chat-panel > * {
-        min-width: 320px;
-    }
 }
 
 /* 窄屏时 Agent 面板占满，编辑器通过侧栏按钮切换 */

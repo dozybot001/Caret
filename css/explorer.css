@@ -1,6 +1,6 @@
 /* 文件资源管理器样式 - 定义文件树面板、文件节点和目录结构的样式 */
 #file-tree-panel {
-    width: 260px;
+    width: var(--tree-width);
     background-color: var(--bg-2);
     display: flex;
     flex-direction: column;
@@ -10,7 +10,7 @@
 }
 
 #file-tree-panel > * {
-    min-width: 260px;
+    min-width: var(--tree-width);
 }
 
 #file-tree-panel.collapsed {

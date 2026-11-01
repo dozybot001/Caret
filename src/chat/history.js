@@ -5,7 +5,7 @@
 
 import { HISTORY_CONSTANTS } from '../global/constants.js';
 
-const { MAX_SESSIONS, TITLE_CHARS, SAVE_DELAY } = HISTORY_CONSTANTS;
+const { MAX_SESSIONS, MAX_PROMPTS, TITLE_CHARS, SAVE_DELAY } = HISTORY_CONSTANTS;
 
 const createId = prefix => `${prefix}-${Date.now().toString(36)}-${crypto.randomUUID().slice(0, 8)}`;
 
@@ -20,6 +20,7 @@ export class SessionHistory {
     constructor(store) {
         this.store = store;
         this.projectId = null;
+        this.project = null;
         /** 当前会话的基本信息，还没有发送消息时为 null */
         this.current = null;
         this.pendingSnapshot = null;
@@ -42,12 +43,30 @@ export class SessionHistory {
         for (const project of await this.store.listProjects()) {
             const isSame = await project.handle.isSameEntry(handle).catch(() => false);
             if (isSame) {
+                this.project = project;
                 this.projectId = project.id;
                 return;
             }
         }
         this.projectId = createId('project');
-        await this.store.saveProject({ id: this.projectId, name: handle.name, handle });
+        this.project = { id: this.projectId, name: handle.name, handle, prompts: [] };
+        await this.store.saveProject(this.project);
+    }
+
+    /** @returns {string[]} 当前项目发过的提示词，旧的在前 */
+    prompts() {
+        return this.project?.prompts || [];
+    }
+
+    /**
+     * 记住发过的提示词，重复的只保留最新一条
+     * @param {string} text - 提示词
+     */
+    rememberPrompt(text) {
+        if (!this.project) return;
+        const prompts = [...this.prompts().filter(item => item !== text), text].slice(-MAX_PROMPTS);
+        this.project = { ...this.project, prompts };
+        this.store.saveProject(this.project).catch(error => this.onError?.(error));
     }
 
     /**

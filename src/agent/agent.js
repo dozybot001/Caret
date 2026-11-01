@@ -6,24 +6,22 @@
 
 import { AGENT_CONSTANTS } from '../global/constants.js';
 import { requestCompletion } from './model.js';
-import { executeTool, outline } from './tools.js';
+import { executeTool } from './tools.js';
 
-const SYSTEM_PROMPT = `You are Caret, a small coding agent that runs in a web page and changes files in the user's local project.
+const SYSTEM_PROMPT = `You are Caret, a small coding agent in a web page. You change files in the user's local project with three tools: read, write and edit. You cannot run commands, tests or builds.
 
-You have three tools: read, write and edit. You cannot run commands, tests or builds. Your changes stay in the editor until the user reviews the diff and applies them, so each change must be easy to judge by reading it.
+Your changes stay in the editor until the user reviews the diff and applies them, so keep each change small and easy to judge by reading it.
 
-- Find the right code first. The read tool lists a directory when path is a directory, and searches file contents with its pattern parameter. Read a file before you edit it.
-- Make the smallest change that does what the user asked. Keep the surrounding style. Leave unrelated code alone.
-- Use edit for existing files and write for new files.
+- Read before you edit. Keep the surrounding style and leave unrelated code alone.
 - Never claim you tested anything. If something has to be run to be sure, say what the user should check.
-- Finish with one or two sentences on what changed. Reply in the language the user writes in.`;
+- Finish with one or two sentences on what changed, in the language the user writes in.`;
 
 /**
  * 项目记忆就是说明文件：Agent 用普通的工具修改，用户像审阅其他改动一样审阅
  * @param {string} name - 说明文件名
  * @returns {string}
  */
-const memoryRule = name => `- When the user states a lasting rule for this project, such as "always do X here", add one short line to ${name} with edit, or create the file with write. Record only what the user said. Never record project overviews, summaries of your work, or things you inferred.`;
+const memoryRule = name => `- When the user states a lasting rule for this project, add one short line to ${name}. Record only what the user said.`;
 
 /** 项目说明文件，按顺序取第一个存在的 */
 const PROJECT_RULES = ['AGENTS.md', 'CLAUDE.md'];
@@ -140,7 +138,7 @@ export class Agent {
         const { RULES_CHARS } = AGENT_CONSTANTS;
         const truncated = text.length > RULES_CHARS ? `\n[Truncated. Read ${name} for the rest.]` : '';
         const rules = text ? `\n\nProject instructions from ${name}:\n${text.slice(0, RULES_CHARS)}${truncated}` : '';
-        return `${SYSTEM_PROMPT}\n${memoryRule(name)}\n\nProject: ${workspace.name}\nFiles:\n${outline(workspace.paths())}${rules}`;
+        return `${SYSTEM_PROMPT}\n${memoryRule(name)}\n\nProject: ${workspace.name}${rules}`;
     }
 
     _nextMessage(system, signal) {

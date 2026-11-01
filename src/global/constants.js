@@ -88,6 +88,8 @@ export const AGENT_CONSTANTS = {
 export const HISTORY_CONSTANTS = {
     /** 每个项目保留的会话数量，超出时删除最旧的 */
     MAX_SESSIONS: 100,
+    /** 每个项目保留的提示词数量 */
+    MAX_PROMPTS: 200,
     /** 会话标题的最大字符数 */
     TITLE_CHARS: 60,
     /** 保存间隔（毫秒），连续变化时合并 */
@@ -107,4 +109,4 @@ export const PROVIDERS = {
 };
 
 /** 当前版本 */
-export const VERSION = '0.4.3';
+export const VERSION = '0.5.0';

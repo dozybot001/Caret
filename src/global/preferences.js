@@ -22,7 +22,8 @@ function defaults() {
     const lang = params.get('lang');
     return {
         theme: theme === 'light' || theme === 'dark' ? theme : read().theme || 'system',
-        lang: lang === 'zh' || lang === 'en' ? lang : read().lang || (navigator.language.startsWith('zh') ? 'zh' : 'en')
+        lang: lang === 'zh' || lang === 'en' ? lang : read().lang || (navigator.language.startsWith('zh') ? 'zh' : 'en'),
+        panels: read().panels || {}
     };
 }
 
@@ -63,6 +64,21 @@ export function setTheme(theme) {
 /** @param {'zh'|'en'} lang - 语言 */
 export function setLang(lang) {
     state.lang = lang;
+    save();
+}
+
+/**
+ * @param {'tree'|'chat'} name - 侧栏
+ * @returns {number|undefined} 保存的宽度
+ */
+export const getPanelWidth = name => state.panels[name];
+
+/**
+ * @param {'tree'|'chat'} name - 侧栏
+ * @param {number} width - 宽度
+ */
+export function setPanelWidth(name, width) {
+    state.panels[name] = width;
     save();
 }
 

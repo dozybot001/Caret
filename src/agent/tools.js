@@ -21,14 +21,14 @@ export const TOOL_SCHEMAS = [
         type: 'function',
         function: {
             name: 'read',
-            description: 'Read a file, list a directory, or search file contents with pattern. Results include unapplied changes.',
+            description: 'Read a file, list a directory, or search file contents with pattern.',
             parameters: {
                 type: 'object',
                 properties: {
-                    path: { type: 'string', description: 'File or directory relative to the project root. Defaults to the root.' },
-                    pattern: { type: 'string', description: 'Regular expression. Returns matching lines from the file or directory. Case-insensitive unless it contains capitals.' },
-                    offset: { type: 'integer', description: 'First line to return, starting at 1.' },
-                    limit: { type: 'integer', description: 'Number of lines to return.' }
+                    path: { type: 'string', description: 'File or directory. Defaults to the project root.' },
+                    pattern: { type: 'string', description: 'Regular expression to search for. Case-insensitive unless it contains capitals.' },
+                    offset: { type: 'integer', description: 'First line, starting at 1.' },
+                    limit: { type: 'integer', description: 'Number of lines.' }
                 }
             }
         }
@@ -37,12 +37,12 @@ export const TOOL_SCHEMAS = [
         type: 'function',
         function: {
             name: 'write',
-            description: 'Create a file, or replace the whole content of a file.',
+            description: 'Create a file, or replace a whole file. Prefer edit for existing files.',
             parameters: {
                 type: 'object',
                 properties: {
-                    path: { type: 'string', description: 'File path relative to the project root.' },
-                    content: { type: 'string', description: 'The complete file content.' }
+                    path: { type: 'string' },
+                    content: { type: 'string' }
                 },
                 required: ['path', 'content']
             }
@@ -56,9 +56,9 @@ export const TOOL_SCHEMAS = [
             parameters: {
                 type: 'object',
                 properties: {
-                    path: { type: 'string', description: 'File path relative to the project root.' },
-                    old: { type: 'string', description: 'The exact text to replace, including whitespace. Add surrounding lines if it is not unique.' },
-                    new: { type: 'string', description: 'The replacement text.' },
+                    path: { type: 'string' },
+                    old: { type: 'string', description: 'Exact text to replace, including whitespace.' },
+                    new: { type: 'string' },
                     all: { type: 'boolean', description: 'Replace every match.' }
                 },
                 required: ['path', 'old', 'new']

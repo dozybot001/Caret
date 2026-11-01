@@ -4,6 +4,8 @@ import { test } from 'node:test';
 
 import { Agent } from './src/agent/agent.js';
 import { SessionHistory } from './src/chat/history.js';
+import { parseInline, parseMarkdown } from './src/chat/markdown.js';
+import { PromptRecall } from './src/chat/prompt-recall.js';
 import { countChanges } from './src/agent/diff.js';
 import { collectMessage, readEvents } from './src/agent/model.js';
 import { executeTool, normalizePath, outline, replaceText, TOOL_SCHEMAS } from './src/agent/tools.js';
@@ -181,7 +183,7 @@ test('Agent 循环：读、改、失败后重试，直到模型不再调用工�
     assert.equal(ws.state.get('a.js'), 'const a = 2;\n');
     assert.deepEqual(steps, [['read', true], ['edit', false], ['edit', true]]);
     assert.equal(requests.length, 4);
-    assert.match(requests[0].messages[0].content, /Files:\na\.js/);
+    assert.doesNotMatch(requests[0].messages[0].content, /a\.js/);
     assert.deepEqual(requests[0].tools.map(tool => tool.function.name), ['read', 'write', 'edit']);
     assert.equal(requests[3].messages.at(-1).role, 'tool');
     assert.equal(requests[3].messages.at(-1).content, 'Edited a.js');
@@ -228,11 +230,11 @@ test('系统提示词带上项目规则，并要求长期规则写进同一个�
     await new Agent(workspace({ 'AGENTS.md': '- 用中文注释\n' }), connection, {}).send('改');
     const withRules = requests[0].messages[0].content;
     assert.match(withRules, /Project instructions from AGENTS\.md:\n- 用中文注释/);
-    assert.match(withRules, /add one short line to AGENTS\.md with edit/);
+    assert.match(withRules, /add one short line to AGENTS\.md\./);
 
     await new Agent(workspace({ 'CLAUDE.md': 'x'.repeat(9000) }), connection, {}).send('改');
     const truncated = requests[1].messages[0].content;
-    assert.match(truncated, /add one short line to CLAUDE\.md with edit/);
+    assert.match(truncated, /add one short line to CLAUDE\.md\./);
     assert.match(truncated, /\[Truncated\. Read CLAUDE\.md for the rest\.\]/);
 });
 
@@ -347,4 +349,98 @@ test('保存失败不影响任务，错误交给界面提示', async () => {
     history.schedule(() => ({ messages: [], timeline: [] }));
     await history.flush();
     assert.deepEqual(errors, ['quota']);
+});
+
+test('系统提示词保持极简，不带文件列表', async () => {
+    const requests = scriptedModel([{ text: '好' }]);
+    const files = Object.fromEntries(Array.from({ length: 500 }, (_, index) => [`src/file${index}.js`, 'x']));
+    await new Agent(workspace(files), connection, {}).send('改');
+    const system = requests[0].messages[0].content;
+    assert.ok(system.length < 900, `提示词有 ${system.length} 个字符`);
+    assert.doesNotMatch(system, /file0\.js/);
+    assert.ok(JSON.stringify(requests[0].tools).length < 1300);
+});
+
+test('Markdown 解析块级结构', () => {
+    const blocks = parseMarkdown([
+        '# 标题', '', '第一段', '第二行', '', '- 一', '  - 嵌套', '- 二', '', '3. 三', '4. 四', '',
+        '> 引用', '', '---', '', '```js', 'const a = 1;', '```', '', '| 名称 | 值 |', '| --- | --- |', '| a | 1 |'
+    ].join('\n'));
+
+    assert.deepEqual(blocks.map(block => block.type), ['heading', 'paragraph', 'list', 'list', 'quote', 'rule', 'code', 'table']);
+    assert.equal(blocks[0].level, 1);
+    assert.equal(blocks[1].text, '第一段\n第二行');
+    assert.deepEqual(blocks[2].items.map(item => item.text), ['一', '二']);
+    assert.equal(blocks[2].items[0].children[0].items[0].text, '嵌套');
+    assert.deepEqual([blocks[3].ordered, blocks[3].start], [true, 3]);
+    assert.deepEqual([blocks[6].language, blocks[6].text], ['js', 'const a = 1;']);
+    assert.deepEqual([blocks[7].header, blocks[7].rows], [['名称', '值'], [['a', '1']]]);
+});
+
+test('Markdown 没有写完时也能显示', () => {
+    assert.deepEqual(parseMarkdown('```js\nconst a'), [{ type: 'code', language: 'js', text: 'const a' }]);
+    assert.deepEqual(parseInline('**还没写完'), [{ type: 'text', text: '**还没写完' }]);
+});
+
+test('Markdown 解析行内结构，不误伤代码和普通星号', () => {
+    assert.deepEqual(parseInline('改 `a*b*c` 和 **重点**').map(node => node.type), ['text', 'code', 'text', 'strong']);
+    assert.deepEqual(parseInline('2*3*4 不是斜体'), [{ type: 'text', text: '2*3*4 不是斜体' }]);
+    assert.equal(parseInline('*斜体*')[0].type, 'emphasis');
+    assert.equal(parseInline('~~删除~~')[0].type, 'deleted');
+    assert.equal(parseInline('__init__.py')[0].text, '__init__.py');
+    assert.deepEqual(parseInline('见 https://tenon.asia/。').map(node => node.href ?? node.text), ['见 ', 'https://tenon.asia/', '。']);
+});
+
+test('Markdown 链接只允许 http、https 和 mailto', () => {
+    assert.equal(parseInline('[官网](https://tenon.asia/)')[0].href, 'https://tenon.asia/');
+    assert.equal(parseInline('[邮件](mailto:a@b.c)')[0].href, 'mailto:a@b.c');
+    assert.equal(parseInline('[维基](https://a.org/b_(c))')[0].href, 'https://a.org/b_(c)');
+    assert.deepEqual(parseInline('[点我](javascript:alert(1))'), [{ type: 'text', text: '点我' }]);
+});
+
+const textarea = (value, caret = value.length) => ({ value, selectionStart: caret, selectionEnd: caret });
+
+test('上下键翻看提示词，最后回到原来的内容', () => {
+    const recall = new PromptRecall();
+    recall.load(['第一条', '第二条']);
+    assert.equal(recall.previous(textarea('')), '第二条');
+    assert.equal(recall.previous(textarea('第二条')), '第一条');
+    assert.equal(recall.previous(textarea('第一条')), '第一条');
+    assert.equal(recall.next(textarea('第一条')), '第二条');
+    assert.equal(recall.next(textarea('第二条')), '');
+    assert.equal(recall.next(textarea('')), null);
+});
+
+test('上键不打断正在编辑的内容', () => {
+    const recall = new PromptRecall();
+    recall.load(['第一条']);
+    assert.equal(recall.previous(textarea('写到一半')), null);
+    assert.equal(recall.previous(textarea('写到一半', 0)), '第一条');
+    assert.equal(recall.next(textarea('第一条')), '写到一半');
+    assert.equal(new PromptRecall().previous(textarea('')), null);
+});
+
+test('多行提示词里上下键先移动光标', () => {
+    const recall = new PromptRecall();
+    recall.load(['第一条', '一\n二']);
+    assert.equal(recall.previous(textarea('')), '一\n二');
+    assert.equal(recall.previous(textarea('一\n二')), null);
+    assert.equal(recall.previous(textarea('一\n二', 1)), '第一条');
+    assert.equal(recall.next(textarea('第一条')), '一\n二');
+    assert.equal(recall.next(textarea('一\n二', 1)), null);
+    assert.equal(recall.next(textarea('一\n二')), '');
+});
+
+test('提示词按项目保存，重复的只留最新一条', async () => {
+    const store = memoryStore();
+    const history = new SessionHistory(store);
+    const a = folder('a');
+    await history.openProject(a);
+    for (const text of ['一', '二', '一']) history.rememberPrompt(text);
+    assert.deepEqual(history.prompts(), ['二', '一']);
+
+    await history.openProject(folder('b'));
+    assert.deepEqual(history.prompts(), []);
+    await history.openProject(a);
+    assert.deepEqual(history.prompts(), ['二', '一']);
 });

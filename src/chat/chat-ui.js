@@ -6,9 +6,11 @@
  */
 
 import { t, onLanguageChange } from '../global/i18n.js';
+import { renderMarkdown } from './markdown.js';
 
-/** 判断是否贴近底部的距离 */
-const STICK_DISTANCE = 80;
+/** 离底部小于这个距离时继续跟随最新内容 */
+const STICK_DISTANCE = 8;
+const COPIED_DURATION = 1500;
 
 const ROW_CLASS = {
     user: 'message user',
@@ -24,30 +26,6 @@ function createElement(tag, className, text) {
     if (className) element.className = className;
     if (text !== undefined) element.textContent = text;
     return element;
-}
-
-/**
- * 渲染 Agent 回复：支持段落、代码块、行内代码和粗体
- * @param {HTMLElement} container - 容器
- * @param {string} text - 回复文本
- */
-function renderReply(container, text) {
-    container.replaceChildren();
-    text.split(/(```[^\n]*\n[\s\S]*?(?:```|$))/).forEach(part => {
-        if (part.startsWith('```')) {
-            const body = part.replace(/^```[^\n]*\n?/, '').replace(/```$/, '');
-            container.appendChild(createElement('pre', 'code-block', body));
-            return;
-        }
-        if (!part.trim()) return;
-        const paragraph = createElement('p');
-        part.trim().split(/(`[^`\n]+`|\*\*[^*\n]+\*\*)/).forEach(segment => {
-            if (/^`[^`\n]+`$/.test(segment)) paragraph.appendChild(createElement('code', 'inline-code', segment.slice(1, -1)));
-            else if (/^\*\*[^*\n]+\*\*$/.test(segment)) paragraph.appendChild(createElement('strong', '', segment.slice(2, -2)));
-            else if (segment) paragraph.append(segment);
-        });
-        container.appendChild(paragraph);
-    });
 }
 
 /**
@@ -73,9 +51,21 @@ export class ChatUI {
         this.statusRow = createElement('div', 'chat-status hidden');
         this.chatMessagesContainer.appendChild(this.statusRow);
 
+        // 用户往上滑时立刻停止跟随，再滑回底部时恢复
+        this.lastScrollTop = 0;
+        this.chatMessagesContainer.addEventListener('wheel', (event) => {
+            if (event.deltaY < 0 && this.chatMessagesContainer.scrollTop > 0) this.stickToBottom = false;
+        }, { passive: true });
         this.chatMessagesContainer.addEventListener('scroll', () => {
             const { scrollHeight, scrollTop, clientHeight } = this.chatMessagesContainer;
-            this.stickToBottom = scrollHeight - scrollTop - clientHeight < STICK_DISTANCE;
+            const isAtBottom = scrollHeight - scrollTop - clientHeight < STICK_DISTANCE;
+            // 内容变短时位置也会变小，这时仍在底部，不算用户上滑
+            if (scrollTop >= this.lastScrollTop) {
+                if (isAtBottom) this.stickToBottom = true;
+            } else if (!isAtBottom) {
+                this.stickToBottom = false;
+            }
+            this.lastScrollTop = scrollTop;
         });
 
         onLanguageChange(() => {
@@ -118,10 +108,10 @@ export class ChatUI {
         const { data, element } = row;
         switch (data.type) {
             case 'user':
-                element.textContent = data.text;
+                this._drawMessage(row, content => { content.textContent = data.text; });
                 break;
             case 'reply':
-                renderReply(element, data.text);
+                this._drawMessage(row, content => renderMarkdown(content, data.text));
                 break;
             case 'step':
                 this._drawStep(element, data);
@@ -136,6 +126,53 @@ export class ChatUI {
                 this._drawError(row);
                 break;
         }
+    }
+
+    /**
+     * 绘制消息。复制按钮只创建一次，流式更新时不会打断点击
+     * @private
+     * @param {Object} row - 行
+     * @param {Function} fill - 填充消息内容
+     */
+    _drawMessage(row, fill) {
+        if (!row.copyButton) {
+            row.content = createElement('div', 'message-content');
+            row.copyButton = createElement('button', 'btn btn-close message-copy');
+            row.copyButton.type = 'button';
+            row.copyButton.appendChild(createElement('i'));
+            row.copyButton.addEventListener('click', () => this._copy(row));
+            row.element.append(row.content, row.copyButton);
+        }
+        this._drawCopyButton(row);
+        fill(row.content);
+    }
+
+    _drawCopyButton({ copyButton, isCopied }) {
+        const label = t(isCopied ? 'chat.copied' : 'chat.copy');
+        copyButton.title = label;
+        copyButton.setAttribute('aria-label', label);
+        copyButton.firstChild.className = `codicon codicon-${isCopied ? 'check' : 'copy'}`;
+    }
+
+    /**
+     * 复制消息的原始文本
+     * @private
+     * @param {Object} row - 行
+     */
+    async _copy(row) {
+        try {
+            await navigator.clipboard.writeText(row.data.text);
+        } catch {
+            window.notify?.alert(t('chat.copyFailed'), { type: 'error' });
+            return;
+        }
+        row.isCopied = true;
+        this._drawCopyButton(row);
+        clearTimeout(row.copiedTimer);
+        row.copiedTimer = setTimeout(() => {
+            row.isCopied = false;
+            this._drawCopyButton(row);
+        }, COPIED_DURATION);
     }
 
     _drawStep(element, step) {
