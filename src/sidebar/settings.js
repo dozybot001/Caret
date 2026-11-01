@@ -65,6 +65,8 @@ export class Settings {
         this.onClose = null;
         /** 连接信息变化时调用 */
         this.onConnectionChange = null;
+        /** 字号或换行变化时调用 */
+        this.onDisplayChange = null;
         /** 清除 Key 后调用 */
 
         const find = selector => dialog.querySelector(selector);
@@ -80,6 +82,7 @@ export class Settings {
         this.modelTrigger = find('#model-trigger');
         this.effortField = find('#field-effort');
         this.effortTrigger = find('#effort-trigger');
+        this.wrapSwitch = find('#wrap-switch');
         this.statusText = find('#connection-status');
         this.menu = find('#select-menu');
         this.tooltip = find('#tooltip');
@@ -136,6 +139,13 @@ export class Settings {
                 this._renderChoices();
             });
         });
+        dialog.querySelectorAll('[data-size-setting]').forEach((group) => {
+            group.addEventListener('click', (event) => {
+                const size = event.target.closest('[data-size]')?.dataset.size;
+                if (size) this._saveDisplay({ [group.dataset.sizeSetting]: Number(size) });
+            });
+        });
+        this.wrapSwitch.addEventListener('click', () => this._saveDisplay({ wordWrap: !this._config.wordWrap }));
         dialog.querySelectorAll('[data-go]').forEach(button => {
             button.addEventListener('click', () => this._showPage(button.dataset.go));
         });
@@ -165,7 +175,11 @@ export class Settings {
         this._showPage(page);
         this._renderConnection();
         this._renderChoices();
-        if (!this.dialog.open) this.dialog.showModal();
+        if (!this.dialog.open) {
+            this.dialog.showModal();
+            // 焦点放在对话框本身，打开时不高亮关闭按钮
+            this.dialog.focus();
+        }
         this._checkConnection();
     }
 
@@ -303,6 +317,18 @@ export class Settings {
         this.dialog.querySelectorAll('[data-lang-option]').forEach(button => {
             button.setAttribute('aria-pressed', String(button.dataset.langOption === getLanguage()));
         });
+        this.dialog.querySelectorAll('[data-size-setting]').forEach((group) => {
+            group.querySelectorAll('[data-size]').forEach((button) => {
+                button.setAttribute('aria-pressed', String(Number(button.dataset.size) === this._config[group.dataset.sizeSetting]));
+            });
+        });
+        this.wrapSwitch.setAttribute('aria-checked', String(this._config.wordWrap));
+    }
+
+    async _saveDisplay(changes) {
+        await this.store.updateConfig(changes);
+        this._renderChoices();
+        this.onDisplayChange?.();
     }
 
     /**

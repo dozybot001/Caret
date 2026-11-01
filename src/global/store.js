@@ -30,7 +30,9 @@ export class AppStore extends EventTarget {
                 /** 接口返回的推理档位：{ 服务商: { 模型: { levels, defaultLevel } } } */
                 modelEfforts: {},
                 customUrl: '',
-                fontSize: DEFAULT_CONFIG.FONT_SIZE
+                fontSize: DEFAULT_CONFIG.FONT_SIZE,
+                chatFontSize: DEFAULT_CONFIG.CHAT_FONT_SIZE,
+                wordWrap: true
             }
         };
 

@@ -237,6 +237,14 @@ export class AppController {
         });
     }
 
+    /** 应用设置里的字号和换行 */
+    _applyDisplay() {
+        const { fontSize, chatFontSize, wordWrap } = this.store.getConfig();
+        this.editor.setFontSize(fontSize);
+        this.editor.setWordWrap(wordWrap);
+        document.documentElement.style.setProperty('--chat-font-size', `${chatFontSize}px`);
+    }
+
     /**
      * 绑定编辑器事件
      * @private
@@ -246,8 +254,8 @@ export class AppController {
 
         editor.store = this.store;
         editor.fileManager = this.file;
-        const config = this.store.getConfig();
-        if (config.fontSize !== undefined) editor.setFontSize(config.fontSize);
+        this._applyDisplay();
+        this.settings.onDisplayChange = () => this._applyDisplay();
         editor.onFontSizeChange = fontSize => this.store.updateConfig({ fontSize });
 
         editor.onChangesUpdated = () => {

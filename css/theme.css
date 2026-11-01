@@ -2,6 +2,7 @@
 :root {
     --tree-width: 260px;
     --chat-width: 360px;
+    --chat-font-size: 13px;
 
     --font-family: ui-monospace, "SF Mono", SFMono-Regular, "JetBrains Mono", "Cascadia Code", Menlo, Consolas, "PingFang SC", "Microsoft YaHei", monospace;
 
@@ -45,7 +46,7 @@
     --diff-remove-line: #ff7b721f;
     --diff-remove-text: #ff7b7240;
 
-    --overlay: rgba(0, 0, 0, 0.6);
+    --overlay: rgba(0, 0, 0, 0.75);
     --popup-shadow: 0 12px 32px #00000066, 0 2px 6px #00000033;
 }
 
@@ -83,6 +84,6 @@
     --diff-remove-line: #c62a2218;
     --diff-remove-text: #c62a2238;
 
-    --overlay: rgba(0, 0, 0, 0.35);
+    --overlay: rgba(0, 0, 0, 0.5);
     --popup-shadow: 0 12px 32px #00000016, 0 2px 6px #00000008;
 }

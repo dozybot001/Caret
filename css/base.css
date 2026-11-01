@@ -182,6 +182,52 @@ body {
     background-color: var(--bg-1);
 }
 
+/* 全局加载层：启动完成前盖住还没有文案和编辑器的页面 */
+#app-loading {
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 16px;
+    background-color: var(--bg-1);
+    color: var(--text-1);
+    text-align: center;
+}
+
+.app-loading-mark {
+    width: 40px;
+    height: 40px;
+}
+
+.app-loading-cursor {
+    animation: blink 1s steps(1) infinite;
+}
+
+.app-loading-error {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-3);
+    line-height: 1.6;
+}
+
+.app-loading-error .btn {
+    margin-top: 8px;
+}
+
+#app-loading.is-failed .app-loading-cursor {
+    animation: none;
+}
+
+#app-loading.is-failed .app-loading-error {
+    display: flex;
+}
+
 /* 拖入文件夹 */
 #drop-overlay {
     display: none;

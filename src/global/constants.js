@@ -30,6 +30,8 @@ export const STORAGE_CONSTANTS = {
 export const DEFAULT_CONFIG = {
     /** 默认字体大小 */
     FONT_SIZE: 14,
+    /** 对话的默认字体大小 */
+    CHAT_FONT_SIZE: 13,
     /** 默认模型服务 */
     PROVIDER: 'deepseek'
 };
@@ -115,4 +117,4 @@ export const PROVIDERS = {
 };
 
 /** 当前版本 */
-export const VERSION = '0.8.1';
+export const VERSION = '0.9.0';

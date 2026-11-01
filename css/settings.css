@@ -1,6 +1,6 @@
 /* 设置样式 - 定义设置对话框、表单控件、下拉菜单和说明提示 */
 #settings-dialog {
-    width: min(520px, calc(100vw - 32px));
+    width: min(800px, calc(100vw - 32px));
     height: min(640px, calc(100dvh - 32px));
     margin: auto;
     border: 0;
@@ -15,6 +15,10 @@
     flex-direction: column;
 }
 
+#settings-dialog:focus {
+    outline: none;
+}
+
 #settings-dialog::backdrop {
     background-color: var(--overlay);
 }
@@ -24,7 +28,7 @@
     align-items: center;
     gap: 4px;
     min-height: 52px;
-    padding: 6px 6px 6px 20px;
+    padding: 6px 12px 6px 28px;
     flex-shrink: 0;
 }
 
@@ -44,14 +48,76 @@
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding: 4px 20px 20px;
+    padding: 4px 28px 12px;
     line-height: 1.7;
+}
+
+/* 说明和法律页面按阅读宽度排版 */
+.dialog-body > section:not(.settings-columns) {
+    max-width: 640px;
+    margin-inline: auto;
+}
+
+/* 设置主页两栏，窄屏时变成一栏 */
+.settings-columns {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 0 40px;
+    align-items: start;
+}
+
+.settings-links {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2px 40px;
+    margin-top: 8px;
+}
+
+.field.field-switch {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 36px;
+}
+
+/* 胶囊开关：开启时滑块在右 */
+.switch {
+    position: relative;
+    flex-shrink: 0;
+    width: 36px;
+    height: 20px;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    background-color: var(--bg-5);
+    cursor: pointer;
+}
+
+.switch::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background-color: var(--text-1);
+    transition: transform 0.15s;
+}
+
+.switch[aria-checked="true"] {
+    background-color: var(--accent);
+}
+
+.switch[aria-checked="true"]::after {
+    transform: translateX(16px);
 }
 
 .dialog-foot {
     display: flex;
     justify-content: flex-end;
-    padding: 12px 20px;
+    padding: 12px 28px;
     flex-shrink: 0;
 }
 
@@ -191,7 +257,6 @@
     width: 100%;
     min-height: 40px;
     padding: 0 10px;
-    margin-top: 2px;
     border: 0;
     background-color: var(--bg-3);
     color: var(--text-1);

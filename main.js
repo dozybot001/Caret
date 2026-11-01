@@ -32,7 +32,14 @@ const editorManager = new EditorManager(
     document.getElementById('tabs-bar')
 );
 
-await store.init();
-await Promise.all([fileManager.init(), editorManager.init()]);
+const loading = document.getElementById('app-loading');
 
-await new AppController(fileManager, editorManager, store).init();
+try {
+    await store.init();
+    await Promise.all([fileManager.init(), editorManager.init()]);
+    await new AppController(fileManager, editorManager, store).init();
+    loading.remove();
+} catch (error) {
+    console.error(error);
+    loading.classList.add('is-failed');
+}

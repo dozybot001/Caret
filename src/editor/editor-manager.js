@@ -245,6 +245,16 @@ export class EditorManager {
      * 更新编辑器字体大小
      * @private
      */
+    /**
+     * 设置自动换行，审阅改动时同样生效
+     * @param {boolean} isOn - 是否换行
+     */
+    setWordWrap(isOn) {
+        const value = isOn ? 'on' : 'off';
+        this.editorInstance?.updateOptions({ wordWrap: value });
+        this.diffEditor?.updateOptions({ diffWordWrap: value });
+    }
+
     _updateFontSize() {
         this.editorInstance?.updateOptions({ fontSize: this.fontSize });
         this.diffEditor?.updateOptions({ fontSize: this.fontSize });

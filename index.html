@@ -18,11 +18,21 @@
         } catch {
             // 读取失败时使用默认主题
         }
+        // 启动一直没有完成时给出提示。启动完成后加载层已经移除
+        setTimeout(() => document.getElementById('app-loading')?.classList.add('is-failed'), 45000);
     </script>
     <link href="css/codicons/codicon.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div id="app-loading" role="status">
+        <svg class="app-loading-mark" viewBox="0 0 64 64" role="img" aria-label="Caret"><rect x="6" y="24" width="17" height="24" fill="currentColor"/><rect class="app-loading-cursor" x="28.5" y="8" width="7" height="48" fill="#f06b32"/><rect x="41" y="24" width="17" height="24" fill="currentColor"/></svg>
+        <div class="app-loading-error">
+            <p>Caret 没有加载成功，请检查网络后刷新页面。</p>
+            <p>Caret could not load. Check your network and reload.</p>
+            <button type="button" class="btn btn-text btn-primary" onclick="location.reload()">刷新 / Reload</button>
+        </div>
+    </div>
     <div id="app">
         <nav id="sidebar">
             <div class="sidebar-top">
@@ -148,7 +158,7 @@
         </div>
     </dialog>
 
-    <dialog id="settings-dialog" aria-labelledby="settings-title">
+    <dialog id="settings-dialog" aria-labelledby="settings-title" tabindex="-1">
         <header class="dialog-head">
             <button type="button" id="settings-back" class="btn hidden" data-i18n-title="settings.back">
                 <i class="codicon codicon-arrow-left"></i>
@@ -160,60 +170,78 @@
         </header>
 
         <div class="dialog-body">
-            <section data-page="main">
-                <h3 class="section-title"><span data-i18n="settings.model"></span><button type="button" class="info" data-tip="settings.modelTip" data-i18n-label="settings.info"><i class="codicon codicon-info"></i></button></h3>
-                <div class="field">
-                    <span class="field-label" id="provider-label" data-i18n="settings.provider"></span>
-                    <button type="button" id="provider-trigger" class="select-trigger" aria-haspopup="listbox" aria-labelledby="provider-label"><span></span><i class="codicon codicon-chevron-down"></i></button>
-                </div>
-                <div class="field hidden" id="field-base-url">
-                    <label class="field-label" for="input-base-url" data-i18n="settings.baseUrl"></label>
-                    <input id="input-base-url" type="url" placeholder="https://" autocomplete="off" spellcheck="false">
-                </div>
-                <div class="field">
-                    <div class="field-label">
-                        <label for="input-api-key" data-i18n="settings.apiKey"></label>
-                        <button type="button" class="info" data-tip="settings.apiKeyTip" data-i18n-label="settings.info"><i class="codicon codicon-info"></i></button>
-                        <a id="key-link" class="field-link" target="_blank" rel="noopener noreferrer" data-i18n="settings.getKey"></a>
+            <section data-page="main" class="settings-columns">
+                <div>
+                    <h3 class="section-title"><span data-i18n="settings.model"></span><button type="button" class="info" data-tip="settings.modelTip" data-i18n-label="settings.info"><i class="codicon codicon-info"></i></button></h3>
+                    <div class="field">
+                        <span class="field-label" id="provider-label" data-i18n="settings.provider"></span>
+                        <button type="button" id="provider-trigger" class="select-trigger" aria-haspopup="listbox" aria-labelledby="provider-label"><span></span><i class="codicon codicon-chevron-down"></i></button>
                     </div>
-                    <input id="input-api-key" type="password" placeholder="sk-" autocomplete="off" spellcheck="false">
-                    <button type="button" id="btn-clear-key" class="field-link hidden" data-i18n="settings.clearKey"></button>
-                </div>
-                <div class="field">
-                    <div class="field-label">
-                        <span id="model-label" data-i18n="settings.defaultModel"></span>
-                        <button type="button" class="info" data-tip="settings.defaultModelTip" data-i18n-label="settings.info"><i class="codicon codicon-info"></i></button>
+                    <div class="field hidden" id="field-base-url">
+                        <label class="field-label" for="input-base-url" data-i18n="settings.baseUrl"></label>
+                        <input id="input-base-url" type="url" placeholder="https://" autocomplete="off" spellcheck="false">
                     </div>
-                    <button type="button" id="model-trigger" class="select-trigger" aria-haspopup="listbox" aria-labelledby="model-label"><span></span><i class="codicon codicon-chevron-down"></i></button>
-                </div>
-                <div class="field hidden" id="field-effort">
-                    <div class="field-label">
-                        <span id="effort-label" data-i18n="settings.defaultEffort"></span>
-                        <button type="button" class="info" data-tip="settings.defaultEffortTip" data-i18n-label="settings.info"><i class="codicon codicon-info"></i></button>
+                    <div class="field">
+                        <div class="field-label">
+                            <label for="input-api-key" data-i18n="settings.apiKey"></label>
+                            <button type="button" class="info" data-tip="settings.apiKeyTip" data-i18n-label="settings.info"><i class="codicon codicon-info"></i></button>
+                            <a id="key-link" class="field-link" target="_blank" rel="noopener noreferrer" data-i18n="settings.getKey"></a>
+                        </div>
+                        <input id="input-api-key" type="password" placeholder="sk-" autocomplete="off" spellcheck="false">
+                        <button type="button" id="btn-clear-key" class="field-link hidden" data-i18n="settings.clearKey"></button>
                     </div>
-                    <button type="button" id="effort-trigger" class="select-trigger" aria-haspopup="listbox" aria-labelledby="effort-label"><span></span><i class="codicon codicon-chevron-down"></i></button>
-                </div>
-                <p id="connection-status" role="status"></p>
-
-                <h3 class="section-title" data-i18n="settings.appearance"></h3>
-                <div class="field">
-                    <span class="field-label" data-i18n="settings.theme"></span>
-                    <div class="segments">
-                        <button type="button" data-theme-option="system" data-i18n="settings.themeSystem"></button>
-                        <button type="button" data-theme-option="light" data-i18n="settings.themeLight"></button>
-                        <button type="button" data-theme-option="dark" data-i18n="settings.themeDark"></button>
+                    <div class="field">
+                        <div class="field-label">
+                            <span id="model-label" data-i18n="settings.defaultModel"></span>
+                            <button type="button" class="info" data-tip="settings.defaultModelTip" data-i18n-label="settings.info"><i class="codicon codicon-info"></i></button>
+                        </div>
+                        <button type="button" id="model-trigger" class="select-trigger" aria-haspopup="listbox" aria-labelledby="model-label"><span></span><i class="codicon codicon-chevron-down"></i></button>
                     </div>
-                </div>
-                <div class="field">
-                    <span class="field-label" data-i18n="settings.language"></span>
-                    <div class="segments">
-                        <button type="button" data-lang-option="zh">简体中文</button>
-                        <button type="button" data-lang-option="en">English</button>
+                    <div class="field hidden" id="field-effort">
+                        <div class="field-label">
+                            <span id="effort-label" data-i18n="settings.defaultEffort"></span>
+                            <button type="button" class="info" data-tip="settings.defaultEffortTip" data-i18n-label="settings.info"><i class="codicon codicon-info"></i></button>
+                        </div>
+                        <button type="button" id="effort-trigger" class="select-trigger" aria-haspopup="listbox" aria-labelledby="effort-label"><span></span><i class="codicon codicon-chevron-down"></i></button>
                     </div>
+                    <p id="connection-status" role="status"></p>
                 </div>
 
-                <button type="button" class="settings-link" data-go="context"><span data-i18n="context.title"></span><i class="codicon codicon-chevron-right"></i></button>
-                <button type="button" class="settings-link" data-go="about"><span data-i18n="settings.about"></span><i class="codicon codicon-chevron-right"></i></button>
+                <div>
+                    <h3 class="section-title" data-i18n="settings.appearance"></h3>
+                    <div class="field">
+                        <span class="field-label" data-i18n="settings.theme"></span>
+                        <div class="segments">
+                            <button type="button" data-theme-option="system" data-i18n="settings.themeSystem"></button>
+                            <button type="button" data-theme-option="light" data-i18n="settings.themeLight"></button>
+                            <button type="button" data-theme-option="dark" data-i18n="settings.themeDark"></button>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <span class="field-label" data-i18n="settings.language"></span>
+                        <div class="segments">
+                            <button type="button" data-lang-option="zh">简体中文</button>
+                            <button type="button" data-lang-option="en">English</button>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <span class="field-label" data-i18n="settings.editorFontSize"></span>
+                        <div class="segments" data-size-setting="fontSize"><button type="button" data-size="12">12</button><button type="button" data-size="13">13</button><button type="button" data-size="14">14</button><button type="button" data-size="15">15</button><button type="button" data-size="16">16</button></div>
+                    </div>
+                    <div class="field">
+                        <span class="field-label" data-i18n="settings.chatFontSize"></span>
+                        <div class="segments" data-size-setting="chatFontSize"><button type="button" data-size="12">12</button><button type="button" data-size="13">13</button><button type="button" data-size="14">14</button><button type="button" data-size="15">15</button><button type="button" data-size="16">16</button></div>
+                    </div>
+                    <div class="field field-switch">
+                        <span class="field-label" id="wrap-label" data-i18n="settings.wordWrap"></span>
+                        <button type="button" id="wrap-switch" class="switch" role="switch" aria-labelledby="wrap-label"></button>
+                    </div>
+                </div>
+
+                <div class="settings-links">
+                    <button type="button" class="settings-link" data-go="context"><span data-i18n="context.title"></span><i class="codicon codicon-chevron-right"></i></button>
+                    <button type="button" class="settings-link" data-go="about"><span data-i18n="settings.about"></span><i class="codicon codicon-chevron-right"></i></button>
+                </div>
             </section>
 
             <section data-page="about" class="hidden">
@@ -258,6 +286,6 @@
         <div id="tooltip" popover="manual" role="tooltip"></div>
     </dialog>
 
-    <script type="module" src="main.js"></script>
+    <script type="module" src="main.js" onerror="document.getElementById('app-loading').classList.add('is-failed')"></script>
 </body>
 </html>
