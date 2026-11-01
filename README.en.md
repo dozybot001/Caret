@@ -61,7 +61,7 @@ The ring in the input bar shows how much context is used. 100% is the compaction
 
 ## Development
 
-There is no build step and there are no dependencies. The source is what runs in production.
+There is no build step and no runtime dependency. The source is what runs in production. Monaco lives in `vendor/` and is served from the same origin, so the page loads no third-party scripts.
 
 ```bash
 python3 -m http.server 8000   # Run locally, then open http://localhost:8000
@@ -83,6 +83,7 @@ css/                   Styles, starting from style.css
 assets/                Static assets such as the share image
 tests/                 Tests, matching the modules in src
 docs/                  Design guidelines and the README screenshot
+vendor/                Monaco 0.52.2, from min/vs in the npm package, with only the Simplified Chinese language pack
 deploy/                Release script and Caddy config
 ```
 
@@ -90,4 +91,4 @@ Read the [design guidelines](docs/design-guidelines.md) (in Chinese) before chan
 
 ## License
 
-[MIT](LICENSE). Icons are from [vscode-codicons](https://github.com/microsoft/vscode-codicons), with the license in [css/codicons](css/codicons).
+[MIT](LICENSE). The editor is [Monaco Editor](https://github.com/microsoft/monaco-editor), with the license in [vendor/monaco-0.52.2](vendor/monaco-0.52.2). Icons are from [vscode-codicons](https://github.com/microsoft/vscode-codicons), with the license in [css/codicons](css/codicons).

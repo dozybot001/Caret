@@ -1,13 +1,13 @@
 /**
  * @fileoverview Monaco 加载和配色
- * @description 从 CDN 加载 Monaco，按当前主题设置配色，按文件名判断语言
+ * @description 加载 vendor 目录里的 Monaco，按当前主题设置配色，按文件名判断语言
  * @module monaco
  */
 
 import { resolvedTheme } from '../app/preferences.js';
 import { getLanguage } from '../i18n/index.js';
 
-const MONACO_BASE = 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min';
+const MONACO_BASE = new URL('../../vendor/monaco-0.52.2/', import.meta.url).href;
 
 const LANGUAGES = {
     'js': 'javascript', 'mjs': 'javascript', 'cjs': 'javascript', 'jsx': 'javascript',
@@ -22,23 +22,19 @@ const LANGUAGES = {
 };
 
 /**
- * 从 CDN 加载 Monaco。Worker 跨域，需要通过 data URL 中转
+ * 加载 Monaco
  * @returns {Promise<void>}
  */
 export function loadMonaco() {
-    window.MonacoEnvironment = {
-        getWorkerUrl: () => `data:text/javascript;charset=utf-8,${encodeURIComponent(
-            `self.MonacoEnvironment={baseUrl:'${MONACO_BASE}/'};importScripts('${MONACO_BASE}/vs/base/worker/workerMain.js');`
-        )}`
-    };
+    window.MonacoEnvironment = { getWorkerUrl: () => `${MONACO_BASE}vs/base/worker/workerMain.js` };
 
     return new Promise((resolve, reject) => {
         const script = document.createElement('script');
-        script.src = `${MONACO_BASE}/vs/loader.min.js`;
+        script.src = `${MONACO_BASE}vs/loader.js`;
         script.onerror = reject;
         script.onload = () => {
             window.require.config({
-                paths: { vs: `${MONACO_BASE}/vs` },
+                paths: { vs: `${MONACO_BASE}vs` },
                 'vs/nls': getLanguage() === 'zh' ? { availableLanguages: { '*': 'zh-cn' } } : {}
             });
             window.require(['vs/editor/editor.main'], resolve, reject);

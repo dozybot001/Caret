@@ -61,7 +61,7 @@ Caret 没有隐藏的记忆，只有三样你能看到的东西：
 
 ## 开发
 
-没有构建步骤，也没有依赖，源码就是线上运行的代码。
+没有构建步骤，也没有运行时依赖，源码就是线上运行的代码。Monaco 放在 `vendor/`，和页面同源托管，页面不加载第三方脚本。
 
 ```bash
 python3 -m http.server 8000   # 本地运行，然后打开 http://localhost:8000
@@ -83,6 +83,7 @@ css/                   样式，入口是 style.css
 assets/                分享图等静态资源
 tests/                 测试，和 src 的模块对应
 docs/                  设计规范和 README 截图
+vendor/                Monaco 0.52.2，来自 npm 包的 min/vs，只保留简体中文语言包
 deploy/                发布脚本和 Caddy 配置
 ```
 
@@ -90,4 +91,4 @@ deploy/                发布脚本和 Caddy 配置
 
 ## 许可证
 
-[MIT](LICENSE)。图标来自 [vscode-codicons](https://github.com/microsoft/vscode-codicons)，许可证见 [css/codicons](css/codicons)。
+[MIT](LICENSE)。编辑器是 [Monaco Editor](https://github.com/microsoft/monaco-editor)，许可证见 [vendor/monaco-0.52.2](vendor/monaco-0.52.2)。图标来自 [vscode-codicons](https://github.com/microsoft/vscode-codicons)，许可证见 [css/codicons](css/codicons)。

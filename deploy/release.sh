@@ -6,7 +6,7 @@ set -euo pipefail
 SERVER=agenthub-prod
 ROOT=/opt/caret
 ORIGIN=https://caret.tenon.asia
-FILES=(404.html LICENSE index.html .well-known assets css src)
+FILES=(404.html LICENSE index.html .well-known assets css src vendor)
 SSH=(ssh -o BatchMode=yes -o ConnectTimeout=15 "$SERVER")
 
 cd "$(dirname "$0")/.."
@@ -70,11 +70,19 @@ for name in strict-transport-security content-security-policy x-content-type-opt
     grep -qi "^$name:" <<<"$headers" || fail "缺少响应头 $name"
 done
 grep -qi "frame-ancestors 'none'" <<<"$headers" || fail 'CSP 缺少 frame-ancestors'
+grep -qi 'cdnjs' <<<"$headers" && fail 'CSP 里还有第三方脚本'
+grep -qi '^cache-control: no-cache' <<<"$headers" || fail '页面的缓存策略不对'
 
 headers=$(fetch -I "$ORIGIN/src/main.js") || fail 'main.js 不可用'
 grep -qi '^content-type: text/javascript' <<<"$headers" || fail 'main.js 类型不对'
 [ "$(status_of css/codicons/codicon.ttf)" = 200 ] || fail '图标字体不可用'
 [ "$(status_of assets/og.png)" = 200 ] || fail '分享图不可用'
+
+headers=$(fetch -I "$ORIGIN/vendor/monaco-0.52.2/vs/loader.js") || fail 'Monaco 不可用'
+grep -qi '^cache-control: public' <<<"$headers" || fail 'Monaco 的缓存策略不对'
+grep -qi 'content-security-policy' <<<"$headers" || fail 'Monaco 缺少 CSP'
+[ "$(status_of vendor/monaco-0.52.2/vs/base/worker/workerMain.js)" = 200 ] || fail 'Monaco Worker 不可用'
+[ "$(status_of vendor/monaco-0.52.2/vs/nls.messages.zh-cn.js)" = 200 ] || fail 'Monaco 语言包不可用'
 
 body=$(fetch "$ORIGIN/.well-known/security.txt") || fail 'security.txt 不可用'
 [[ $body == *'Contact: mailto:support@tenonai.cn'* ]] || fail 'security.txt 不对'
