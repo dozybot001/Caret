@@ -6,7 +6,7 @@ set -euo pipefail
 SERVER=agenthub-prod
 ROOT=/opt/caret
 ORIGIN=https://caret.tenon.asia
-FILES=(404.html LICENSE index.html main.js style.css .well-known css src)
+FILES=(404.html LICENSE index.html main.js style.css og.png .well-known css src)
 SSH=(ssh -o BatchMode=yes -o ConnectTimeout=15 "$SERVER")
 
 cd "$(dirname "$0")/.."
@@ -74,6 +74,7 @@ grep -qi "frame-ancestors 'none'" <<<"$headers" || fail 'CSP 缺少 frame-ancest
 headers=$(fetch -I "$ORIGIN/main.js") || fail 'main.js 不可用'
 grep -qi '^content-type: text/javascript' <<<"$headers" || fail 'main.js 类型不对'
 [ "$(status_of css/codicons/codicon.ttf)" = 200 ] || fail '图标字体不可用'
+[ "$(status_of og.png)" = 200 ] || fail '分享图不可用'
 
 body=$(fetch "$ORIGIN/.well-known/security.txt") || fail 'security.txt 不可用'
 [[ $body == *'Contact: mailto:support@tenonai.cn'* ]] || fail 'security.txt 不对'

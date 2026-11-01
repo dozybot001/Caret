@@ -59,7 +59,9 @@ export const FS_CONSTANTS = {
     /** 大文件阈值（字节），超过后关闭编辑器的部分功能 */
     LARGE_FILE_THRESHOLD: 10 * 1024 * 1024,
     /** Agent 能读取的最大文件（字节） */
-    AGENT_FILE_LIMIT: 2 * 1000 * 1000
+    AGENT_FILE_LIMIT: 2 * 1000 * 1000,
+    /** 这些目录不显示，也不交给 Agent，任何层级都一样，任何规则都不能放开 */
+    PROTECTED_DIRECTORIES: ['.git', '.intent']
 };
 
 /**
@@ -151,4 +153,4 @@ export const PROVIDERS = {
 };
 
 /** 当前版本 */
-export const VERSION = '0.10.0';
+export const VERSION = '0.10.1';

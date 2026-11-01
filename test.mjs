@@ -85,6 +85,33 @@ test('密钥文件不读取、不修改、不进入搜索结果', async () => {
     assert.equal((await run(ws, 'read', { path: '.env.example' })).ok, true);
 });
 
+test('更多密钥文件不读取，示例文件和公钥不受影响', async () => {
+    const secrets = [
+        '.git-credentials', '.envrc', '.dev.vars', '.pgpass', '.htpasswd', 'terraform.tfvars', 'prod.auto.tfvars', 'terraform.tfstate',
+        'secrets.yaml', 'secrets.json', 'config/secrets.yml', 'service-account.json', 'deploy/my-service_account-key.json',
+        '.docker/config.json', '.kube/config', 'keystore.jks', 'vault.kdbx', 'AuthKey_ABC.p8', 'HOME/.NETRC', '_netrc'
+    ];
+    const ws = workspace(Object.fromEntries(secrets.map(path => [path, 'SECRET'])));
+    for (const path of secrets) {
+        assert.equal((await run(ws, 'read', { path })).ok, false, path);
+        assert.equal((await run(ws, 'edit', { path, old: 'SECRET', new: 'x' })).ok, false, path);
+    }
+    assert.equal((await run(ws, 'read', { pattern: 'SECRET' })).output, 'No matches.');
+
+    const safe = ['.env.example', '.dev.vars.example', 'id_ed25519.pub', 'secrets.example.yaml', 'docker/config.json', 'src/config.json', 'kube/config'];
+    const open = workspace(Object.fromEntries(safe.map(path => [path, 'text'])));
+    for (const path of safe) assert.equal((await run(open, 'read', { path })).ok, true, path);
+});
+
+test('任意层级的 .git 和 .intent 都不开放，不区分大小写', async () => {
+    for (const path of ['.GIT/config', '.Git/hooks/pre-commit', 'packages/app/.git/config', 'vendor/lib/.git/hooks/pre-commit', 'a/.intent/x', 'a/.INTENT/x']) {
+        assert.throws(() => normalizePath(path), /directory is not available/, path);
+    }
+    assert.equal(normalizePath('.gitignore'), '.gitignore');
+    assert.equal(normalizePath('.github/workflows/ci.yml'), '.github/workflows/ci.yml');
+    assert.equal((await run(workspace({ 'a/.git/config': 'x' }), 'read', { path: 'a/.git/config' })).ok, false);
+});
+
 test('路径限制在项目内', async () => {
     assert.equal(normalizePath('./src//a.js'), 'src/a.js');
     assert.equal(normalizePath('/src/a.js'), 'src/a.js');
@@ -146,7 +173,7 @@ test('流式响应合并文本、分片的工具调用和 reasoning_content', as
     });
 
     const seen = [];
-    const message = await collectMessage(readEvents(stream), { onText: text => seen.push(text) });
+    const { message } = await collectMessage(readEvents(stream), { onText: text => seen.push(text) });
     assert.deepEqual(seen, ['好']);
     assert.equal(message.content, '好');
     assert.equal(message.reasoning_content, '想一想');
@@ -161,9 +188,10 @@ function scriptedModel(replies) {
         const reply = replies.shift();
         if (reply.status) return new Response(JSON.stringify({ error: { message: reply.message } }), { status: reply.status });
         const delta = reply.tool
-            ? { tool_calls: [{ index: 0, id: `call_${requests.length}`, function: { name: reply.tool, arguments: JSON.stringify(reply.args) } }] }
+            ? { tool_calls: [{ index: 0, id: `call_${requests.length}`, function: { name: reply.tool, arguments: reply.raw ?? JSON.stringify(reply.args) } }] }
             : { content: reply.text };
-        return new Response(`data: ${JSON.stringify({ choices: [{ delta }] })}\n\ndata: [DONE]\n\n`);
+        const finish = reply.finish ? `data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: reply.finish }] })}\n\n` : '';
+        return new Response(`data: ${JSON.stringify({ choices: [{ delta }] })}\n\n${finish}data: [DONE]\n\n`);
     };
     return requests;
 }
@@ -217,6 +245,43 @@ test('停止后补齐工具结果，下一次请求仍然合法', async () => {
     const results = agent.messages.filter(message => message.role === 'tool');
     assert.deepEqual(results.map(message => message.tool_call_id), ['one', 'two']);
     assert.equal(results[1].content, 'Stopped by the user.');
+});
+
+test('工具调用被输出上限截断时不重试，也不把残缺的调用留在上下文里', async () => {
+    const ws = workspace({ 'a.txt': 'old\n' });
+    const requests = scriptedModel([{ tool: 'write', raw: '{"path":"a.txt","content":"long text th', finish: 'length' }]);
+    const steps = [];
+    const agent = new Agent(ws, connection, { onStepStart: name => steps.push(name) });
+    await assert.rejects(agent.send('重写'), { code: 'output-limit' });
+    assert.equal(requests.length, 1);
+    assert.deepEqual(steps, []);
+    assert.equal(ws.state.get('a.txt'), 'old\n');
+    assert.deepEqual(agent.messages.map(message => message.role), ['user']);
+    assert.equal(agent.running, false);
+});
+
+test('内容过滤截断工具调用时交给界面处理', async () => {
+    const requests = scriptedModel([{ tool: 'write', raw: '{"path":', finish: 'content_filter' }]);
+    await assert.rejects(new Agent(workspace(), connection, {}).send('改'), { code: 'content-filter' });
+    assert.equal(requests.length, 1);
+});
+
+test('回复被截断时保留已生成的内容，并告诉界面没有正常结束', async () => {
+    const requests = scriptedModel([{ text: '前半段', finish: 'length' }, { text: '被拦截', finish: 'content_filter' }, { text: '完整', finish: 'stop' }]);
+    const agent = new Agent(workspace(), connection, {});
+    assert.equal(await agent.send('解释'), 'truncated');
+    assert.equal(agent.messages.at(-1).content, '前半段');
+    assert.equal(await agent.send('继续'), 'filtered');
+    assert.equal(await agent.send('再来'), 'done');
+    assert.equal(requests.length, 3);
+});
+
+test('工具调用完整时，即使到达输出上限也照常执行', async () => {
+    const ws = workspace({ 'a.txt': 'x\n' });
+    const requests = scriptedModel([{ tool: 'read', args: { path: 'a.txt' }, finish: 'length' }, { text: '好' }]);
+    assert.equal(await new Agent(ws, connection, {}).send('读'), 'done');
+    assert.equal(requests.length, 2);
+    assert.equal(requests[1].messages.at(-1).content, 'x\n');
 });
 
 test('模型服务报错时保留上下文，可以重试', async () => {
@@ -687,6 +752,81 @@ test('忽略规则优先于内置规则和 .gitignore，但放不开 .git 和 .i
     assert.deepEqual(await paths(), ['.gitignore', 'dist/app.js', 'logo.svg', 'notes.md']);
     manager.setUserIgnoreRules('');
     assert.deepEqual(await paths(), ['.gitignore', 'a.js']);
+});
+
+const bytes = text => new TextEncoder().encode(text).buffer;
+
+/** 编辑器管理器和内存磁盘。这里只替换撤销用到的浏览器对象，不创建 Monaco */
+async function undoFixture(files) {
+    Object.assign(globalThis, {
+        window: { matchMedia: () => ({ matches: false, addEventListener() {} }) },
+        location: { search: '' },
+        document: { documentElement: { dataset: {} } },
+        monaco: { editor: { EndOfLinePreference: { LF: 1 } } }
+    });
+    const { EditorManager } = await import('./src/editor/editor-manager.js');
+
+    const disk = new Map(Object.entries(files));
+    const editor = new EditorManager(null, null);
+    Object.assign(editor, { _renderTabs() {}, _saveTabsState: async () => {}, _notifyChanges() {}, _present() {} });
+    editor.fileManager = {
+        readBytes: async path => (disk.has(path) ? bytes(disk.get(path)) : null),
+        writeFile: async (path, content) => void disk.set(path, new TextDecoder().decode(content)),
+        deleteFile: async path => void disk.delete(path)
+    };
+    const open = (path, text, original = text) => {
+        const tab = {
+            id: path, name: path, original, savedVersion: 1, isDirty: text !== original, isNew: false, showDiff: false, handle: {},
+            model: { getValue: () => text, getAlternativeVersionId: () => 2 }
+        };
+        editor.tabs.push(tab);
+        return tab;
+    };
+    return { editor, disk, open };
+}
+
+test('撤销前核对磁盘，同一文件之后又写入过时不动文件', async () => {
+    const { editor, disk, open } = await undoFixture({ 'a.txt': 'three\n' });
+    open('a.txt', 'three\n');
+    const applied = [{ path: 'a.txt', before: bytes('one\n'), after: 'two\n' }];
+
+    assert.deepEqual(await editor.undoApply(applied), { conflicts: ['a.txt'] });
+    assert.equal(disk.get('a.txt'), 'three\n');
+    assert.deepEqual(editor.getChanges(), []);
+});
+
+test('确认撤销后恢复磁盘，后来的内容留在待写入的改动里', async () => {
+    const { editor, disk, open } = await undoFixture({ 'a.txt': 'three\n' });
+    open('a.txt', 'three\n');
+    await editor.undoApply([{ path: 'a.txt', before: bytes('one\n'), after: 'two\n' }], { force: true });
+
+    assert.equal(disk.get('a.txt'), 'one\n');
+    const [change] = editor.getChanges();
+    assert.deepEqual([change.base, change.text], ['one\n', 'three\n']);
+});
+
+test('撤销不替换标签页里没写入的修改', async () => {
+    const { editor, disk, open } = await undoFixture({ 'a.txt': 'two\r\n' });
+    open('a.txt', 'two\nmine\n', 'two\n');
+    assert.deepEqual(await editor.undoApply([{ path: 'a.txt', before: bytes('one\n'), after: 'two\n' }]), {});
+
+    assert.equal(disk.get('a.txt'), 'one\n');
+    const [change] = editor.getChanges();
+    assert.deepEqual([change.base, change.text], ['one\n', 'two\nmine\n']);
+});
+
+test('撤销新建的文件时删除它，内容回到待写入，文件已经不在时也不报错', async () => {
+    const { editor, disk, open } = await undoFixture({ 'new.txt': 'new\n' });
+    const tab = open('new.txt', 'new\n');
+    const applied = [{ path: 'new.txt', before: null, after: 'new\n' }];
+
+    assert.deepEqual(await editor.undoApply(applied), {});
+    assert.equal(disk.has('new.txt'), false);
+    assert.deepEqual(editor.getChanges().map(change => [change.path, change.isNew]), [['new.txt', true]]);
+
+    assert.deepEqual(await editor.undoApply(applied), { conflicts: ['new.txt'] });
+    assert.deepEqual(await editor.undoApply(applied, { force: true }), {});
+    assert.equal(tab.isNew, true);
 });
 
 const REGULAR = 0o100644;

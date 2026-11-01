@@ -8,12 +8,38 @@
  * @module tools
  */
 
-import { AGENT_CONSTANTS } from '../global/constants.js';
+import { AGENT_CONSTANTS, FS_CONSTANTS } from '../global/constants.js';
 
 const { READ_LINES, READ_CHARS, GREP_HITS, GREP_LINE_CHARS, OUTLINE_LINES, GREP_CONCURRENCY } = AGENT_CONSTANTS;
 
 /** 常见密钥文件：不读取，不修改，不发给模型 */
-const SECRET_FILE = /(^|\/)(\.env(?!\.(example|sample|template)$)(\..+)?|[^/]+\.(pem|key|p12|pfx|keystore)|id_(rsa|dsa|ecdsa|ed25519)|\.npmrc|\.pypirc|\.netrc|credentials(\.json)?)$/i;
+const SECRET_FILE = new RegExp(`(^|/)(${[
+    // 环境变量
+    '\\.env(?!\\.(example|sample|template)$)(\\..+)?',
+    '\\.envrc',
+    '\\.dev\\.vars',
+    // 私钥、证书和密码库
+    '[^/]+\\.(pem|key|p8|p12|pfx|ppk|jks|keystore|kdbx?)',
+    'id_(rsa|dsa|ecdsa|ed25519)',
+    // 各种工具保存的登录信息
+    '\\.npmrc',
+    '\\.pypirc',
+    '[._]netrc',
+    '\\.git-credentials',
+    '\\.pgpass',
+    '\\.my\\.cnf',
+    '\\.htpasswd',
+    '\\.vault-token',
+    '\\.docker/config\\.json',
+    '\\.kube/config',
+    'kubeconfig',
+    // 配置里的密钥
+    'credentials(\\.json)?',
+    'secrets?\\.(ya?ml|json|toml)',
+    '[^/]*service[-_]?account[^/]*\\.json',
+    '[^/]+\\.tfvars',
+    '[^/]+\\.tfstate(\\.backup)?'
+].join('|')})$`, 'i');
 
 /** 提供给模型的工具定义（OpenAI 兼容格式） */
 export const TOOL_SCHEMAS = [
@@ -75,7 +101,8 @@ export const TOOL_SCHEMAS = [
 export function normalizePath(path) {
     const parts = String(path ?? '.').replace(/\\/g, '/').split('/').filter(part => part && part !== '.');
     if (parts.includes('..')) throw new Error(`Path must stay inside the project: ${path}`);
-    if (parts[0] === '.git' || parts[0] === '.intent') throw new Error(`The ${parts[0]} directory is not available.`);
+    const blocked = parts.find(part => FS_CONSTANTS.PROTECTED_DIRECTORIES.includes(part.toLowerCase()));
+    if (blocked) throw new Error(`The ${blocked} directory is not available.`);
     return parts.join('/') || '.';
 }
 

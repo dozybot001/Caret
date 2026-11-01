@@ -28,6 +28,9 @@ import { applyTranslations, onLanguageChange, t } from './i18n.js';
 import { clearPreferences, onThemeChange } from './preferences.js';
 import { initResizers } from './resizers.js';
 
+/** 运行没有正常完成时显示的说明 */
+const RUN_NOTES = { stopped: 'chat.stopped', truncated: 'chat.truncated', filtered: 'chat.filtered' };
+
 /**
  * 把错误转成用户能处理的说明
  * @param {Error} error - 错误
@@ -36,6 +39,8 @@ import { initResizers } from './resizers.js';
 function describeError(error) {
     const { status, code, name, message } = error;
     if (code === 'too-many-steps') return () => t('error.steps');
+    if (code === 'output-limit') return () => t('error.outputLimit');
+    if (code === 'content-filter') return () => t('error.contentFilter');
     if (status === 401 || status === 403) return () => t('error.auth');
     if (status === 402 || status === 429) return () => t('error.rate');
     if (isContextError(error)) return () => t('error.long');
@@ -393,8 +398,8 @@ export class AppController {
         this._saveSession();
         try {
             const outcome = await running;
-            if (outcome === 'stopped') {
-                this.chatUI.addNote('chat.stopped');
+            if (RUN_NOTES[outcome]) {
+                this.chatUI.addNote(RUN_NOTES[outcome]);
             } else {
                 const seconds = Math.max(1, Math.round((performance.now() - startedAt) / 1000));
                 this.chatUI.addNote('chat.finished', seconds);
@@ -454,8 +459,17 @@ export class AppController {
      * @private
      */
     async _undo(applied, row) {
+        if (this.agent.running) {
+            window.notify?.alert(t('folder.releaseBusy'), { type: 'warning' });
+            return;
+        }
         try {
-            await this.editor.undoApply(applied);
+            const { conflicts } = await this.editor.undoApply(applied);
+            if (conflicts) {
+                const confirmed = await window.notify.confirm(t('changes.undoConflict', conflicts.join(', ')), t('changes.undoAnyway'));
+                if (!confirmed) return;
+                await this.editor.undoApply(applied, { force: true });
+            }
             this.agent.addNote('[The user undid the last apply. Those changes are pending again.]');
             this.chatUI.markUndone(row);
             this._saveSession();

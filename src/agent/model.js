@@ -88,16 +88,19 @@ export async function* readEvents(body) {
  * 合并一轮流式响应，得到完整的 assistant 消息
  * @param {AsyncIterable<Object>} events - 数据块
  * @param {Object} handlers - 进度回调：onText(fullText)、onThinking()、onToolCall()
- * @returns {Promise<Object>} assistant 消息
+ * @returns {Promise<{message: Object, finishReason: string}>} assistant 消息和模型结束回复的原因
  */
 export async function collectMessage(events, { onText, onThinking, onToolCall } = {}) {
     const message = { role: 'assistant', content: '' };
     const calls = [];
     let reasoning = '';
+    let finishReason = '';
 
     for await (const event of events) {
         if (event.error) throw new Error(event.error.message || 'Model error');
-        const delta = event.choices?.[0]?.delta;
+        const choice = event.choices?.[0];
+        finishReason = choice?.finish_reason || finishReason;
+        const delta = choice?.delta;
         if (!delta) continue;
         if (delta.reasoning_content) {
             reasoning += delta.reasoning_content;
@@ -121,7 +124,7 @@ export async function collectMessage(events, { onText, onThinking, onToolCall } 
     if (toolCalls.length > 0) message.tool_calls = toolCalls;
     // DeepSeek 要求在后续请求里带回 reasoning_content
     if (reasoning) message.reasoning_content = reasoning;
-    return message;
+    return { message, finishReason };
 }
 
 /**
@@ -130,7 +133,7 @@ export async function collectMessage(events, { onText, onThinking, onToolCall } 
  * @param {Array<Object>} messages - 消息列表
  * @param {AbortSignal} signal - 取消信号
  * @param {Object} handlers - 进度回调
- * @returns {Promise<Object>} assistant 消息
+ * @returns {Promise<{message: Object, finishReason: string}>} assistant 消息和模型结束回复的原因
  */
 export async function requestCompletion(connection, messages, signal, handlers) {
     for (let attempt = 0; ; attempt++) {

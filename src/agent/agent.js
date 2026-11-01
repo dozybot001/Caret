@@ -29,6 +29,26 @@ const CLEARED_OUTPUT = '[Output removed to save space. Read the file again if yo
 /** 项目说明文件，按顺序取第一个存在的 */
 const PROJECT_RULES = ['AGENTS.md', 'CLAUDE.md'];
 
+/** 回复没有正常结束时的结果：模型到达输出上限，或者模型服务拦截了内容 */
+const CUT_OFF = {
+    length: { outcome: 'truncated', code: 'output-limit' },
+    content_filter: { outcome: 'filtered', code: 'content-filter' }
+};
+
+/**
+ * 判断工具调用的参数是否完整
+ * @param {Object} call - 工具调用
+ * @returns {boolean}
+ */
+function isCompleteCall(call) {
+    try {
+        JSON.parse(call.function.arguments || '{}');
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 /**
  * 判断错误是否由用户取消引起
  * @param {Error} error - 错误
@@ -98,7 +118,7 @@ export class Agent {
     /**
      * 发送一条用户消息并运行
      * @param {string} text - 用户消息
-     * @returns {Promise<'done'|'stopped'>}
+     * @returns {Promise<'done'|'stopped'|'truncated'|'filtered'>}
      */
     send(text) {
         const notes = this.pendingNotes.splice(0);
@@ -108,7 +128,7 @@ export class Agent {
 
     /**
      * 从当前上下文继续运行，也用于出错后的重试
-     * @returns {Promise<'done'|'stopped'>}
+     * @returns {Promise<'done'|'stopped'|'truncated'|'filtered'>}
      */
     async resume() {
         this.controller = new AbortController();
@@ -118,9 +138,11 @@ export class Agent {
             const system = await this._systemPrompt();
             const { maxSteps } = this.preferences;
             for (let step = 0; step < maxSteps; step++) {
-                const message = await this._nextMessage(system, signal);
+                const { message, finishReason } = await this._nextMessage(system, signal);
+                const cutOff = CUT_OFF[finishReason];
+                if (cutOff && message.tool_calls?.some(call => !isCompleteCall(call))) this._rejectCall(message, cutOff);
                 this.messages.push(message);
-                if (!message.tool_calls) return 'done';
+                if (!message.tool_calls) return cutOff?.outcome ?? 'done';
                 await this._runTools(message.tool_calls, signal);
             }
             throw Object.assign(new Error('Too many steps'), { code: 'too-many-steps' });
@@ -131,6 +153,18 @@ export class Agent {
             this.controller = null;
             this._closeOpenCalls();
         }
+    }
+
+    /**
+     * 放弃被截断的工具调用。它不能执行，模型重试多半还是被截断，只会多花费用，所以交给用户处理
+     * @private
+     * @param {Object} message - assistant 消息
+     * @param {{code: string}} cutOff - 回复没有正常结束的原因
+     */
+    _rejectCall(message, { code }) {
+        delete message.tool_calls;
+        if (message.content) this.messages.push(message);
+        throw Object.assign(new Error('The reply was cut off'), { code });
     }
 
     /**

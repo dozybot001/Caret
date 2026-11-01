@@ -75,9 +75,6 @@ export function decodeBytes(buffer) {
 
 const isMissing = error => error.name === 'NotFoundError' || error.name === 'TypeMismatchError';
 
-/** 这些目录不显示，也不交给 Agent，任何规则都不能放开 */
-const PROTECTED_DIRECTORIES = ['.git', '.intent'];
-
 export class FileManager {
     /**
      * @param {AppStore} store - 应用状态存储实例
@@ -198,7 +195,7 @@ export class FileManager {
 
         const scopes = [...currentStack, { basePath: '', rules: this.userIgnoreRules }];
         const visibleEntries = entries.filter(entry => {
-            if (PROTECTED_DIRECTORIES.includes(entry.name)) return false;
+            if (FS_CONSTANTS.PROTECTED_DIRECTORIES.includes(entry.name.toLowerCase())) return false;
             const entryPath = currentPath ? `${currentPath}/${entry.name}` : entry.name;
             return !isIgnored(entryPath, scopes);
         });

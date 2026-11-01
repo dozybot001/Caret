@@ -714,21 +714,34 @@ export class EditorManager {
                 applied.push({ path: tab.id, before, after });
             }
         } catch (error) {
-            await this.undoApply(applied);
+            await this.undoApply(applied, { force: true });
             throw error;
         }
         return { applied };
     }
 
     /**
-     * 撤销一次写入：恢复磁盘内容，改动回到待写入状态
+     * 撤销一次写入：恢复磁盘内容，改动回到待写入状态。
+     * 编辑器里的内容不动，所以写入之后的修改留在待写入的改动里，不会丢失
      * @param {Array<{path: string, before: ArrayBuffer|null, after: string}>} applied - 写入记录
+     * @param {Object} options - 选项
+     * @param {boolean} options.force - 磁盘内容和这次写入不同时仍然恢复
+     * @returns {Promise<{conflicts?: string[]}>} 没有恢复时返回磁盘内容不同的文件
      */
-    async undoApply(applied) {
+    async undoApply(applied, { force = false } = {}) {
+        if (!force) {
+            const conflicts = [];
+            for (const { path, after } of applied) {
+                const disk = await this.fileManager.readBytes(path);
+                if (disk === null || decodeBytes(disk).text.replace(/\r\n/g, '\n') !== after) conflicts.push(path);
+            }
+            if (conflicts.length > 0) return { conflicts };
+        }
+
         for (const { path, before, after } of [...applied].reverse()) {
             const tab = this._getTab(path);
             if (before === null) {
-                await this.fileManager.deleteFile(path);
+                if (await this.fileManager.readBytes(path) !== null) await this.fileManager.deleteFile(path);
                 if (tab) {
                     tab.handle = null;
                     tab.isNew = true;
@@ -738,8 +751,9 @@ export class EditorManager {
                 await this.fileManager.writeFile(path, before);
                 if (tab) this._setBase(tab, decodeBytes(before).text.replace(/\r\n/g, '\n'));
             }
-            await this.stageText(path, after, { reveal: false });
+            await this.stageText(path, tab ? this._modelText(tab) : after, { reveal: false });
         }
+        return {};
     }
 
     _renderTabs() {
