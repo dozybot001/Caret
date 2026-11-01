@@ -38,44 +38,61 @@ remote() {
     "${SSH[@]}" 'sudo -n bash -s'
 }
 
-status_of() {
-    curl -s -m 15 -o /dev/null -w '%{http_code}' "$ORIGIN/$1"
+# 公网验收在服务器上执行，不受开发机网络影响：页面、资源类型、安全响应头、404，以及不该发布的文件
+read -r -d '' SMOKE <<'REMOTE' || true
+fail() {
+    echo "公网验收失败：$1" >&2
+    exit 1
 }
 
-# 公网验收：页面、资源类型、安全响应头、404，以及不该发布的文件
+fetch() {
+    curl -fsS --retry 3 --retry-all-errors --retry-delay 2 -m 15 "$@"
+}
+
+status_of() {
+    curl -s --retry 3 --retry-delay 2 -m 15 -o /dev/null -w '%{http_code}' "$ORIGIN/$1"
+}
+
+# 新域名第一次访问时要签发证书
+for _ in $(seq 1 30); do
+    if curl -fsS -m 8 -o /dev/null "$ORIGIN/"; then break; fi
+    sleep 2
+done
+
+body=$(fetch "$ORIGIN/") || fail '首页不可用'
+[[ $body == *'<title>Caret</title>'* ]] || fail '首页内容不对'
+
+body=$(fetch "$ORIGIN/src/global/constants.js") || fail '脚本不可用'
+[[ $body == *"VERSION = '$EXPECTED'"* ]] || fail '线上版本不对'
+
+headers=$(fetch -I "$ORIGIN/") || fail '读不到响应头'
+for name in strict-transport-security content-security-policy x-content-type-options referrer-policy x-frame-options; do
+    grep -qi "^$name:" <<<"$headers" || fail "缺少响应头 $name"
+done
+grep -qi "frame-ancestors 'none'" <<<"$headers" || fail 'CSP 缺少 frame-ancestors'
+
+headers=$(fetch -I "$ORIGIN/main.js") || fail 'main.js 不可用'
+grep -qi '^content-type: text/javascript' <<<"$headers" || fail 'main.js 类型不对'
+[ "$(status_of css/codicons/codicon.ttf)" = 200 ] || fail '图标字体不可用'
+
+body=$(fetch "$ORIGIN/.well-known/security.txt") || fail 'security.txt 不可用'
+[[ $body == *'Contact: mailto:support@tenonai.cn'* ]] || fail 'security.txt 不对'
+
+[ "$(status_of not-a-page)" = 404 ] || fail '不存在的地址没有返回 404'
+body=$(curl -s --retry 3 --retry-delay 2 -m 15 "$ORIGIN/not-a-page")
+[[ $body == *'Page not found'* ]] || fail '404 页面不对'
+
+for path in test.mjs deploy/release.sh README.md .git/config; do
+    [ "$(status_of "$path")" = 404 ] || fail "$path 不应该被发布"
+done
+REMOTE
+
 smoke() {
-    local expected=$1 body headers name path
-    for _ in $(seq 1 30); do
-        if curl -fsS -m 8 -o /dev/null "$ORIGIN/"; then break; fi
-        sleep 2
-    done
-
-    body=$(curl -fsS -m 15 "$ORIGIN/") || return 1
-    [[ $body == *'<title>Caret</title>'* ]] || { echo '首页内容不对' >&2; return 1; }
-
-    body=$(curl -fsS -m 15 "$ORIGIN/src/global/constants.js") || return 1
-    [[ $body == *"VERSION = '$expected'"* ]] || { echo '线上版本不对' >&2; return 1; }
-
-    headers=$(curl -fsSI -m 15 "$ORIGIN/") || return 1
-    for name in strict-transport-security content-security-policy x-content-type-options referrer-policy x-frame-options; do
-        grep -qi "^$name:" <<<"$headers" || { echo "缺少响应头 $name" >&2; return 1; }
-    done
-    grep -qi "frame-ancestors 'none'" <<<"$headers" || { echo 'CSP 缺少 frame-ancestors' >&2; return 1; }
-
-    headers=$(curl -fsSI -m 15 "$ORIGIN/main.js") || return 1
-    grep -qi '^content-type: text/javascript' <<<"$headers" || { echo 'main.js 类型不对' >&2; return 1; }
-    [ "$(status_of css/codicons/codicon.ttf)" = 200 ] || { echo '图标字体不可用' >&2; return 1; }
-
-    body=$(curl -fsS -m 15 "$ORIGIN/.well-known/security.txt") || return 1
-    [[ $body == *'Contact: mailto:support@tenonai.cn'* ]] || { echo 'security.txt 不对' >&2; return 1; }
-
-    [ "$(status_of not-a-page)" = 404 ] || { echo '不存在的地址没有返回 404' >&2; return 1; }
-    body=$(curl -s -m 15 "$ORIGIN/not-a-page")
-    [[ $body == *'Page not found'* ]] || { echo '404 页面不对' >&2; return 1; }
-
-    for path in test.mjs deploy/release.sh README.md .git/config; do
-        [ "$(status_of "$path")" = 404 ] || { echo "$path 不应该被发布" >&2; return 1; }
-    done
+    remote <<EOS
+ORIGIN=$ORIGIN
+EXPECTED=$1
+$SMOKE
+EOS
 }
 
 version_of() {
