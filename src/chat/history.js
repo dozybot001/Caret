@@ -34,23 +34,36 @@ export class SessionHistory {
     }
 
     /**
-     * 打开项目。同一个文件夹用 isSameEntry 判断，名字相同的不同文件夹互不影响
+     * 打开项目。同一个文件夹用 isSameEntry 判断，名字相同的不同文件夹互不影响。
+     * 取消过授权的项目没有句柄，由下一个同名文件夹接上
      * @param {FileSystemDirectoryHandle} handle - 项目文件夹
      */
     async openProject(handle) {
         await this.flush();
         this.current = null;
         for (const project of await this.store.listProjects()) {
-            const isSame = await project.handle.isSameEntry(handle).catch(() => false);
+            const isSame = project.handle
+                ? await project.handle.isSameEntry(handle).catch(() => false)
+                : project.name === handle.name;
             if (isSame) {
-                this.project = project;
+                this.project = { ...project, handle };
                 this.projectId = project.id;
+                if (!project.handle) await this.store.saveProject(this.project);
                 return;
             }
         }
         this.projectId = createId('project');
         this.project = { id: this.projectId, name: handle.name, handle, prompts: [] };
         await this.store.saveProject(this.project);
+    }
+
+    /** 关闭当前项目并放弃它的文件夹句柄，对话记录保留 */
+    async releaseProject() {
+        await this.flush();
+        if (this.project) await this.store.saveProject({ ...this.project, handle: null });
+        this.current = null;
+        this.project = null;
+        this.projectId = null;
     }
 
     /** @returns {string[]} 当前项目发过的提示词，旧的在前 */

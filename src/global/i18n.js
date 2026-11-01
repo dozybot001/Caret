@@ -78,6 +78,7 @@ const MESSAGES = {
 
         'model.connect': '连接模型',
         'model.switch': '切换模型',
+        'model.switchEffort': '切换推理强度',
         'model.settings': '模型设置',
         'model.default': '默认',
 
@@ -92,6 +93,8 @@ const MESSAGES = {
         'settings.clearKey': '清除 Key',
         'settings.defaultModel': '默认模型',
         'settings.defaultModelTip': '新任务默认使用这个模型。在输入栏切换模型只影响当前对话。',
+        'settings.defaultEffort': '默认推理强度',
+        'settings.defaultEffortTip': '档位来自模型服务的接口，模型没有返回档位时不显示。新任务默认使用这个强度，在输入栏切换只影响当前对话。',
         'settings.chooseModel': '选择模型',
         'settings.searchModel': '搜索模型',
         'settings.searchOrTypeModel': '搜索或输入模型名称',
@@ -141,7 +144,11 @@ const MESSAGES = {
         'error.dropFile': '请拖入文件夹，而不是单个文件。',
         'notice.readOnly': name => `${name} 不是 UTF-8 文本，只能查看，不能修改。`,
         'editor.closeConfirm': name => `${name} 有未写入的改动，确定关闭吗？`,
-        'folder.loaded': name => `已打开 ${name}`
+        'folder.loaded': name => `已打开 ${name}`,
+        'folder.release': '取消授权',
+        'folder.releaseConfirm': name => `取消对 ${name} 的授权？Caret 会关闭这个文件夹，之后不能再读取或修改它。未写入的改动会丢失，对话记录保留。浏览器自己的授权记录可以在网站设置里清除。`,
+        'folder.released': name => `已取消对 ${name} 的授权`,
+        'folder.releaseBusy': 'Agent 正在运行，请先停止。'
     },
     en: {
         'brand.label': 'Caret, by Tenon',
@@ -215,6 +222,7 @@ const MESSAGES = {
 
         'model.connect': 'Connect a model',
         'model.switch': 'Switch model',
+        'model.switchEffort': 'Switch reasoning effort',
         'model.settings': 'Model settings',
         'model.default': 'default',
 
@@ -229,6 +237,8 @@ const MESSAGES = {
         'settings.clearKey': 'Clear key',
         'settings.defaultModel': 'Default model',
         'settings.defaultModelTip': 'New tasks use this model. Switching in the input bar only affects the current conversation.',
+        'settings.defaultEffort': 'Default reasoning effort',
+        'settings.defaultEffortTip': 'Levels come from the model service. This option is hidden when a model reports none. New tasks use this level. Switching in the input bar only affects the current conversation.',
         'settings.chooseModel': 'Choose a model',
         'settings.searchModel': 'Search models',
         'settings.searchOrTypeModel': 'Search or type a model name',
@@ -278,7 +288,11 @@ const MESSAGES = {
         'error.dropFile': 'Drop a folder, not a single file.',
         'notice.readOnly': name => `${name} is not UTF-8 text, so it is read-only.`,
         'editor.closeConfirm': name => `${name} has changes that are not applied. Close anyway?`,
-        'folder.loaded': name => `Opened ${name}`
+        'folder.loaded': name => `Opened ${name}`,
+        'folder.release': 'Remove access',
+        'folder.releaseConfirm': name => `Remove access to ${name}? Caret closes this folder and can no longer read or change it. Unapplied changes are lost. Conversations stay. You can clear the browser's own permission record in site settings.`,
+        'folder.released': name => `Removed access to ${name}`,
+        'folder.releaseBusy': 'The Agent is running. Stop it first.'
     }
 };
 

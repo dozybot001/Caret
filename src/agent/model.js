@@ -137,7 +137,13 @@ export async function requestCompletion(connection, messages, signal, handlers) 
         const response = await fetch(endpoint(connection.url, '/chat/completions'), {
             method: 'POST',
             headers: headers(connection.key),
-            body: JSON.stringify({ model: connection.model, messages, tools: TOOL_SCHEMAS, stream: true }),
+            body: JSON.stringify({
+                model: connection.model,
+                messages,
+                tools: TOOL_SCHEMAS,
+                stream: true,
+                ...(connection.effort ? { reasoning_effort: connection.effort } : {})
+            }),
             signal
         });
         if (response.ok) return collectMessage(readEvents(response.body), handlers);
@@ -149,17 +155,29 @@ export async function requestCompletion(connection, messages, signal, handlers) 
 }
 
 /**
- * 获取可用模型列表，同时用来验证连接
+ * 读取模型支持的推理档位。DeepSeek 放在 effort 里，OpenRouter 放在 reasoning 里，其他接口不返回
+ * @param {Object} model - 模型列表里的一项
+ * @returns {{levels: string[], defaultLevel: string}}
+ */
+function readEfforts({ effort, reasoning }) {
+    return {
+        levels: effort?.supported_levels || reasoning?.supported_efforts || [],
+        defaultLevel: effort?.default_level || reasoning?.default_effort || ''
+    };
+}
+
+/**
+ * 获取可用模型和它们的推理档位，同时用来验证连接
  * @param {{url: string, key: string}} connection - 模型连接
  * @param {AbortSignal} signal - 取消信号
- * @returns {Promise<string[]>} 模型名
+ * @returns {Promise<Array<{id: string, levels: string[], defaultLevel: string}>>} 按名称排序的模型
  */
 export async function listModels(connection, signal) {
     const response = await fetch(endpoint(connection.url, '/models'), { headers: headers(connection.key), signal });
     if (!response.ok) throw await responseError(response);
     const payload = await response.json();
     return (payload.data || payload.models || [])
-        .map(model => model.id || model.name)
-        .filter(id => id && !NON_CHAT_MODEL.test(id))
-        .sort();
+        .map(model => ({ id: model.id || model.name, ...readEfforts(model) }))
+        .filter(({ id }) => id && !NON_CHAT_MODEL.test(id))
+        .sort((a, b) => (a.id < b.id ? -1 : 1));
 }

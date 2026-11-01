@@ -109,7 +109,10 @@
             <form id="chat-input-area">
                 <textarea id="chat-input" rows="2"></textarea>
                 <div class="chat-input-foot">
-                    <button type="button" id="btn-model" class="chat-chip" aria-haspopup="listbox"><i class="codicon codicon-plug"></i><span></span><i class="codicon codicon-chevron-up"></i></button>
+                    <div class="chat-chips">
+                        <button type="button" id="btn-model" class="chat-chip" aria-haspopup="listbox"><i class="codicon codicon-plug"></i><span></span><i class="codicon codicon-chevron-up"></i></button>
+                        <button type="button" id="btn-effort" class="chat-chip hidden" aria-haspopup="listbox"><i class="codicon codicon-dashboard"></i><span></span><i class="codicon codicon-chevron-up"></i></button>
+                    </div>
                     <div class="chat-input-actions">
                         <button type="button" id="context-ring">
                             <svg viewBox="0 0 26 26" aria-hidden="true">
@@ -175,6 +178,13 @@
                         <button type="button" class="info" data-tip="settings.defaultModelTip" data-i18n-label="settings.info"><i class="codicon codicon-info"></i></button>
                     </div>
                     <button type="button" id="model-trigger" class="select-trigger" aria-haspopup="listbox" aria-labelledby="model-label"><span></span><i class="codicon codicon-chevron-down"></i></button>
+                </div>
+                <div class="field hidden" id="field-effort">
+                    <div class="field-label">
+                        <span id="effort-label" data-i18n="settings.defaultEffort"></span>
+                        <button type="button" class="info" data-tip="settings.defaultEffortTip" data-i18n-label="settings.info"><i class="codicon codicon-info"></i></button>
+                    </div>
+                    <button type="button" id="effort-trigger" class="select-trigger" aria-haspopup="listbox" aria-labelledby="effort-label"><span></span><i class="codicon codicon-chevron-down"></i></button>
                 </div>
                 <p id="connection-status" role="status"></p>
 

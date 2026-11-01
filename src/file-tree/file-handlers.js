@@ -98,6 +98,16 @@ export class FileHandlers {
         }
     }
 
+    /** 放弃当前文件夹，回到没有打开文件夹时的样子 */
+    async handleReleaseFolder() {
+        const { file, editor, fileTreeUI } = this.context;
+        await editor.reset();
+        await file.release();
+        fileTreeUI.clearExpanded();
+        fileTreeUI.renderEmpty();
+        fileTreeUI.setFileTreeVisible(false);
+    }
+
     /**
      * 显示已打开的文件夹
      * @private

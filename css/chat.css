@@ -526,6 +526,13 @@
     margin-top: 2px;
 }
 
+.chat-chips {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    min-width: 0;
+}
+
 .chat-chip {
     display: inline-flex;
     align-items: center;
@@ -545,6 +552,11 @@
 
 .chat-chip:hover {
     background-color: var(--bg-4);
+}
+
+#btn-effort {
+    flex-shrink: 0;
+    margin-left: 0;
 }
 
 .chat-chip.is-unset {

@@ -7,7 +7,7 @@ import { SessionHistory } from './src/chat/history.js';
 import { parseInline, parseMarkdown } from './src/chat/markdown.js';
 import { PromptRecall } from './src/chat/prompt-recall.js';
 import { countChanges } from './src/agent/diff.js';
-import { collectMessage, isContextError, readEvents } from './src/agent/model.js';
+import { collectMessage, isContextError, listModels, readEvents } from './src/agent/model.js';
 import { executeTool, normalizePath, outline, replaceText, TOOL_SCHEMAS } from './src/agent/tools.js';
 
 /** 内存工作区 */
@@ -518,4 +518,55 @@ test('识别上下文超限错误', () => {
     assert.ok(!isContextError({ status: 400, message: 'Invalid model' }));
     assert.ok(!isContextError({ status: 429, message: 'token rate limit' }));
     assert.ok(!isContextError(new Error('network')));
+});
+
+test('模型列表和推理档位都来自接口', async () => {
+    globalThis.fetch = async () => new Response(JSON.stringify({ data: [
+        { id: 'plain' },
+        { id: 'deepseek-flash', effort: { supported_levels: ['low', 'high', 'max'], default_level: 'high' } },
+        { id: 'openai/gpt-5.4', reasoning: { supported_efforts: ['xhigh', 'high', 'none'], default_effort: 'medium' } },
+        { id: 'moonshotai/kimi-k2.6', reasoning: { mandatory: false } },
+        { id: 'text-embedding-3' }
+    ] }));
+
+    const models = await listModels({ url: 'https://model.test/v1', key: 'test' });
+    assert.deepEqual(models, [
+        { id: 'deepseek-flash', levels: ['low', 'high', 'max'], defaultLevel: 'high' },
+        { id: 'moonshotai/kimi-k2.6', levels: [], defaultLevel: '' },
+        { id: 'openai/gpt-5.4', levels: ['xhigh', 'high', 'none'], defaultLevel: 'medium' },
+        { id: 'plain', levels: [], defaultLevel: '' }
+    ]);
+});
+
+test('只有选择了推理强度才发送这个参数', async () => {
+    const requests = scriptedModel([{ text: '好' }, { text: '好' }]);
+    await new Agent(workspace(), () => ({ ...connection(), effort: 'low' }), {}).send('改');
+    await new Agent(workspace(), () => ({ ...connection(), effort: '' }), {}).send('改');
+    assert.equal(requests[0].reasoning_effort, 'low');
+    assert.ok(!('reasoning_effort' in requests[1]));
+});
+
+test('取消授权后不再保存句柄，对话记录保留，同名文件夹可以接上', async () => {
+    const store = memoryStore();
+    const history = new SessionHistory(store);
+    await history.openProject(folder('app', 'a'));
+    history.begin('任务');
+    history.schedule(() => ({ messages: [1], timeline: [] }));
+    await history.flush();
+    history.rememberPrompt('任务');
+
+    await history.releaseProject();
+    assert.equal(history.projectId, null);
+    assert.equal(history.currentId, null);
+    assert.deepEqual(await history.list(), []);
+    assert.equal((await store.listProjects())[0].handle, null);
+
+    await history.openProject(folder('other', 'b'));
+    assert.deepEqual(await history.list(), []);
+
+    const reopened = folder('app', 'c');
+    await history.openProject(reopened);
+    assert.equal((await history.list()).length, 1);
+    assert.deepEqual(history.prompts(), ['任务']);
+    assert.equal((await store.listProjects()).find(project => project.name === 'app').handle, reopened);
 });

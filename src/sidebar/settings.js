@@ -53,9 +53,13 @@ export class Settings {
         this.checkTimer = null;
         this.checkController = null;
         this.status = null;
-        /** 输入栏选择的模型，只在当前对话有效 */
+        /** 这次是否拿到了接口返回的模型列表，拿不到时才允许手动填写 */
+        this.hasModelList = false;
+        /** 输入栏选择的模型和推理强度，只在当前对话有效 */
         this.sessionModel = null;
+        this.sessionEffort = null;
         this.menuClosedAt = -Infinity;
+        this.menuAnchor = null;
 
         /** 对话框关闭时调用，用于继续等待模型的任务 */
         this.onClose = null;
@@ -74,6 +78,8 @@ export class Settings {
         this.keyLink = find('#key-link');
         this.clearKeyButton = find('#btn-clear-key');
         this.modelTrigger = find('#model-trigger');
+        this.effortField = find('#field-effort');
+        this.effortTrigger = find('#effort-trigger');
         this.statusText = find('#connection-status');
         this.menu = find('#select-menu');
         this.tooltip = find('#tooltip');
@@ -111,6 +117,7 @@ export class Settings {
         });
 
         this.modelTrigger.addEventListener('click', () => this._openModelMenu());
+        this.effortTrigger.addEventListener('click', () => this._openEffortMenu());
 
         this.menu.addEventListener('keydown', (event) => this._moveInMenu(event));
         this.menu.addEventListener('beforetoggle', (event) => {
@@ -164,20 +171,36 @@ export class Settings {
 
     /**
      * 当前模型连接
-     * @returns {{url: string, key: string, model: string}}
+     * @returns {{url: string, key: string, model: string, effort: string}} 没有选择推理强度时 effort 为空，请求里不带这个参数
      */
     getConnection() {
-        const { provider, keys, models, customUrl } = this._config;
+        const { provider, keys, models, customUrl, efforts } = this._config;
+        const model = this.sessionModel || models[provider] || '';
+        const { levels } = this._effortsOf(model);
         return {
             url: provider === 'custom' ? customUrl : PROVIDERS[provider].url,
             key: keys[provider] || '',
-            model: this.sessionModel || models[provider] || ''
+            model,
+            effort: [this.sessionEffort, efforts[provider]].find(level => levels.includes(level)) || ''
         };
     }
 
     _defaultModel() {
         const { provider, models } = this._config;
         return models[provider] || '';
+    }
+
+    /** 接口返回的这个模型的推理档位 */
+    _effortsOf(model) {
+        const { provider, modelEfforts } = this._config;
+        return modelEfforts[provider]?.[model] || { levels: [], defaultLevel: '' };
+    }
+
+    /** 没有在输入栏切换时使用的强度：设置里保存的值，模型不支持时用模型自己的默认值 */
+    _defaultEffort(model) {
+        const { provider, efforts } = this._config;
+        const { levels, defaultLevel } = this._effortsOf(model);
+        return levels.includes(efforts[provider]) ? efforts[provider] : defaultLevel;
     }
 
     /**
@@ -189,9 +212,19 @@ export class Settings {
         this.onConnectionChange?.();
     }
 
-    /** 回到默认模型 */
-    resetSessionModel() {
+    /**
+     * 只为当前对话换推理强度，新任务回到默认值
+     * @param {string} level - 接口返回的档位
+     */
+    useSessionEffort(level) {
+        this.sessionEffort = level === this._defaultEffort(this.getConnection().model) ? null : level;
+        this.onConnectionChange?.();
+    }
+
+    /** 回到默认模型和推理强度 */
+    resetSession() {
         this.sessionModel = null;
+        this.sessionEffort = null;
         this.onConnectionChange?.();
     }
 
@@ -204,6 +237,14 @@ export class Settings {
     /** @returns {string} 显示在输入框下方的模型名称 */
     getModelLabel() {
         return this.isReady() ? this.getConnection().model : t('model.connect');
+    }
+
+    /** @returns {string} 显示在输入框下方的推理强度，模型没有档位时为空 */
+    getEffortLabel() {
+        const { model, effort } = this.getConnection();
+        const { levels, defaultLevel } = this._effortsOf(model);
+        if (!this.isReady() || levels.length === 0) return '';
+        return effort || defaultLevel || t('model.default');
     }
 
     _providerName(id) {
@@ -248,6 +289,8 @@ export class Settings {
         const modelLabel = this.modelTrigger.querySelector('span');
         modelLabel.textContent = model || t('settings.chooseModel');
         modelLabel.classList.toggle('is-placeholder', !model);
+        this.effortField.classList.toggle('hidden', this._effortsOf(model).levels.length === 0);
+        this.effortTrigger.querySelector('span').textContent = this._defaultEffort(model) || t('model.default');
         this.keyLink.classList.toggle('hidden', !keyPage);
         this.keyLink.href = keyPage || '#';
         this.clearKeyButton.classList.toggle('hidden', !key);
@@ -288,7 +331,17 @@ export class Settings {
     async _setModel(model) {
         const { provider, models } = this._config;
         this.sessionModel = null;
+        this.sessionEffort = null;
         await this.store.updateConfig({ models: { ...models, [provider]: model } });
+        this._renderConnection();
+        this.onConnectionChange?.();
+    }
+
+    /** 设置默认推理强度 */
+    async _setEffort(level) {
+        const { provider, efforts } = this._config;
+        this.sessionEffort = null;
+        await this.store.updateConfig({ efforts: { ...efforts, [provider]: level } });
         this._renderConnection();
         this.onConnectionChange?.();
     }
@@ -299,6 +352,7 @@ export class Settings {
         const connection = this.getConnection();
         const { provider, modelLists } = this._config;
         this.models = modelLists[provider] || [];
+        this.hasModelList = false;
         if (!connection.url || (!connection.key && provider !== 'custom')) {
             this._setStatus(null);
             return;
@@ -308,8 +362,10 @@ export class Settings {
         this.checkController = controller;
         this._setStatus({ key: 'settings.checking', kind: 'pending' });
         try {
-            this.models = await listModels(connection, controller.signal);
-            this._cacheModels(provider, this.models);
+            const models = await listModels(connection, controller.signal);
+            this.models = models.map(model => model.id);
+            this.hasModelList = true;
+            await this._cacheModels(provider, models);
             this._setStatus({ key: 'settings.connected', args: [this.models.length], kind: 'ok' });
             if (!this._defaultModel()) {
                 const { prefer } = PROVIDERS[provider];
@@ -328,10 +384,30 @@ export class Settings {
         }
     }
 
-    /** 记住模型列表，打开输入栏的菜单时不用等网络 */
-    _cacheModels(provider, models) {
-        const { modelLists } = this._config;
-        return this.store.updateConfig({ modelLists: { ...modelLists, [provider]: models } });
+    /** 记住模型列表和推理档位，打开输入栏的菜单时不用等网络 */
+    async _cacheModels(provider, models) {
+        const { modelLists, modelEfforts } = this._config;
+        await this.store.updateConfig({
+            modelLists: { ...modelLists, [provider]: models.map(model => model.id) },
+            modelEfforts: {
+                ...modelEfforts,
+                [provider]: Object.fromEntries(models
+                    .filter(model => model.levels.length > 0)
+                    .map(({ id, levels, defaultLevel }) => [id, { levels, defaultLevel }]))
+            }
+        });
+        this._renderConnection();
+        this.onConnectionChange?.();
+    }
+
+    /** 从接口更新模型和推理档位，失败时继续用记住的列表 */
+    async refreshModels() {
+        if (!this.isReady()) return;
+        try {
+            await this._cacheModels(this._config.provider, await listModels(this.getConnection()));
+        } catch {
+            // 下次打开菜单时再试
+        }
     }
 
     /**
@@ -346,15 +422,25 @@ export class Settings {
             return;
         }
 
+        this._openSwitcher(anchor, () => this._showModelSwitcher(anchor));
+    }
+
+    /**
+     * 输入栏的推理强度菜单：列出接口返回的档位，选中后下一次请求生效
+     * @param {HTMLElement} anchor - 触发按钮
+     */
+    openEffortSwitcher(anchor) {
+        if (this._menuJustClosed()) return;
+        this._openSwitcher(anchor, () => this._showEffortSwitcher(anchor));
+    }
+
+    /** 先用记住的内容打开菜单，接口返回后再更新 */
+    async _openSwitcher(anchor, show) {
         const { provider } = this._config;
-        this._showModelSwitcher(anchor);
-        try {
-            await this._cacheModels(provider, await listModels(this.getConnection()));
-            const isStillOpen = this.menu.matches(':popover-open') && this.menu.parentElement === document.body;
-            if (isStillOpen && this._config.provider === provider) this._showModelSwitcher(anchor);
-        } catch {
-            // 网络失败时继续用记住的列表
-        }
+        show();
+        await this.refreshModels();
+        const isStillOpen = this.menu.matches(':popover-open') && this.menuAnchor === anchor;
+        if (isStillOpen && this._config.provider === provider) show();
     }
 
     _showModelSwitcher(anchor) {
@@ -373,6 +459,14 @@ export class Settings {
         });
     }
 
+    _showEffortSwitcher(anchor) {
+        const { model, effort } = this.getConnection();
+        const { levels, defaultLevel } = this._effortsOf(model);
+        const base = this._defaultEffort(model);
+        const options = levels.map(level => ({ value: level, label: level === base ? `${level} · ${t('model.default')}` : level }));
+        this._openMenu(anchor, options, effort || defaultLevel, level => this.useSessionEffort(level));
+    }
+
     /** 判断这次点击是否刚好由触发按钮关闭了菜单 */
     _menuJustClosed() {
         return performance.now() - this.menuClosedAt < MENU_REOPEN_DELAY;
@@ -383,11 +477,12 @@ export class Settings {
         const options = Object.keys(PROVIDERS).map(id => ({ value: id, label: this._providerName(id) }));
         this._openMenu(this.providerTrigger, options, this._config.provider, (provider) => {
             this.sessionModel = null;
+            this.sessionEffort = null;
             this._saveConnection({ provider });
         });
     }
 
-    /** 默认模型的下拉菜单：可以搜索，也可以直接填写列表里没有的模型名称 */
+    /** 默认模型的下拉菜单：可以搜索。接口给不出列表时，才允许直接填写模型名称 */
     _openModelMenu() {
         if (this._menuJustClosed()) return;
         const current = this._defaultModel();
@@ -395,8 +490,16 @@ export class Settings {
         const options = ids.map(id => ({ value: id, label: id }));
         this._openMenu(this.modelTrigger, options, current, model => this._setModel(model), {
             searchable: true,
-            allowCustom: true
+            allowCustom: !this.hasModelList
         });
+    }
+
+    /** 默认推理强度的下拉菜单，档位来自接口 */
+    _openEffortMenu() {
+        if (this._menuJustClosed()) return;
+        const model = this._defaultModel();
+        const options = this._effortsOf(model).levels.map(level => ({ value: level, label: level }));
+        this._openMenu(this.effortTrigger, options, this._defaultEffort(model), level => this._setEffort(level));
     }
 
     /**
@@ -413,6 +516,7 @@ export class Settings {
      */
     _openMenu(anchor, options, current, onPick, { searchable = false, allowCustom = false, footer = null } = {}) {
         const { menu } = this;
+        this.menuAnchor = anchor;
         // 对话框打开时外部内容不可操作，关闭时里面的内容不显示，所以菜单跟着触发元素走
         const container = anchor.closest('dialog') || document.body;
         if (menu.parentElement !== container) container.appendChild(menu);

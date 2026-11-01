@@ -136,6 +136,16 @@ export class FileManager {
         return handle;
     }
 
+    /**
+     * 放弃文件夹句柄。网页不能撤销浏览器的授权，没有句柄后就无法再访问这个文件夹
+     */
+    async release() {
+        this.rootDirHandle = null;
+        this.pendingHandle = null;
+        this.fileCache.clear();
+        await this.store?.clearDirectoryHandle();
+    }
+
     hasRoot() {
         return !!this.rootDirHandle;
     }

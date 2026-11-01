@@ -21,6 +21,7 @@ export class FileTreeUI {
         this.onFileClick = null;
         this.onOpenFolder = null;
         this.onResumeFolder = null;
+        this.onReleaseFolder = null;
 
         /** @type {Array|null} 当前文件树数据 */
         this.currentTreeData = null;
@@ -59,7 +60,7 @@ export class FileTreeUI {
 
     /** 显示空状态：说明没有文件夹，并给出打开入口 */
     renderEmpty() {
-        this._renderNotice(t('tree.empty'), t('tree.open'), () => this.onOpenFolder?.());
+        this._renderNotice(t('tree.empty'), [[t('tree.open'), () => this.onOpenFolder?.()]]);
     }
 
     /**
@@ -67,20 +68,26 @@ export class FileTreeUI {
      * @param {string} name - 文件夹名称
      */
     renderResume(name) {
-        this._renderNotice(name, t('tree.resume', name), () => this.onResumeFolder?.());
+        this._renderNotice(name, [
+            [t('tree.resume', name), () => this.onResumeFolder?.()],
+            [t('folder.release'), () => this.onReleaseFolder?.()]
+        ]);
     }
 
-    _renderNotice(message, action, onClick) {
+    _renderNotice(message, actions) {
         const notice = document.createElement('div');
         notice.className = 'tree-notice';
         const text = document.createElement('p');
         text.textContent = message;
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'btn btn-text btn-text-chat';
-        button.textContent = action;
-        button.addEventListener('click', onClick);
-        notice.append(text, button);
+        notice.appendChild(text);
+        for (const [label, onClick] of actions) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'btn btn-text btn-text-chat';
+            button.textContent = label;
+            button.addEventListener('click', onClick);
+            notice.appendChild(button);
+        }
         this.fileTreeContainer.replaceChildren(notice);
     }
 
@@ -101,6 +108,15 @@ export class FileTreeUI {
         rootNameSpan.className = 'tree-name';
         rootNameSpan.textContent = `${rootName}/`;
         rootLabel.appendChild(rootNameSpan);
+
+        const release = document.createElement('button');
+        release.type = 'button';
+        release.className = 'btn btn-close tree-release';
+        release.title = t('folder.release');
+        release.setAttribute('aria-label', release.title);
+        release.innerHTML = '<i class="codicon codicon-debug-disconnect"></i>';
+        release.addEventListener('click', () => this.onReleaseFolder?.());
+        rootLabel.appendChild(release);
 
         fragment.appendChild(rootLabel);
 

@@ -89,6 +89,7 @@ export class AppController {
         await this.editor.restoreTabsState();
         if (this.file.hasRoot()) await this._openProject();
         this._updateModelButton();
+        this.settings.refreshModels();
         this.input.focus();
     }
 
@@ -101,6 +102,7 @@ export class AppController {
         this.input = element('chat-input');
         this.sendButton = element('btn-send-chat');
         this.modelButton = element('btn-model');
+        this.effortButton = element('btn-effort');
         this.chatPanel = element('chat-panel');
         this.chatMessages = element('chat-messages');
         this.historyButton = element('btn-history');
@@ -141,6 +143,7 @@ export class AppController {
         element('btn-new-task').addEventListener('click', () => this._newTask());
         this.historyButton.addEventListener('click', () => this._setHistoryVisible(!this.historyUI.isVisible));
         this.modelButton.addEventListener('click', () => this.settings.openModelSwitcher(this.modelButton));
+        this.effortButton.addEventListener('click', () => this.settings.openEffortSwitcher(this.effortButton));
 
         this.historyUI = new HistoryUI(element('history-panel'), {
             onOpen: id => this._openSession(id),
@@ -151,6 +154,7 @@ export class AppController {
 
         this.fileTreeUI.onOpenFolder = () => this._openFolder();
         this.fileTreeUI.onResumeFolder = () => this.fileHandlers.handleResumeFolder();
+        this.fileTreeUI.onReleaseFolder = () => this._releaseFolder();
         this.fileTreeUI.onFileClick = (handle, path, isPreview) => {
             this.workspace.follow = false;
             this.editor.openFile(handle, path, isPreview);
@@ -195,10 +199,9 @@ export class AppController {
     _renderStatic() {
         this._updateModelButton();
         this._updateSendButton();
-        if (!this.file.hasRoot()) {
-            if (this.file.pendingHandle) this.fileTreeUI.renderResume(this.file.pendingHandle.name);
-            else this.fileTreeUI.renderEmpty();
-        }
+        if (this.file.hasRoot()) this.fileHandlers.refreshTree();
+        else if (this.file.pendingHandle) this.fileTreeUI.renderResume(this.file.pendingHandle.name);
+        else this.fileTreeUI.renderEmpty();
     }
 
     /**
@@ -462,7 +465,7 @@ export class AppController {
     _resetConversation() {
         this.agent.reset();
         this.chatUI.clear();
-        this.settings.resetSessionModel();
+        this.settings.resetSession();
         this._updateContextUsage();
     }
 
@@ -476,6 +479,34 @@ export class AppController {
      */
     _openFolder() {
         if (!this.agent.running) return this.fileHandlers.handleOpenFolder();
+    }
+
+    /**
+     * 取消文件夹授权，回到初始状态。对话记录保留，重新打开同名文件夹时可以继续
+     * @private
+     */
+    async _releaseFolder() {
+        const { file } = this;
+        const { pendingHandle } = file;
+        const handle = file.getRootHandle() || pendingHandle;
+        if (!handle) return;
+        if (this.agent.running) {
+            window.notify?.alert(t('folder.releaseBusy'), { type: 'warning' });
+            return;
+        }
+        if (!(await window.notify.confirm(t('folder.releaseConfirm', handle.name), t('folder.release')))) return;
+
+        // 还没恢复访问的文件夹没有打开项目，先找到它的记录
+        if (pendingHandle) await this.history.openProject(pendingHandle);
+        await this.history.releaseProject();
+        await this.fileHandlers.handleReleaseFolder();
+        this.workspace.files = [];
+        this.promptRecall.load([]);
+        this._resetConversation();
+        await this._refreshHistory();
+        this._setHistoryVisible(false);
+        if (this._isNarrow()) this.chatPanel.classList.add('collapsed');
+        window.notify?.alert(t('folder.released', handle.name), { type: 'success' });
     }
 
     /**
@@ -538,7 +569,7 @@ export class AppController {
         }
         this.agent.restore(session.messages);
         this.chatUI.restore(session.timeline);
-        this.settings.resetSessionModel();
+        this.settings.resetSession();
         this._updateContextUsage();
         this.historyUI.render(this.sessions, id);
         this._setHistoryVisible(false);
@@ -585,6 +616,11 @@ export class AppController {
         this.modelButton.querySelector('span').textContent = this.settings.getModelLabel();
         this.modelButton.classList.toggle('is-unset', !this.settings.isReady());
         this.modelButton.title = t(this.settings.isReady() ? 'model.switch' : 'model.connect');
+
+        const effort = this.settings.getEffortLabel();
+        this.effortButton.classList.toggle('hidden', !effort);
+        this.effortButton.querySelector('span').textContent = effort;
+        this.effortButton.title = t('model.switchEffort');
     }
 
     /**
