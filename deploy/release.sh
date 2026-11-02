@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 发布 Caret：从确定的提交导出静态文件，上传到服务器，切换站点，公网验收，失败时恢复
+# 发布 Caret：从确定的提交导出静态文件，上传到服务器，切换站点，公网验收，失败时恢复，成功后清理旧版本
 # 用法：deploy/release.sh [rollback]
 set -euo pipefail
 
@@ -179,5 +179,8 @@ fi
 EOS
     exit 1
 fi
+
+# 保留规则见 deploy/retain.sh
+"${SSH[@]}" "sudo -n bash -s $ROOT" < deploy/retain.sh || echo '旧版本没有清理，这次发布不受影响' >&2
 
 echo "已发布 $SHA 到 $ORIGIN"

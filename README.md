@@ -81,10 +81,10 @@ src/
   i18n/                中英文文案和法律文本
 css/                   样式，入口是 style.css
 assets/                分享图等静态资源
-tests/                 测试，和 src 的模块对应
+tests/                 测试，和 src 的模块、deploy 的脚本对应
 docs/                  设计规范和 README 截图
 vendor/                Monaco 0.52.2，来自 npm 包的 min/vs，只保留简体中文语言包
-deploy/                发布脚本和 Caddy 配置
+deploy/                发布脚本、旧版本清理脚本和 Caddy 配置
 ```
 
 修改界面前先看[设计规范](docs/design-guidelines.md)。

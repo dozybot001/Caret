@@ -81,10 +81,10 @@ src/
   i18n/                Chinese and English copy, and legal text
 css/                   Styles, starting from style.css
 assets/                Static assets such as the share image
-tests/                 Tests, matching the modules in src
+tests/                 Tests, matching the modules in src and the scripts in deploy
 docs/                  Design guidelines and the README screenshot
 vendor/                Monaco 0.52.2, from min/vs in the npm package, with only the Simplified Chinese language pack
-deploy/                Release script and Caddy config
+deploy/                Release script, cleanup of old releases and Caddy config
 ```
 
 Read the [design guidelines](docs/design-guidelines.md) (in Chinese) before changing the interface.
