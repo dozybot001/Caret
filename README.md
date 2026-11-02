@@ -2,7 +2,7 @@
 
 简体中文 | [English](README.en.md)
 
-只有三个工具的 Coding Agent：`read`、`write`、`edit`。
+极轻量的浏览器 Coding Agent。只有三个工具：`read`、`write`、`edit`。
 
 Caret 运行在浏览器里，不用安装，也不用账号。打开一个本地文件夹，说明要改什么，Agent 找到代码并做出改动。改动先留在编辑器里，你看完 diff 再写入磁盘。
 

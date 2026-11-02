@@ -2,7 +2,7 @@
 
 [简体中文](README.md) | English
 
-A coding agent with three tools: `read`, `write` and `edit`.
+An ultralight coding agent in your browser. It has three tools: `read`, `write` and `edit`.
 
 Caret runs in your browser, with nothing to install and no account. Open a local folder and describe the change. The Agent finds the code and makes the edit. Changes stay in the editor until you have read the diff and applied them to disk.
 

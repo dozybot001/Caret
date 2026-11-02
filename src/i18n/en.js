@@ -10,7 +10,7 @@ export const en = {
     'sidebar.agent': 'Agent',
     'settings.title': 'Settings',
 
-    'welcome.tagline': 'A coding agent with three tools',
+    'welcome.tagline': 'An ultralight coding agent in your browser',
     'welcome.intro': 'Copy, config, styles and small bugs rarely need a full development setup. Caret runs in a web page, with an editor, file tree, diff review, conversation history and Git status. Open a folder, say what should change, and apply the result once you have reviewed it.',
     'welcome.read': 'Read files, list directories, search content',
     'welcome.write': 'Create a file, or rewrite a whole file',
@@ -201,7 +201,7 @@ export const en = {
     'settings.close': 'Close',
 
     'about.version': 'Version',
-    'about.body1': 'Caret is a coding agent that runs in your browser. Open a local folder and describe the change. The model works with three tools: read, write and edit. Changes appear in the editor first. Review the diff, adjust by hand if you like, then apply them to disk.',
+    'about.body1': 'An ultralight coding agent in your browser. Open a local folder and describe the change. The model works with three tools: read, write and edit. Changes appear in the editor first. Review the diff, adjust by hand if you like, then apply them to disk.',
     'about.body2': 'It suits changes you can judge by reading the diff, such as copy, configuration, styles, documentation and small bugs. Caret runs no commands and no tests, and there is nothing to install.',
     'about.publisher': 'Publisher',
     'about.website': 'Tenon website',

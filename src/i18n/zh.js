@@ -10,7 +10,7 @@ export const zh = {
     'sidebar.agent': 'Agent',
     'settings.title': '设置',
 
-    'welcome.tagline': '只有三个工具的 Coding Agent',
+    'welcome.tagline': '极轻量的浏览器 Coding Agent',
     'welcome.intro': '改文案、配置、样式和小 bug，通常不需要一整套开发环境。Caret 运行在网页里，带编辑器、文件树、diff 审阅、对话历史和 Git 状态。打开文件夹，说明要改什么，Agent 改完由你确认后写入。',
     'welcome.read': '读取文件、列出目录、搜索内容',
     'welcome.write': '新建文件，或重写整个文件',
@@ -201,7 +201,7 @@ export const zh = {
     'settings.close': '关闭',
 
     'about.version': '版本',
-    'about.body1': 'Caret 是运行在浏览器里的 Coding Agent。你打开一个本地文件夹，说明要改什么，模型用读、写、改三个工具完成改动。改动先出现在编辑器里，你看完 diff，也可以再手动调整，确认后写入磁盘。',
+    'about.body1': '极轻量的浏览器 Coding Agent。你打开一个本地文件夹，说明要改什么，模型用读、写、改三个工具完成改动。改动先出现在编辑器里，你看完 diff，也可以再手动调整，确认后写入磁盘。',
     'about.body2': '它适合看 diff 就能判断对错的改动，例如文案、配置、样式、文档和小 bug。Caret 不执行命令，不运行测试，也不需要安装。',
     'about.publisher': '出品方',
     'about.website': 'Tenon 官网',
