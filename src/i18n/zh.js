@@ -210,7 +210,8 @@ export const zh = {
     'about.license': '许可证',
     'about.privacy': '隐私政策',
     'about.terms': '用户协议',
-    'legal.meta': '版本 1.1 · 生效日期：2026年11月1日',
+    'legal.privacyMeta': '版本 1.2 · 生效日期：2026 年 11 月 3 日',
+    'legal.termsMeta': '版本 1.1 · 生效日期：2026 年 11 月 1 日',
 
     'error.auth': '模型服务拒绝了这个 Key。请在设置里检查 Key 是否正确。',
     'error.rate': '请求太频繁或额度不足。请稍后重试，或检查账户余额。',

@@ -58,6 +58,7 @@ The ring in the input bar shows how much context is used. 100% is the compaction
 - Your requests, global instructions and the file contents the Agent reads go only to the model service you configured
 - Common secret files, such as `.env`, private keys and login files for cloud and package tools, are not read
 - API keys, settings and conversations are stored only in this device's browser, and you can delete all of them on the Data page in Settings
+- When you use the hosted page, the server records access logs with the time, IP address and page visited, without URL parameters, and deletes them after 6 months
 
 ## Development
 

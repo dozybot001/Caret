@@ -1,4 +1,5 @@
 caret.tenon.asia {
+	import access_log
 	root * __RELEASE__
 	encode zstd gzip
 	@app not path /vendor/*

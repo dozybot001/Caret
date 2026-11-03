@@ -210,7 +210,8 @@ export const en = {
     'about.license': 'License',
     'about.privacy': 'Privacy Policy',
     'about.terms': 'Terms of Service',
-    'legal.meta': 'Version 1.1 · Effective Nov 1, 2026',
+    'legal.privacyMeta': 'Version 1.2 · Effective Nov 3, 2026',
+    'legal.termsMeta': 'Version 1.1 · Effective Nov 1, 2026',
 
     'error.auth': 'The model service rejected this key. Check the key in Settings.',
     'error.rate': 'Too many requests, or the quota is used up. Try again later, or check your balance.',
