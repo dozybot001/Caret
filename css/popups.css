@@ -58,8 +58,16 @@
     inset: -8px;
 }
 
-.info:hover {
-    color: var(--text-2);
+/* 悬停、键盘聚焦和展开时只让 i 变亮，不加底色；悬停只在有指针的设备上生效，触屏点按后不残留 */
+.info:focus-visible,
+.info[aria-expanded="true"] {
+    color: var(--text-1);
+}
+
+@media (hover: hover) {
+    .info:hover {
+        color: var(--text-1);
+    }
 }
 
 .info .codicon {

@@ -36,6 +36,7 @@
 
 - 输入框、分段选择和胶囊开关的样式在 `controls.css`，下拉菜单和说明提示在 `popups.css`
 - 下拉菜单统一用 `#select-menu`，说明提示统一用 `#tooltip`，不使用浏览器默认样式
+- 说明按钮 `.info` 在任何状态下都不加底色、描边或阴影；悬停、键盘聚焦和展开时只把 i 从 `--text-5` 变成 `--text-1`，悬停样式放在 `@media (hover: hover)` 里
 - 设置里的单行设置用 `.setting-row`，布尔项用 `.switch`，控件带上 `data-setting` 后由 `settings.js` 统一读写
 
 ## 交互规范
