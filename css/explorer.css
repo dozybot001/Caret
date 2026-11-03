@@ -74,6 +74,10 @@
     color: var(--accent-text);
 }
 
+.tree-node:focus-visible {
+    outline-offset: -2px;
+}
+
 .tree-node:hover {
     background-color: var(--bg-3);
 }

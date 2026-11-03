@@ -12,6 +12,8 @@ const NON_CHAT_MODEL = /embed|tts|whisper|audio|image|dall-e|moderation|realtime
 /** 这些状态码可以稍后重试 */
 const RETRYABLE_STATUS = new Set([408, 429, 500, 502, 503, 504, 529]);
 const RETRY_DELAYS = [1500, 4000];
+/** 服务商要求等待超过这么久时不自动重试，交给用户手动重试 */
+const RETRY_AFTER_LIMIT = 30000;
 
 /**
  * 判断错误是否因为上下文超出了模型上限
@@ -43,6 +45,23 @@ async function responseError(response) {
         // 响应不是 JSON，保留原文
     }
     return Object.assign(new Error(String(message).slice(0, 300)), { status: response.status });
+}
+
+/**
+ * 下次重试前的等待时间：按退避时间，服务商用 Retry-After 要求更久时按它的。
+ * 跨域时只有服务商公开了这个响应头才能读到，读不到就按退避时间
+ * @param {string|null} header - Retry-After 的值，秒数或 HTTP 日期
+ * @param {number} fallback - 退避时间（毫秒）
+ * @param {number} now - 当前时间
+ * @returns {number|null} 等待的毫秒数；要求等待太久时返回 null，不再自动重试
+ */
+export function retryDelay(header, fallback, now = Date.now()) {
+    const value = header?.trim();
+    if (!value) return fallback;
+    const requested = /^\d+$/.test(value) ? Number(value) * 1000 : Date.parse(value) - now;
+    if (!Number.isFinite(requested)) return fallback;
+    const delay = Math.max(requested, fallback);
+    return delay <= RETRY_AFTER_LIMIT ? delay : null;
 }
 
 function wait(ms, signal) {
@@ -153,7 +172,9 @@ export async function requestCompletion(connection, messages, signal, handlers) 
 
         const error = await responseError(response);
         if (!RETRYABLE_STATUS.has(response.status) || attempt >= RETRY_DELAYS.length) throw error;
-        await wait(RETRY_DELAYS[attempt], signal);
+        const delay = retryDelay(response.headers.get('retry-after'), RETRY_DELAYS[attempt]);
+        if (delay === null) throw error;
+        await wait(delay, signal);
     }
 }
 

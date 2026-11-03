@@ -166,6 +166,7 @@ export const en = {
     'settings.themeLight': 'Light',
     'settings.themeDark': 'Dark',
     'settings.language': 'Language',
+    'settings.languageNote': 'The editor’s own context menu and find box change language after you reload the page.',
     'settings.fontFamily': 'Editor font',
     'settings.fontFamilyTip': 'The name of a font installed on this computer. Leave it empty for the default font.',
     'settings.fontFamilyHint': 'JetBrains Mono',
@@ -201,6 +202,7 @@ export const en = {
     'settings.close': 'Close',
 
     'about.version': 'Version',
+    'about.build': 'Build',
     'about.body1': 'An ultralight coding agent in your browser. Open a local folder and describe the change. The model works with three tools: read, write and edit. Changes appear in the editor first. Review the diff, adjust by hand if you like, then apply them to disk.',
     'about.body2': 'It suits changes you can judge by reading the diff, such as copy, configuration, styles, documentation and small bugs. Caret runs no commands and no tests, and there is nothing to install.',
     'about.publisher': 'Publisher',
@@ -212,6 +214,9 @@ export const en = {
     'about.terms': 'Terms of Service',
     'legal.privacyMeta': 'Version 1.2 · Effective Nov 3, 2026',
     'legal.termsMeta': 'Version 1.1 · Effective Nov 1, 2026',
+    'legal.oldMeta': (version, date) => `Version ${version} · Effective ${date} · Replaced by the current version`,
+    'legal.history': 'Earlier versions',
+    'legal.current': 'Current version',
 
     'error.auth': 'The model service rejected this key. Check the key in Settings.',
     'error.rate': 'Too many requests, or the quota is used up. Try again later, or check your balance.',

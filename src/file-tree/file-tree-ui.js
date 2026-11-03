@@ -41,6 +41,9 @@ export class FileTreeUI {
         /** @type {Set<string>} 展开的目录，刷新文件树时保留 */
         this.expandedPaths = new Set();
 
+        /** @type {string|null} 能用 Tab 进入的那一行，刷新文件树时保留 */
+        this.activePath = null;
+
         /** @type {string[]} 有未写入改动的文件 */
         this.changedPaths = [];
 
@@ -70,6 +73,7 @@ export class FileTreeUI {
     /** 清除展开状态，用于切换文件夹 */
     clearExpanded() {
         this.expandedPaths.clear();
+        this.activePath = null;
     }
 
     /** 显示空状态：说明没有文件夹，并给出打开入口 */
@@ -112,6 +116,7 @@ export class FileTreeUI {
      */
     renderFileTree(rootName, treeData) {
         this.currentTreeData = treeData;
+        const hadFocus = this.fileTreeContainer.contains(document.activeElement);
         this.fileTreeContainer.innerHTML = '';
 
         const fragment = document.createDocumentFragment();
@@ -139,7 +144,17 @@ export class FileTreeUI {
 
         fragment.appendChild(rootLabel);
 
-        this._renderTreeNodes(treeData, fragment, "");
+        // 文件和目录组成一棵树：Tab 进入，方向键移动，Enter 打开
+        const tree = document.createElement('div');
+        tree.setAttribute('role', 'tree');
+        tree.setAttribute('aria-label', rootName);
+        tree.addEventListener('keydown', event => this._onTreeKey(event, tree));
+        tree.addEventListener('focusin', event => this._setActiveRow(tree, event.target));
+        this._renderTreeNodes(treeData, tree, "");
+        fragment.appendChild(tree);
+        const active = (this.activePath && tree.querySelector(`[data-path="${CSS.escape(this.activePath)}"]`))
+            || tree.querySelector('[role="treeitem"]');
+        this._setActiveRow(tree, active);
 
         this.deletedList = document.createElement('div');
         fragment.appendChild(this.deletedList);
@@ -147,6 +162,7 @@ export class FileTreeUI {
         // 批量追加
         this.fileTreeContainer.appendChild(fragment);
         this._renderGit();
+        if (hadFocus) active?.focus();
     }
 
     /**
@@ -229,7 +245,59 @@ export class FileTreeUI {
         const isOpen = childContainer.classList.toggle('hidden') === false;
         if (isOpen) this.expandedPaths.add(path);
         else this.expandedPaths.delete(path);
+        childContainer.previousElementSibling?.setAttribute('aria-expanded', String(isOpen));
         return isOpen;
+    }
+
+    /**
+     * 文件树只有一行能用 Tab 进入，其他行用方向键到达
+     * @private
+     * @param {HTMLElement} tree - 树容器
+     * @param {HTMLElement|null} row - 要成为入口的行
+     */
+    _setActiveRow(tree, row) {
+        if (row?.getAttribute('role') !== 'treeitem') return;
+        tree.querySelectorAll('[role="treeitem"][tabindex="0"]').forEach(item => { item.tabIndex = -1; });
+        row.tabIndex = 0;
+        this.activePath = row.dataset.path;
+    }
+
+    /**
+     * 键盘操作，按 WAI-ARIA 树视图的约定：上下移动，右键展开或进入，左键收起或回到上级，Enter 和空格等同单击
+     * @private
+     * @param {KeyboardEvent} event - 按键事件
+     * @param {HTMLElement} tree - 树容器
+     */
+    _onTreeKey(event, tree) {
+        const row = event.target.closest('[role="treeitem"]');
+        if (!row || event.altKey || event.ctrlKey || event.metaKey) return;
+        const rows = [...tree.querySelectorAll('[role="treeitem"]')].filter(item => item.offsetParent !== null);
+        const index = rows.indexOf(row);
+        const isOpen = row.getAttribute('aria-expanded') === 'true';
+        const next = rows[index + 1];
+        let target = null;
+        switch (event.key) {
+            case 'ArrowDown': target = next; break;
+            case 'ArrowUp': target = rows[index - 1]; break;
+            case 'Home': target = rows[0]; break;
+            case 'End': target = rows[rows.length - 1]; break;
+            case 'ArrowRight':
+                if (row.getAttribute('aria-expanded') === 'false') row.click();
+                else if (isOpen && next && Number(next.getAttribute('aria-level')) > Number(row.getAttribute('aria-level'))) target = next;
+                break;
+            case 'ArrowLeft':
+                if (isOpen) row.click();
+                else if (row.parentElement.classList.contains('tree-children')) target = row.parentElement.previousElementSibling;
+                break;
+            case 'Enter':
+            case ' ':
+                row.click();
+                break;
+            default:
+                return;
+        }
+        event.preventDefault();
+        target?.focus();
     }
 
     /**
@@ -262,6 +330,9 @@ export class FileTreeUI {
             const row = document.createElement('div');
             row.className = `tree-node ${node.kind === 'directory' ? 'is-folder' : 'is-file'}`;
             row.setAttribute('data-path', node.path);
+            row.setAttribute('role', 'treeitem');
+            row.setAttribute('aria-level', String(currentDepth + 1));
+            row.tabIndex = -1;
 
             // 将连接线和文件名分开，以便使用不同颜色
             const connector = document.createElement('span');
@@ -314,7 +385,10 @@ export class FileTreeUI {
                 // 目录节点：创建子容器（默认关闭）
                 const childContainer = document.createElement('div');
                 childContainer.classList.add('tree-children');
+                // 子项和目录行是兄弟元素，读屏按 aria-level 判断层级
+                childContainer.setAttribute('role', 'none');
                 if (!this.expandedPaths.has(node.path)) childContainer.classList.add('hidden');
+                row.setAttribute('aria-expanded', String(this.expandedPaths.has(node.path)));
 
                 // 对于大型目录，实现懒加载
                 if (shouldLazyRender && node.children && node.children.length > 20) {
@@ -354,6 +428,7 @@ export class FileTreeUI {
                         if (remainingCount > 0) {
                             moreIndicator = document.createElement('div');
                             moreIndicator.className = 'tree-node tree-more';
+                            moreIndicator.setAttribute('aria-hidden', 'true');
                             moreIndicator.textContent = `${prefix}${isLast ? ' ' : '│'}... (${remainingCount})`;
                             childContainer.appendChild(moreIndicator);
                             if (this.expandedPaths.has(node.path)) renderRemaining();

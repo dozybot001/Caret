@@ -1,7 +1,8 @@
 /* 浮层样式 - 定义确认对话框、说明提示和下拉菜单 */
 /* 确认对话框 */
 #confirm-dialog {
-    width: min(400px, calc(100vw - 32px));
+    width: min(var(--dialog-small-width), calc(100vw - 32px));
+    height: min(var(--dialog-small-height), calc(100dvh - 32px));
     margin: auto;
     padding: 20px;
     border: 0;
@@ -11,8 +12,22 @@
     line-height: 1.7;
 }
 
+#confirm-dialog[open] {
+    display: flex;
+    flex-direction: column;
+}
+
 #confirm-dialog::backdrop {
     background-color: var(--overlay);
+}
+
+/* 外框高度固定，说明长时在这里滚动，按钮留在底部 */
+#confirm-message {
+    flex: 1;
+    min-height: 0;
+    margin: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
 }
 
 .confirm-actions {

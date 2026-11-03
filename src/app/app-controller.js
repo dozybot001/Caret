@@ -133,6 +133,9 @@ export class AppController {
         element('btn-welcome-open').addEventListener('click', () => this._openFolder());
         element('btn-settings').addEventListener('click', () => this.settings.open());
         element('context-ring').addEventListener('click', () => this.settings.open('context'));
+        document.querySelectorAll('[data-legal]').forEach(button => {
+            button.addEventListener('click', () => this.settings.open(button.dataset.legal));
+        });
         element('btn-new-task').addEventListener('click', () => this.conversations.startNew());
 
         this.history.onError = () => window.notify?.alert(t('history.saveFailed'), { type: 'warning' });

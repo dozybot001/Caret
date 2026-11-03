@@ -27,6 +27,28 @@ export function t(key, ...args) {
 }
 
 /**
+ * 显示日期和时刻：中文写成「11 月 3 日 14:05」，英文写成「Nov 3, 02:05 PM」，不是今年的加上年份
+ * @param {number|Date} time - 时间
+ * @param {'zh'|'en'} lang - 语言
+ * @returns {string}
+ */
+export function formatDateTime(time, lang = getLang()) {
+    const date = new Date(time);
+    const withYear = date.getFullYear() !== new Date().getFullYear();
+    if (lang === 'zh') {
+        const clock = [date.getHours(), date.getMinutes()].map(value => String(value).padStart(2, '0')).join(':');
+        return `${withYear ? `${date.getFullYear()} 年 ` : ''}${date.getMonth() + 1} 月 ${date.getDate()} 日 ${clock}`;
+    }
+    return new Intl.DateTimeFormat('en-US', {
+        ...(withYear ? { year: 'numeric' } : {}),
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    }).format(date);
+}
+
+/**
  * 取法律文本
  * @param {'privacy'|'terms'} page - 页面
  * @returns {Array<[string, string]>} 标题和正文

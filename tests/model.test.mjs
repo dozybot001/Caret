@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { collectMessage, isContextError, listModels, readEvents } from '../src/agent/model.js';
+import { collectMessage, isContextError, listModels, readEvents, retryDelay } from '../src/agent/model.js';
 
 test('流式响应合并文本、分片的工具调用和 reasoning_content', async () => {
     const lines = [
@@ -54,4 +54,13 @@ test('模型列表和推理档位都来自接口', async () => {
         { id: 'openai/gpt-5.4', levels: ['xhigh', 'high', 'none'], defaultLevel: 'medium' },
         { id: 'plain', levels: [], defaultLevel: '' }
     ]);
+});
+
+test('重试按退避时间等待，服务商要求更久时按 Retry-After，太久时不再自动重试', () => {
+    assert.equal(retryDelay(null, 1500), 1500);
+    assert.equal(retryDelay('1', 1500), 1500);
+    assert.equal(retryDelay('10', 1500), 10000);
+    assert.equal(retryDelay('120', 1500), null);
+    assert.equal(retryDelay('Tue, 03 Nov 2026 08:00:05 GMT', 1500, Date.parse('2026-11-03T08:00:00Z')), 5000);
+    assert.equal(retryDelay('soon', 4000), 4000);
 });

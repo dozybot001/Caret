@@ -1,7 +1,7 @@
 /* 设置样式 - 定义设置对话框的导航、页面布局、关于和说明页面 */
 #settings-dialog {
-    width: min(800px, calc(100vw - 32px));
-    height: min(640px, calc(100dvh - 32px));
+    width: min(var(--dialog-large-width), calc(100vw - 32px));
+    height: min(var(--dialog-large-height), calc(100dvh - 32px));
     margin: auto;
     border: 0;
     background-color: var(--bg-2);
@@ -272,6 +272,16 @@
 
 .article-body p {
     color: var(--text-2);
+}
+
+.legal-history {
+    margin: 24px 0 8px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.legal-versions .settings-link[aria-current="true"] {
+    background-color: var(--bg-5);
 }
 
 /* 窄屏：导航移到上方，一行放不下的设置改成上下排列 */

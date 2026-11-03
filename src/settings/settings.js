@@ -3,6 +3,7 @@
  * @description 左侧导航和页面切换，把各页的控件和设置绑定起来。模型页和数据页在各自的模块里
  */
 
+import { BUILD } from '../app/build.js';
 import { DEFAULT_PREFERENCES, VERSION } from '../app/constants.js';
 import { getTheme, setTheme } from '../app/preferences.js';
 import { articleText, changeLanguage, getLanguage, onLanguageChange, t } from '../i18n/index.js';
@@ -26,6 +27,11 @@ const PAGES = {
 
 /** 输入停下这么久后再保存 */
 const INPUT_DELAY = 400;
+/** 页面打开时的语言。Monaco 自带的菜单和查找框按它加载，换语言后要刷新才变 */
+const START_LANGUAGE = getLanguage();
+
+/** 鼠标离开说明按钮后，提示保留这么久，方便移进提示 */
+const TOOLTIP_HIDE_DELAY = 300;
 
 /**
  * 设置管理器
@@ -57,6 +63,9 @@ export class Settings {
         this.titleInfo = find('#settings-info');
         this.backButton = find('#settings-back');
         this.tooltip = find('#tooltip');
+        /** 当前提示对应的说明按钮 */
+        this.tooltipOwner = null;
+        this.tooltipTimer = null;
     }
 
     /** 初始化事件绑定 */
@@ -70,7 +79,13 @@ export class Settings {
             this.onClose?.();
         });
 
-        // Esc 先关闭说明提示，再关闭对话框
+        // Esc 先关闭说明提示，再关闭对话框。在按键阶段拦下：没有用户激活时浏览器不允许取消 cancel 事件
+        dialog.addEventListener('keydown', (event) => {
+            if (event.key !== 'Escape' || !this.tooltip.matches(':popover-open')) return;
+            event.preventDefault();
+            event.stopPropagation();
+            this._hideTooltip();
+        }, true);
         dialog.addEventListener('cancel', (event) => {
             if (this.tooltip.matches(':popover-open')) {
                 event.preventDefault();
@@ -97,12 +112,17 @@ export class Settings {
         });
 
         dialog.querySelectorAll('.info').forEach(button => this._bindTooltip(button));
+        this.tooltip.addEventListener('mouseenter', () => clearTimeout(this.tooltipTimer));
+        this.tooltip.addEventListener('mouseleave', () => this._hideTooltipSoon());
         document.addEventListener('click', (event) => {
-            if (!event.target.closest('.info')) this._hideTooltip();
+            if (!event.target.closest('.info, #tooltip')) this._hideTooltip();
         });
 
         dialog.querySelector('#about-version').textContent = VERSION;
+        dialog.querySelector('#about-build-id').textContent = BUILD;
+        dialog.querySelector('#about-build').hidden = !BUILD;
         onLanguageChange(() => {
+            dialog.querySelector('#language-note').hidden = getLanguage() === START_LANGUAGE;
             this._showPage(this.page);
             this.connection.render();
             this.connection.renderStatus();
@@ -149,10 +169,37 @@ export class Settings {
         this.dialog.querySelector('.dialog-body').scrollTop = 0;
     }
 
-    _renderArticle(page) {
-        const container = this.dialog.querySelector(`[data-page="${page}"] .article-body`);
+    /**
+     * 显示说明或法律文本。法律文本可以切换到历史版本
+     * @param {string} page - 页面
+     * @param {string|null} version - 历史版本号，null 表示当前版本
+     */
+    async _renderArticle(page, version = null) {
+        const section = this.dialog.querySelector(`[data-page="${page}"]`);
+        const container = section.querySelector('.article-body');
+        const versionList = section.querySelector('.legal-versions');
+        let sections = articleText(page);
+        if (versionList) {
+            const { LEGAL_HISTORY } = await import('../i18n/legal-history.js');
+            const history = LEGAL_HISTORY[getLanguage()][page];
+            const old = history.find(item => item.version === version);
+            if (old) sections = old.sections;
+            section.querySelector('.legal-meta').textContent = old ? t('legal.oldMeta', old.version, old.date) : t(`legal.${page}Meta`);
+            versionList.replaceChildren(...[null, ...history].map((item) => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'settings-link';
+                button.textContent = item ? `${item.version} · ${item.date}` : t('legal.current');
+                if ((item?.version ?? null) === (old?.version ?? null)) button.setAttribute('aria-current', 'true');
+                button.addEventListener('click', () => {
+                    this._renderArticle(page, item?.version ?? null);
+                    this.dialog.querySelector('.dialog-body').scrollTop = 0;
+                });
+                return button;
+            }));
+        }
         container.replaceChildren();
-        for (const [heading, body] of articleText(page)) {
+        for (const [heading, body] of sections) {
             const title = document.createElement('h3');
             title.textContent = heading;
             const paragraph = document.createElement('p');
@@ -221,14 +268,20 @@ export class Settings {
     }
 
     _bindTooltip(button) {
+        button.setAttribute('aria-expanded', 'false');
         const show = () => {
+            clearTimeout(this.tooltipTimer);
+            if (this.tooltipOwner !== button) this._hideTooltip();
             this.tooltip.textContent = t(button.dataset.tip);
             if (!this.tooltip.matches(':popover-open')) this.tooltip.showPopover();
             placePopup(this.tooltip, button);
+            this.tooltipOwner = button;
+            button.setAttribute('aria-expanded', 'true');
+            button.setAttribute('aria-describedby', this.tooltip.id);
         };
         button.addEventListener('mouseenter', show);
         button.addEventListener('focus', show);
-        button.addEventListener('mouseleave', () => this._hideTooltip());
+        button.addEventListener('mouseleave', () => this._hideTooltipSoon());
         button.addEventListener('blur', () => this._hideTooltip());
         button.addEventListener('click', (event) => {
             event.stopPropagation();
@@ -236,7 +289,18 @@ export class Settings {
         });
     }
 
+    /** 鼠标离开按钮后留一点时间移进提示；按钮还有焦点时不关闭 */
+    _hideTooltipSoon() {
+        clearTimeout(this.tooltipTimer);
+        if (document.activeElement === this.tooltipOwner) return;
+        this.tooltipTimer = setTimeout(() => this._hideTooltip(), TOOLTIP_HIDE_DELAY);
+    }
+
     _hideTooltip() {
+        clearTimeout(this.tooltipTimer);
         if (this.tooltip.matches(':popover-open')) this.tooltip.hidePopover();
+        this.tooltipOwner?.setAttribute('aria-expanded', 'false');
+        this.tooltipOwner?.removeAttribute('aria-describedby');
+        this.tooltipOwner = null;
     }
 }

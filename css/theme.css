@@ -4,6 +4,12 @@
     --chat-width: 360px;
     --chat-font-size: 13px;
 
+    /* 对话框只用这两档尺寸，窄屏和矮屏时按视窗缩小 */
+    --dialog-small-width: 400px;
+    --dialog-small-height: 220px;
+    --dialog-large-width: 800px;
+    --dialog-large-height: 640px;
+
     --font-family: ui-monospace, "SF Mono", SFMono-Regular, "JetBrains Mono", "Cascadia Code", Menlo, Consolas, "PingFang SC", "Microsoft YaHei", monospace;
 
     /* 品牌橙：只用于标志和图形，小字用 --accent-text */
@@ -29,7 +35,7 @@
     --text-7: #585858;
 
     /* 功能色 */
-    --color-red: #ff7b72;
+    --color-red: #ff8f87;
     --color-yellow: #e3b341;
     --color-blue: #6ea8ff;
     --color-green: #5fd38a;
@@ -69,10 +75,10 @@
     --text-6: #8a8780;
     --text-7: #aeaba4;
 
-    --color-red: #c62a22;
-    --color-yellow: #a06300;
+    --color-red: #b02019;
+    --color-yellow: #8a5500;
     --color-blue: #1f5fd1;
-    --color-green: #1a7f3c;
+    --color-green: #16703a;
 
     --bg-red-dim: rgba(198, 42, 34, 0.1);
     --bg-yellow-dim: rgba(160, 99, 0, 0.12);

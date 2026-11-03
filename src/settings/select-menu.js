@@ -39,6 +39,7 @@ export class SelectMenu {
         element.addEventListener('keydown', event => this._move(event));
         element.addEventListener('beforetoggle', (event) => {
             if (event.newState === 'closed') this.closedAt = performance.now();
+            this.anchor?.setAttribute('aria-expanded', String(event.newState === 'open'));
         });
     }
 
@@ -64,6 +65,7 @@ export class SelectMenu {
      */
     open(anchor, options, current, onPick, { searchable = false, allowCustom = false, footer = null } = {}) {
         const menu = this.element;
+        this.anchor?.setAttribute('aria-expanded', 'false');
         this.anchor = anchor;
         // 对话框打开时外部内容不可操作，关闭时里面的内容不显示，所以菜单跟着触发元素走
         const container = anchor.closest('dialog') || document.body;

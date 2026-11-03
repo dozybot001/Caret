@@ -142,6 +142,8 @@ export class ChangesUI {
      */
     setBusy(busy) {
         this.applyButton.classList.toggle('is-loading', busy);
+        if (busy) this.applyButton.setAttribute('aria-busy', 'true');
+        else this.applyButton.removeAttribute('aria-busy');
         this.setLocked(busy);
     }
 

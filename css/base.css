@@ -165,6 +165,32 @@ body {
     }
 }
 
+/* 列表下方还有内容时，底部渐隐提示；滚到底或不能滚动时不显示 */
+@property --scroll-fade {
+    syntax: '<length>';
+    inherits: false;
+    initial-value: 0px;
+}
+
+@keyframes scroll-fade {
+    from {
+        --scroll-fade: 20px;
+    }
+    to {
+        --scroll-fade: 0px;
+    }
+}
+
+#file-tree,
+#history-list,
+#changes-list,
+.select-options {
+    mask-image: linear-gradient(#000 calc(100% - var(--scroll-fade)), transparent);
+    animation: scroll-fade linear both;
+    animation-timeline: scroll(self);
+    animation-range: calc(100% - 20px) 100%;
+}
+
 ::-webkit-scrollbar {
     width: 10px;
     height: 10px;
@@ -255,12 +281,19 @@ body {
     font-size: 11px;
 }
 
-.filing a {
+.filing a,
+.filing button {
+    padding: 0;
+    border: 0;
+    background: none;
     color: var(--text-5);
+    font: inherit;
     text-decoration: none;
+    cursor: pointer;
 }
 
-.filing a:hover {
+.filing a:hover,
+.filing button:hover {
     color: var(--text-3);
 }
 

@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
-# 发布 Caret：从确定的提交导出静态文件，上传到服务器，切换站点，公网验收，失败时恢复，成功后清理旧版本
-# 用法：deploy/release.sh [rollback]
+# 发布 Caret：检查依赖漏洞和密钥，从确定的提交导出静态文件，上传到服务器，切换站点，公网验收，失败时恢复，成功后清理旧版本
+# 用法：deploy/release.sh [rollback | maintenance on|off]
 set -euo pipefail
 
 SERVER=agenthub-prod
 ROOT=/opt/caret
 ORIGIN=https://caret.tenon.asia
-FILES=(404.html LICENSE index.html .well-known assets css src)
-SSH=(ssh -o BatchMode=yes -o ConnectTimeout=15 "$SERVER")
+FILES=(404.html 500.html maintenance.html LICENSE index.html .well-known assets css src)
+# 主机公钥固定在 deploy/known_hosts，不信任开发机上临时记下的公钥
+SSH_OPTIONS=(-o BatchMode=yes -o ConnectTimeout=15 -o HostKeyAlias="$SERVER" -o UserKnownHostsFile=deploy/known_hosts -o StrictHostKeyChecking=yes)
+SSH=(ssh "${SSH_OPTIONS[@]}" "$SERVER")
 
 cd "$(dirname "$0")/.."
 
@@ -24,9 +26,11 @@ activate() {
     sed "s#__RELEASE__#\$ROOT/releases/\$release#" "\$ROOT/caret.Caddyfile" > "\$SITE"
     if ! caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null 2>&1; then
         if [ -s "\$backup" ]; then cp -p "\$backup" "\$SITE"; else rm -f "\$SITE"; fi
+        rm -f "\$backup"
         echo 'Caddy 配置无效，站点未切换' >&2
         return 1
     fi
+    rm -f "\$backup"
     systemctl reload caddy
     systemctl is-active --quiet caddy
     if [ -f "\$ROOT/state/current" ]; then cp "\$ROOT/state/current" "\$ROOT/state/previous"; fi
@@ -64,11 +68,14 @@ body=$(fetch "$ORIGIN/") || fail '首页不可用'
 
 body=$(fetch "$ORIGIN/src/app/constants.js") || fail '脚本不可用'
 [[ $body == *"VERSION = '$EXPECTED'"* ]] || fail '线上版本不对'
+body=$(fetch "$ORIGIN/src/app/build.js") || fail '构建号不可用'
+[[ $body == *"'$COMMIT'"* ]] || fail '构建号不对'
 
 headers=$(fetch -I "$ORIGIN/") || fail '读不到响应头'
 for name in strict-transport-security content-security-policy x-content-type-options referrer-policy x-frame-options; do
     grep -qi "^$name:" <<<"$headers" || fail "缺少响应头 $name"
 done
+grep -qi '^strict-transport-security: max-age=31536000; includeSubDomains' <<<"$headers" || fail 'HSTS 不对'
 grep -qi "frame-ancestors 'none'" <<<"$headers" || fail 'CSP 缺少 frame-ancestors'
 grep -qi 'cdnjs' <<<"$headers" && fail 'CSP 里还有第三方脚本'
 grep -qi '^cache-control: no-cache' <<<"$headers" || fail '页面的缓存策略不对'
@@ -76,6 +83,8 @@ grep -qi '^cache-control: no-cache' <<<"$headers" || fail '页面的缓存策略
 headers=$(fetch -I "$ORIGIN/src/main.js") || fail 'main.js 不可用'
 grep -qi '^content-type: text/javascript' <<<"$headers" || fail 'main.js 类型不对'
 [ "$(status_of css/codicons/codicon.ttf)" = 200 ] || fail '图标字体不可用'
+headers=$(fetch -I "$ORIGIN/LICENSE") || fail '许可证不可用'
+grep -qi '^content-type: text/plain; charset=utf-8' <<<"$headers" || fail '许可证的类型不对'
 [ "$(status_of assets/og.png)" = 200 ] || fail '分享图不可用'
 
 headers=$(fetch -I "$ORIGIN/vendor/monaco-0.52.2/vs/loader.js") || fail 'Monaco 不可用'
@@ -87,6 +96,8 @@ grep -qi 'content-security-policy' <<<"$headers" || fail 'Monaco 缺少 CSP'
 body=$(fetch "$ORIGIN/.well-known/security.txt") || fail 'security.txt 不可用'
 [[ $body == *'Contact: mailto:support@tenonai.cn'* ]] || fail 'security.txt 不对'
 
+[ "$(status_of 500.html)" = 200 ] || fail '500 页不可用'
+[ "$(status_of maintenance.html)" = 200 ] || fail '维护页不可用'
 [ "$(status_of not-a-page)" = 404 ] || fail '不存在的地址没有返回 404'
 body=$(curl -s --retry 3 --retry-delay 2 -m 15 "$ORIGIN/not-a-page")
 [[ $body == *'Page not found'* ]] || fail '404 页面不对'
@@ -100,6 +111,7 @@ smoke() {
     remote <<EOS
 ORIGIN=$ORIGIN
 EXPECTED=$1
+COMMIT=$2
 $SMOKE
 EOS
 }
@@ -107,6 +119,15 @@ EOS
 version_of() {
     sed -n "s/^export const VERSION = '\(.*\)';$/\1/p" src/app/constants.js
 }
+
+if [ "${1:-}" = maintenance ]; then
+    case "${2:-}" in
+        on) "${SSH[@]}" "sudo -n touch $ROOT/state/maintenance" ;;
+        off) "${SSH[@]}" "sudo -n rm -f $ROOT/state/maintenance" ;;
+        *) echo '用法：deploy/release.sh maintenance on|off' >&2; exit 1 ;;
+    esac
+    exit 0
+fi
 
 if [ "${1:-}" = rollback ]; then
     remote <<EOS
@@ -121,6 +142,20 @@ fi
 SHA=$(git rev-parse HEAD)
 node --test >/dev/null
 
+# 密钥扫描：常见的 API Key、云平台和代码托管令牌、私钥
+SECRETS='sk-[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{36}|xox[abprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{35}|-----BEGIN [A-Z ]*PRIVATE KEY-----'
+if git grep -nIE "$SECRETS" "$SHA" -- . >&2; then
+    echo '发现疑似密钥，停止发布。先撤销并更换密钥，再清理提交' >&2
+    exit 1
+fi
+
+# 依赖漏洞检查：唯一的第三方依赖是 vendor 里的 Monaco，按版本查询 OSV
+MONACO=$(git ls-tree --name-only "$SHA" vendor/ | sed -n 's#^vendor/monaco-##p')
+ADVISORIES=$(curl -fsS --retry 2 -m 20 https://api.osv.dev/v1/query \
+    -d "{\"package\":{\"name\":\"monaco-editor\",\"ecosystem\":\"npm\"},\"version\":\"$MONACO\"}") \
+    || { echo '查询不到依赖漏洞，停止发布' >&2; exit 1; }
+[ "$ADVISORIES" = '{}' ] || { echo "Monaco $MONACO 有已知漏洞，修复或写明豁免理由后再发布：$ADVISORIES" >&2; exit 1; }
+
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 git archive --format=tar "$SHA" "${FILES[@]}" | gzip -n > "$WORK/site.tar.gz"
@@ -132,7 +167,7 @@ DIGEST=$(shasum -a 256 "$WORK/site.tar.gz" | cut -d' ' -f1)
 VENDOR=$(git rev-parse "$SHA:vendor")
 if [ "$("${SSH[@]}" "cat $ROOT/state/vendor 2>/dev/null || true")" != "$VENDOR" ]; then
     git archive --format=tar "$SHA" vendor | gzip -n > "$WORK/vendor.tar.gz"
-    scp -q -o BatchMode=yes "$WORK/vendor.tar.gz" "$SERVER:$ROOT/incoming/vendor.tar.gz"
+    scp -q "${SSH_OPTIONS[@]}" "$WORK/vendor.tar.gz" "$SERVER:$ROOT/incoming/vendor.tar.gz"
     remote <<EOS
 set -euo pipefail
 tar -xzf $ROOT/incoming/vendor.tar.gz -C $ROOT
@@ -142,8 +177,8 @@ rm -f $ROOT/incoming/vendor.tar.gz
 echo $VENDOR > $ROOT/state/vendor
 EOS
 fi
-scp -q -o BatchMode=yes "$WORK/site.tar.gz" "$SERVER:$ROOT/incoming/$SHA.tar.gz"
-scp -q -o BatchMode=yes deploy/caret.Caddyfile "$SERVER:$ROOT/incoming/caret.Caddyfile"
+scp -q "${SSH_OPTIONS[@]}" "$WORK/site.tar.gz" "$SERVER:$ROOT/incoming/$SHA.tar.gz"
+scp -q "${SSH_OPTIONS[@]}" deploy/caret.Caddyfile "$SERVER:$ROOT/incoming/caret.Caddyfile"
 
 remote <<EOS
 $ACTIVATE
@@ -166,7 +201,7 @@ rm -f "\$archive" \$ROOT/incoming/caret.Caddyfile
 activate "$SHA"
 EOS
 
-if ! smoke "$(version_of)"; then
+if ! smoke "$(version_of)" "$SHA"; then
     echo '公网验收失败，正在恢复' >&2
     remote <<EOS
 $ACTIVATE

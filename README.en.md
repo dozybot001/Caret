@@ -29,6 +29,8 @@ Caret has no bash, runs no commands and runs no tests. When a change has to be r
 3. Open or drop a folder, and describe the change
 4. Read the diff, then click Apply or press `Ctrl/Cmd+Enter`. You can undo an apply
 
+Caret is web only, with no mobile app: it reads and writes a local folder directly, and only desktop Chrome and Edge support that today (the File System Access API).
+
 ## Features
 
 - **Editing and review**: A Monaco editor where you and the Agent work on the same content. Diffs can be inline or side by side, and you can edit them directly
@@ -60,17 +62,35 @@ The ring in the input bar shows how much context is used. 100% is the compaction
 - API keys, settings and conversations are stored only in this device's browser, and you can delete all of them on the Data page in Settings
 - When you use the hosted page, the server records access logs with the time, IP address and page visited, without URL parameters, and deletes them after 6 months
 
+### Data inventory
+
+| Data | Source | Purpose | Where and how long | How to delete |
+| --- | --- | --- | --- | --- |
+| Model service settings and API key | You enter them in Settings | Calling the model service you chose | This device's IndexedDB, until you delete it | Data page in Settings |
+| Preferences and global instructions | You enter them in Settings | Running with your preferences | This device's IndexedDB, until you delete it | Reset settings, or the Data page |
+| Conversations, including file contents the Agent read | Your conversations with the Agent | Resuming and continuing conversations | This device's IndexedDB, up to 100 per project | Delete in History, or the Data page; saving can be turned off |
+| Prompts you sent | The input bar | Recalling them with the arrow keys | This device's IndexedDB, up to 200 per project | Data page |
+| Folder access and open tabs | The folder you chose | Restoring them next time | This device's IndexedDB, until you delete it | Revoke folder access, or the Data page |
+| Theme, language and panel widths | Settings and the interface | Showing your preferences as the page opens | This device's localStorage, until you delete it | Data page |
+| Requests, global instructions, and file contents and paths the Agent reads | Your conversations | Doing the task | The model service you chose, under its privacy policy | Under that provider's rules |
+| Access logs: time, IP address, page visited (without parameters), status and duration | Visiting the hosted page | Network security | The server, deleted automatically after 6 months | Deleted automatically |
+
 ## Development
 
 There is no build step and no runtime dependency. The source is what runs in production. Monaco lives in `vendor/` and is served from the same origin, so the page loads no third-party scripts.
 
+The page's own scripts and styles have no content hash in their names, because there is no build step to add one. They are served with `no-cache`, so the browser checks with the server for updates each time. Monaco sits in a versioned folder, `vendor/monaco-<version>/`, with a long cache lifetime.
+
 ```bash
-python3 -m http.server 8000   # Run locally, then open http://localhost:8000
-node --test                   # Run the tests, with Node.js 22 or later
+python3 -m http.server 8000             # Run locally, then open http://localhost:8000
+node --test                             # Run the tests, with Node.js 22 or later
+bash deploy/release.sh                  # Release: scan for secrets, check dependency advisories, test, upload and check the live site
+bash deploy/release.sh maintenance on   # Show the maintenance page; off to restore
 ```
 
 ```text
-index.html, 404.html   Page entry points
+*.html                 Page entry point, error pages and maintenance page
+CHANGELOG.md           Changelog (in Chinese)
 src/
   main.js              Startup
   app/                 Controller, storage, preferences and constants
@@ -83,12 +103,12 @@ src/
 css/                   Styles, starting from style.css
 assets/                Static assets such as the share image
 tests/                 Tests, matching the modules in src and the scripts in deploy
-docs/                  Design guidelines and the README screenshot
+docs/                  Design guidelines, security self-check and the README screenshot
 vendor/                Monaco 0.52.2, from min/vs in the npm package, with only the Simplified Chinese language pack
-deploy/                Release script, cleanup of old releases and Caddy config
+deploy/                Release and cleanup scripts, Caddy config and the server's host key
 ```
 
-Read the [design guidelines](docs/design-guidelines.md) (in Chinese) before changing the interface.
+Read the [design guidelines](docs/design-guidelines.md) (in Chinese) before changing the interface. See the [changelog](CHANGELOG.md) for changes between versions and [docs/security.md](docs/security.md) for the security self-check (both in Chinese).
 
 ## License
 

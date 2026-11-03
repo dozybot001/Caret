@@ -3,7 +3,7 @@
  * @description 显示当前项目的对话，支持打开、删除和清空
  */
 
-import { getLanguage, onLanguageChange, t } from '../i18n/index.js';
+import { formatDateTime, onLanguageChange, t } from '../i18n/index.js';
 
 /**
  * 历史记录列表 UI
@@ -66,12 +66,7 @@ export class HistoryUI {
         title.textContent = session.title;
         const time = document.createElement('span');
         time.className = 'history-time';
-        time.textContent = new Intl.DateTimeFormat(getLanguage() === 'zh' ? 'zh-CN' : 'en-US', {
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        }).format(session.updatedAt);
+        time.textContent = formatDateTime(session.updatedAt);
         open.append(title, time);
         open.addEventListener('click', () => this.actions.onOpen(session.id));
 

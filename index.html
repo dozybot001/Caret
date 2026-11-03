@@ -92,7 +92,7 @@
                         <div><dt data-i18n="welcome.pointPrompt"></dt><dd data-i18n="welcome.pointPromptBody"></dd></div>
                         <div><dt data-i18n="welcome.pointMemory"></dt><dd data-i18n="welcome.pointMemoryBody"></dd></div>
                     </dl>
-                    <p class="filing"><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">湘ICP备2026031578号-1</a><a href="https://beian.mps.gov.cn/#/query/webSearch?code=43132202001134" target="_blank" rel="noopener noreferrer">湘公网安备43132202001134号</a></p>
+                    <p class="filing"><button type="button" data-legal="privacy" data-i18n="about.privacy"></button><button type="button" data-legal="terms" data-i18n="about.terms"></button><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">湘ICP备2026031578号-1</a><a href="https://beian.mps.gov.cn/#/query/webSearch?code=43132202001134" target="_blank" rel="noopener noreferrer">湘公网安备43132202001134号</a></p>
                 </div>
             </div>
         </main>
@@ -138,8 +138,8 @@
                 <textarea id="chat-input" rows="2"></textarea>
                 <div class="chat-input-foot">
                     <div class="chat-chips">
-                        <button type="button" id="btn-model" class="chat-chip" aria-haspopup="listbox"><i class="codicon codicon-plug"></i><span></span><i class="codicon codicon-chevron-up"></i></button>
-                        <button type="button" id="btn-effort" class="chat-chip hidden" aria-haspopup="listbox"><i class="codicon codicon-dashboard"></i><span></span><i class="codicon codicon-chevron-up"></i></button>
+                        <button type="button" id="btn-model" class="chat-chip" aria-haspopup="listbox" aria-expanded="false" aria-controls="select-menu"><i class="codicon codicon-plug"></i><span></span><i class="codicon codicon-chevron-up"></i></button>
+                        <button type="button" id="btn-effort" class="chat-chip hidden" aria-haspopup="listbox" aria-expanded="false" aria-controls="select-menu"><i class="codicon codicon-dashboard"></i><span></span><i class="codicon codicon-chevron-up"></i></button>
                     </div>
                     <div class="chat-input-actions">
                         <button type="button" id="context-ring">
@@ -197,7 +197,7 @@
                 <section data-page="model">
                     <div class="field">
                         <span class="field-label" id="provider-label" data-i18n="settings.provider"></span>
-                        <button type="button" id="provider-trigger" class="select-trigger" aria-haspopup="listbox" aria-labelledby="provider-label"><span></span><i class="codicon codicon-chevron-down"></i></button>
+                        <button type="button" id="provider-trigger" class="select-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="select-menu" aria-labelledby="provider-label"><span></span><i class="codicon codicon-chevron-down"></i></button>
                     </div>
                     <div class="field hidden" id="field-base-url">
                         <label class="field-label" for="input-base-url" data-i18n="settings.baseUrl"></label>
@@ -217,14 +217,14 @@
                             <span id="model-label" data-i18n="settings.defaultModel"></span>
                             <button type="button" class="info" data-tip="settings.defaultModelTip" data-i18n-label="settings.info"><i class="codicon codicon-info"></i></button>
                         </div>
-                        <button type="button" id="model-trigger" class="select-trigger" aria-haspopup="listbox" aria-labelledby="model-label"><span></span><i class="codicon codicon-chevron-down"></i></button>
+                        <button type="button" id="model-trigger" class="select-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="select-menu" aria-labelledby="model-label"><span></span><i class="codicon codicon-chevron-down"></i></button>
                     </div>
                     <div class="field hidden" id="field-effort">
                         <div class="field-label">
                             <span id="effort-label" data-i18n="settings.defaultEffort"></span>
                             <button type="button" class="info" data-tip="settings.defaultEffortTip" data-i18n-label="settings.info"><i class="codicon codicon-info"></i></button>
                         </div>
-                        <button type="button" id="effort-trigger" class="select-trigger" aria-haspopup="listbox" aria-labelledby="effort-label"><span></span><i class="codicon codicon-chevron-down"></i></button>
+                        <button type="button" id="effort-trigger" class="select-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="select-menu" aria-labelledby="effort-label"><span></span><i class="codicon codicon-chevron-down"></i></button>
                     </div>
                     <p id="connection-status" class="settings-status" role="status"></p>
                 </section>
@@ -330,6 +330,7 @@
                             <button type="button" data-lang-option="en">English</button>
                         </div>
                     </div>
+                    <p id="language-note" class="settings-status" role="status" data-i18n="settings.languageNote" hidden></p>
                     <div class="setting-row">
                         <div class="field-label">
                             <label for="input-font-family" data-i18n="settings.fontFamily"></label>
@@ -375,7 +376,7 @@
                 <section data-page="about" class="hidden">
                     <div class="about-head">
                         <div class="product-logo" data-i18n-label="brand.label"><svg class="product-logo-icon" viewBox="0 0 64 64" aria-hidden="true"><rect x="6" y="24" width="17" height="24" fill="currentColor"/><rect x="28.5" y="8" width="7" height="48" fill="#f06b32"/><rect x="41" y="24" width="17" height="24" fill="currentColor"/></svg>Caret<svg class="product-logo-mark" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="17" fill="#f06b32"/><path d="M13 16H51V28H38V48H26V28H13Z" fill="#fff"/></svg></div>
-                        <p class="about-version"><span data-i18n="about.version"></span> <span id="about-version"></span></p>
+                        <p class="about-version"><span data-i18n="about.version"></span> <span id="about-version"></span><span id="about-build" hidden> · <span data-i18n="about.build"></span> <span id="about-build-id"></span></span></p>
                     </div>
                     <p data-i18n="about.body1"></p>
                     <p data-i18n="about.body2"></p>
@@ -400,11 +401,15 @@
                 <section data-page="privacy" class="hidden">
                     <p class="legal-meta" data-i18n="legal.privacyMeta"></p>
                     <div class="article-body"></div>
+                    <h3 class="legal-history" data-i18n="legal.history"></h3>
+                    <div class="settings-links legal-versions"></div>
                 </section>
 
                 <section data-page="terms" class="hidden">
                     <p class="legal-meta" data-i18n="legal.termsMeta"></p>
                     <div class="article-body"></div>
+                    <h3 class="legal-history" data-i18n="legal.history"></h3>
+                    <div class="settings-links legal-versions"></div>
                 </section>
             </div>
         </div>

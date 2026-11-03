@@ -207,9 +207,11 @@ export class ChatUI {
         button.type = 'button';
         button.addEventListener('click', async () => {
             button.classList.add('is-loading');
+            button.setAttribute('aria-busy', 'true');
             button.disabled = true;
             await actions.onUndo();
             button.classList.remove('is-loading');
+            button.removeAttribute('aria-busy');
             button.disabled = false;
         });
         element.appendChild(button);

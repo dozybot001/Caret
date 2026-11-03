@@ -166,6 +166,7 @@ export const zh = {
     'settings.themeLight': '浅色',
     'settings.themeDark': '深色',
     'settings.language': '语言',
+    'settings.languageNote': '编辑器自带的右键菜单和查找框要刷新页面后才换语言。',
     'settings.fontFamily': '编辑器字体',
     'settings.fontFamilyTip': '填写这台电脑上已安装的字体名称。留空时使用默认字体。',
     'settings.fontFamilyHint': 'JetBrains Mono',
@@ -201,6 +202,7 @@ export const zh = {
     'settings.close': '关闭',
 
     'about.version': '版本',
+    'about.build': '构建',
     'about.body1': '极轻量的浏览器 Coding Agent。你打开一个本地文件夹，说明要改什么，模型用读、写、改三个工具完成改动。改动先出现在编辑器里，你看完 diff，也可以再手动调整，确认后写入磁盘。',
     'about.body2': '它适合看 diff 就能判断对错的改动，例如文案、配置、样式、文档和小 bug。Caret 不执行命令，不运行测试，也不需要安装。',
     'about.publisher': '出品方',
@@ -212,6 +214,9 @@ export const zh = {
     'about.terms': '用户协议',
     'legal.privacyMeta': '版本 1.2 · 生效日期：2026 年 11 月 3 日',
     'legal.termsMeta': '版本 1.1 · 生效日期：2026 年 11 月 1 日',
+    'legal.oldMeta': (version, date) => `版本 ${version} · 生效日期：${date} · 已被当前版本替代`,
+    'legal.history': '历史版本',
+    'legal.current': '当前版本',
 
     'error.auth': '模型服务拒绝了这个 Key。请在设置里检查 Key 是否正确。',
     'error.rate': '请求太频繁或额度不足。请稍后重试，或检查账户余额。',

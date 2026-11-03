@@ -1,0 +1,2 @@
+# 发布时 git archive 把 build.js 里的占位符换成提交号
+src/app/build.js export-subst

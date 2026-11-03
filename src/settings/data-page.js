@@ -52,6 +52,7 @@ export class DataPage {
         if (!(await window.notify.confirm(t(confirm), button.textContent))) return;
 
         button.classList.add('is-loading');
+        button.setAttribute('aria-busy', 'true');
         button.disabled = true;
         try {
             await action();
@@ -60,6 +61,7 @@ export class DataPage {
             this.status = { key: 'error.generic', args: [error.message], kind: 'error' };
         }
         button.classList.remove('is-loading');
+        button.removeAttribute('aria-busy');
         button.disabled = false;
         await this.render();
     }
