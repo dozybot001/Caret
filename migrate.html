@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<!-- 迁移页面 - 迁到新地址后，新地址在弹出窗口里打开旧地址的这个页面，读出这个浏览器里旧地址的设置和对话，只发给新地址 -->
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
+    <title>迁移数据 · Caret</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cstyle%3Erect%7Bfill:%231a1917%7D.c%7Bfill:%23f06b32%7D@media(prefers-color-scheme:dark)%7Brect%7Bfill:%23e8e8e8%7D%7D%3C/style%3E%3Crect x='6' y='24' width='17' height='24'/%3E%3Crect class='c' x='28.5' y='8' width='7' height='48'/%3E%3Crect x='41' y='24' width='17' height='24'/%3E%3C/svg%3E">
+    <style>
+        :root {
+            color-scheme: light dark;
+            --bg: #ffffff;
+            --ink: #1a1917;
+            --muted: #5c5a55;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #000000;
+                --ink: #e8e8e8;
+                --muted: #a0a0a0;
+            }
+        }
+        body {
+            min-height: 100dvh;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 32px;
+            box-sizing: border-box;
+            background: var(--bg);
+            color: var(--ink);
+            font-family: ui-monospace, "SF Mono", SFMono-Regular, "JetBrains Mono", Menlo, Consolas, "PingFang SC", "Microsoft YaHei", monospace;
+            line-height: 1.7;
+        }
+        h1 {
+            margin: 0 0 12px;
+            font-size: 20px;
+            font-weight: 600;
+        }
+        p {
+            margin: 0;
+            color: var(--muted);
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>迁移数据 / Moving your data</h1>
+        <p id="status-zh">正在读取这个浏览器里的设置和对话。</p>
+        <p id="status-en">Reading the settings and conversations in this browser.</p>
+    </main>
+    <script>
+        // 新地址。数据只发给这个来源，别的网页打开这个页面也收不到
+        const TARGET = 'https://caret.tenonai.cn';
+        const DATABASE = 'CaretStore';
+        const STORES = ['config', 'projects', 'sessions', 'sessionData'];
+
+        function show(zh, en) {
+            document.getElementById('status-zh').textContent = zh;
+            document.getElementById('status-en').textContent = en;
+        }
+
+        function settle(request) {
+            return new Promise((resolve, reject) => {
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        /** 读出旧数据。只读，不改动这里的存储；没有数据时返回 null */
+        async function collect() {
+            const preferences = localStorage.getItem('caret_preferences');
+            // 先确认数据库存在，直接打开会建一个空库
+            if (!(await indexedDB.databases()).some(item => item.name === DATABASE)) {
+                return preferences ? { config: null, projects: [], sessions: [], sessionData: [], preferences } : null;
+            }
+            const db = await settle(indexedDB.open(DATABASE));
+            const names = STORES.filter(name => db.objectStoreNames.contains(name));
+            const transaction = db.transaction(names, 'readonly');
+            const read = (name, method, query) => (names.includes(name)
+                ? settle(transaction.objectStore(name)[method](query))
+                : Promise.resolve(undefined));
+            const [config, projects = [], sessions = [], keys = [], contents = []] = await Promise.all([
+                read('config', 'get', 'appConfig'),
+                read('projects', 'getAll'),
+                read('sessions', 'getAll'),
+                read('sessionData', 'getAllKeys'),
+                read('sessionData', 'getAll')
+            ]);
+            db.close();
+            if (!config && !sessions.length && !preferences) return null;
+            return {
+                config: config ?? null,
+                // 文件夹授权不能带到别的域名，项目在新地址打开同名文件夹时重新关联
+                projects: projects.map(project => ({ ...project, handle: null })),
+                sessions,
+                sessionData: keys.map((key, index) => [key, contents[index]]),
+                preferences
+            };
+        }
+
+        async function main() {
+            if (!window.opener || location.origin === TARGET) {
+                show('这个页面用于把设置和对话迁到新地址，请从 Caret 欢迎页的迁移入口打开。',
+                    'This page moves your settings and conversations to the new address. Open it from the welcome page of Caret.');
+                return;
+            }
+            try {
+                const data = await collect();
+                window.opener.postMessage({ type: 'caret-migration', ...(data ?? { empty: true }) }, TARGET);
+                show('已发给新地址，这个窗口会自动关闭。', 'Sent to the new address. This window closes by itself.');
+            } catch (error) {
+                show(`读取失败：${error.message}`, `Could not read the data: ${error.message}`);
+            }
+        }
+
+        main();
+    </script>
+</body>
+</html>

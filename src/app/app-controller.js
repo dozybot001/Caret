@@ -28,8 +28,10 @@ import { FileTreeUI } from '../file-tree/file-tree-ui.js';
 import { bindFolderDrop } from '../file-tree/folder-drop.js';
 import { Settings } from '../settings/settings.js';
 import { applyTranslations, onLanguageChange, t } from '../i18n/index.js';
+import { canMigrate, fetchLegacyData, importLegacyData } from './migration.js';
 import { clearPreferences, onThemeChange } from './preferences.js';
 import { initResizers } from './resizers.js';
+import { filingOf, LEGACY_DOMAIN } from './site.js';
 
 /**
  * 应用控制器
@@ -137,6 +139,8 @@ export class AppController {
             button.addEventListener('click', () => this.settings.open(button.dataset.legal));
         });
         element('btn-new-task').addEventListener('click', () => this.conversations.startNew());
+        this._renderFilings();
+        this._initMigration();
 
         this.history.onError = () => window.notify?.alert(t('history.saveFailed'), { type: 'warning' });
 
@@ -179,6 +183,56 @@ export class AppController {
         if (this.file.hasRoot()) this.fileHandlers.refreshTree();
         else if (this.file.pendingHandle) this.fileTreeUI.renderResume(this.file.pendingHandle.name);
         else this.fileTreeUI.renderEmpty();
+        this.migrateRow.querySelector('span').textContent = t('migrate.prompt', LEGACY_DOMAIN);
+    }
+
+    /**
+     * 按访问的地址显示备案号
+     * @private
+     */
+    _renderFilings() {
+        const { icp, police } = filingOf(location.hostname);
+        document.querySelectorAll('[data-filing="icp"]').forEach(link => {
+            link.textContent = icp;
+            link.hidden = !icp;
+        });
+        document.querySelectorAll('[data-filing="police"]').forEach(link => {
+            link.textContent = `湘公网安备${police}号`;
+            link.href = `https://beian.mps.gov.cn/#/query/webSearch?code=${police}`;
+            link.hidden = !police;
+        });
+    }
+
+    /**
+     * 迁到新地址后，欢迎页提供从旧地址迁移设置和对话的入口
+     * @private
+     */
+    _initMigration() {
+        this.migrateRow = document.getElementById('welcome-migrate');
+        this.migrateRow.querySelector('span').textContent = t('migrate.prompt', LEGACY_DOMAIN);
+        if (!canMigrate(this.store.getConfig())) return;
+        this.migrateRow.hidden = false;
+        const button = this.migrateRow.querySelector('button');
+        button.addEventListener('click', async () => {
+            button.disabled = true;
+            try {
+                const data = await fetchLegacyData();
+                if (!data) {
+                    await this.store.updateConfig({ legacyMigrated: true });
+                    this.migrateRow.hidden = true;
+                    window.notify?.alert(t('migrate.empty'));
+                    return;
+                }
+                const count = await importLegacyData(this.store, data);
+                window.notify?.alert(t('migrate.done', count), { type: 'success' });
+                // 刷新后设置、显示偏好和模型菜单都按迁过来的数据加载
+                this.isLeaving = true;
+                setTimeout(() => location.reload(), 2000);
+            } catch (error) {
+                button.disabled = false;
+                window.notify?.alert(t('migrate.failed', error.message), { type: 'error' });
+            }
+        });
     }
 
     /**

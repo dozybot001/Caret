@@ -1,0 +1,14 @@
+# 迁到新地址后的旧地址，src/app/site.js 的 LEGACY_DOMAIN 不为空时才发布。所有请求 301 到新地址，保留路径和参数
+# 只有 /migrate.html 照常返回：新地址在弹出窗口里打开它，接过旧地址浏览器里的设置和对话
+__LEGACY__ {
+	import access_log
+	import caret_headers
+	handle /migrate.html {
+		root * __RELEASE__
+		header Cache-Control "no-cache"
+		file_server
+	}
+	handle {
+		redir https://__DOMAIN__{uri} permanent
+	}
+}

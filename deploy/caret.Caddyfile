@@ -1,13 +1,6 @@
-caret.tenon.asia {
-	import access_log
-	root * __RELEASE__
-	encode zstd gzip
-	@app not path /vendor/*
-	header @app Cache-Control "no-cache"
-	header /vendor/* Cache-Control "public, max-age=31536000, immutable"
-	# 没有扩展名的许可证文件按纯文本返回
-	@license path_regexp ^/(LICENSE|css/codicons/LICENSE(-CODE)?|vendor/monaco-[^/]+/LICENSE)$
-	header @license Content-Type "text/plain; charset=utf-8"
+# 发布脚本把 __DOMAIN__ 换成 src/app/site.js 里的线上地址，服务器切换版本时把 __RELEASE__ 换成版本目录
+# 安全响应头新旧地址共用。片段名在整个 Caddy 配置里不能重复
+(caret_headers) {
 	header {
 		X-Content-Type-Options "nosniff"
 		X-Frame-Options "DENY"
@@ -16,6 +9,19 @@ caret.tenon.asia {
 		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
 		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data:; worker-src 'self'; connect-src 'self' https: http://localhost:* http://127.0.0.1:*; base-uri 'none'; form-action 'none'; object-src 'none'; frame-ancestors 'none'"
 	}
+}
+
+__DOMAIN__ {
+	import access_log
+	import caret_headers
+	root * __RELEASE__
+	encode zstd gzip
+	@app not path /vendor/*
+	header @app Cache-Control "no-cache"
+	header /vendor/* Cache-Control "public, max-age=31536000, immutable"
+	# 没有扩展名的许可证文件按纯文本返回
+	@license path_regexp ^/(LICENSE|css/codicons/LICENSE(-CODE)?|vendor/monaco-[^/]+/LICENSE)$
+	header @license Content-Type "text/plain; charset=utf-8"
 	# 维护时在服务器上建 state/maintenance，所有请求返回 503 和维护页，不用重载
 	@maintenance file {
 		root /opt/caret/state

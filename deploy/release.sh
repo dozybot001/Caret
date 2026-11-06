@@ -5,13 +5,20 @@ set -euo pipefail
 
 SERVER=agenthub-prod
 ROOT=/opt/caret
-ORIGIN=https://caret.tenon.asia
-FILES=(404.html 500.html maintenance.html LICENSE index.html .well-known assets css src)
+FILES=(404.html 500.html maintenance.html migrate.html LICENSE index.html .well-known assets css src)
 # 主机公钥固定在 deploy/known_hosts，不信任开发机上临时记下的公钥
 SSH_OPTIONS=(-o BatchMode=yes -o ConnectTimeout=15 -o HostKeyAlias="$SERVER" -o UserKnownHostsFile=deploy/known_hosts -o StrictHostKeyChecking=yes)
 SSH=(ssh "${SSH_OPTIONS[@]}" "$SERVER")
 
 cd "$(dirname "$0")/.."
+
+# 线上地址和迁走之前的旧地址，见 src/app/site.js
+site_constant() {
+    sed -n "s/^export const $1 = '\(.*\)';$/\1/p" src/app/site.js
+}
+DOMAIN=$(site_constant DOMAIN)
+LEGACY_DOMAIN=$(site_constant LEGACY_DOMAIN)
+ORIGIN=https://$DOMAIN
 
 # 服务器端：把 Caddy 站点切到指定版本，验证配置后重载
 read -r -d '' ACTIVATE <<REMOTE || true
@@ -19,11 +26,13 @@ set -euo pipefail
 ROOT=$ROOT
 SITE=/etc/caddy/sites-enabled/caret.caddy
 
+# 站点配置跟着版本存放，回滚时一起恢复。早期版本没有自己的配置，用当时共用的那份
 activate() {
-    local release=\$1 backup
+    local release=\$1 backup template=\$ROOT/releases/\$1.Caddyfile
+    [ -f "\$template" ] || template=\$ROOT/caret.Caddyfile
     backup=\$(mktemp)
     if [ -f "\$SITE" ]; then cp -p "\$SITE" "\$backup"; fi
-    sed "s#__RELEASE__#\$ROOT/releases/\$release#" "\$ROOT/caret.Caddyfile" > "\$SITE"
+    sed "s#__RELEASE__#\$ROOT/releases/\$release#g" "\$template" > "\$SITE"
     if ! caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null 2>&1; then
         if [ -s "\$backup" ]; then cp -p "\$backup" "\$SITE"; else rm -f "\$SITE"; fi
         rm -f "\$backup"
@@ -105,11 +114,22 @@ body=$(curl -s --retry 3 --retry-delay 2 -m 15 "$ORIGIN/not-a-page")
 for path in tests/agent.test.mjs docs/design-guidelines.md deploy/release.sh README.md .git/config; do
     [ "$(status_of "$path")" = 404 ] || fail "$path 不应该被发布"
 done
+
+# 迁移期间的旧地址：301 到新地址并保留路径和参数，只有迁移页面照常返回
+if [ -n "$LEGACY" ]; then
+    moved=$(curl -s --retry 3 --retry-delay 2 -m 15 -o /dev/null -w '%{http_code} %{redirect_url}' "https://$LEGACY/docs/a?b=1")
+    [ "$moved" = "301 $ORIGIN/docs/a?b=1" ] || fail "旧地址没有跳到新地址：$moved"
+    headers=$(curl -sI --retry 3 --retry-delay 2 -m 15 "https://$LEGACY/") || fail '旧地址不可用'
+    grep -qi '^strict-transport-security: max-age=31536000; includeSubDomains' <<<"$headers" || fail '旧地址的 HSTS 不对'
+    body=$(fetch "https://$LEGACY/migrate.html") || fail '旧地址的迁移页面不可用'
+    [[ $body == *"const TARGET = '$ORIGIN'"* ]] || fail '迁移页面的目标地址不对'
+fi
 REMOTE
 
 smoke() {
     remote <<EOS
 ORIGIN=$ORIGIN
+LEGACY=$LEGACY_DOMAIN
 EXPECTED=$1
 COMMIT=$2
 $SMOKE
@@ -156,10 +176,26 @@ ADVISORIES=$(curl -fsS --retry 2 -m 20 https://api.osv.dev/v1/query \
     || { echo '查询不到依赖漏洞，停止发布' >&2; exit 1; }
 [ "$ADVISORIES" = '{}' ] || { echo "Monaco $MONACO 有已知漏洞，修复或写明豁免理由后再发布：$ADVISORIES" >&2; exit 1; }
 
+# 新地址要已经解析到服务器，并且不再按未备案被拦截，否则证书签不下来，验证失败多了还会拉长重试间隔
+ADDRESS=$(ssh -G "$SERVER" 2>/dev/null | awk '$1 == "hostname" { print $2 }')
+[[ $ADDRESS =~ ^[0-9.]+$ ]] || ADDRESS=$(dig +short A "$ADDRESS" | tail -1)
+[ "$(dig +short A "$DOMAIN" @119.29.29.29 | tail -1)" = "$ADDRESS" ] || { echo "$DOMAIN 还没有解析到服务器，不发布" >&2; exit 1; }
+if curl -s -m 10 -o /dev/null -w '%{redirect_url}' "http://$DOMAIN/" | grep -q webblock; then
+    echo "$DOMAIN 仍被按未备案拦截，不发布" >&2
+    exit 1
+fi
+
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 git archive --format=tar "$SHA" "${FILES[@]}" | gzip -n > "$WORK/site.tar.gz"
 DIGEST=$(shasum -a 256 "$WORK/site.tar.gz" | cut -d' ' -f1)
+{
+    sed "s#__DOMAIN__#$DOMAIN#g" deploy/caret.Caddyfile
+    if [ -n "$LEGACY_DOMAIN" ]; then
+        echo
+        sed -e "s#__DOMAIN__#$DOMAIN#g" -e "s#__LEGACY__#$LEGACY_DOMAIN#g" deploy/legacy.Caddyfile
+    fi
+} > "$WORK/caret.Caddyfile"
 
 "${SSH[@]}" "sudo -n install -d -m 0755 $ROOT $ROOT/releases $ROOT/state && sudo -n install -d -o ubuntu -g ubuntu -m 0700 $ROOT/incoming"
 
@@ -178,7 +214,7 @@ echo $VENDOR > $ROOT/state/vendor
 EOS
 fi
 scp -q "${SSH_OPTIONS[@]}" "$WORK/site.tar.gz" "$SERVER:$ROOT/incoming/$SHA.tar.gz"
-scp -q "${SSH_OPTIONS[@]}" deploy/caret.Caddyfile "$SERVER:$ROOT/incoming/caret.Caddyfile"
+scp -q "${SSH_OPTIONS[@]}" "$WORK/caret.Caddyfile" "$SERVER:$ROOT/incoming/caret.Caddyfile"
 
 remote <<EOS
 $ACTIVATE
@@ -196,7 +232,7 @@ else
     echo "$DIGEST" > "\$target.sha256"
     mv "\$staging" "\$target"
 fi
-install -m 0644 -o root -g root \$ROOT/incoming/caret.Caddyfile \$ROOT/caret.Caddyfile
+install -m 0644 -o root -g root \$ROOT/incoming/caret.Caddyfile "\$target.Caddyfile"
 rm -f "\$archive" \$ROOT/incoming/caret.Caddyfile
 activate "$SHA"
 EOS
