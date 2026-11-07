@@ -215,6 +215,7 @@ export const en = {
     'about.body1': 'An ultralight coding agent in your browser. Open a local folder and describe the change. The model works with three tools: read, write and edit. Changes appear in the editor first. Review the diff, adjust by hand if you like, then apply them to disk.',
     'about.body2': 'It suits changes you can judge by reading the diff, such as copy, configuration, styles, documentation and small bugs. Caret runs no commands and no tests, and there is nothing to install.',
     'about.publisher': 'Publisher',
+    'about.publisherName': 'Tenon AI',
     'about.website': 'Tenon website',
     'about.feedback': 'Feedback',
     'about.source': 'Source code',

@@ -215,6 +215,7 @@ export const zh = {
     'about.body1': '极轻量的浏览器 Coding Agent。你打开一个本地文件夹，说明要改什么，模型用读、写、改三个工具完成改动。改动先出现在编辑器里，你看完 diff，也可以再手动调整，确认后写入磁盘。',
     'about.body2': '它适合看 diff 就能判断对错的改动，例如文案、配置、样式、文档和小 bug。Caret 不执行命令，不运行测试，也不需要安装。',
     'about.publisher': '出品方',
+    'about.publisherName': '榫卯 Tenon AI',
     'about.website': 'Tenon 官网',
     'about.feedback': '反馈',
     'about.source': '源代码',
