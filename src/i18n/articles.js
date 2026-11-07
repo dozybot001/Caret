@@ -14,13 +14,15 @@ export const ARTICLES = {
             ['上限更小的模型', '如果模型的上限低于压缩线，超限时 Caret 会先清理再重试一次。仍然超限时，需要开始新任务。也可以在设置里调低压缩线。']
         ],
         privacy: [
-            ['我们不收集什么', 'Caret 没有账号，也没有应用服务器。榫卯 Tenon AI 收不到你的文件、需求、API Key 或模型回复。Caret 不使用统计或追踪工具。'],
+            ['谁提供 Caret', 'Caret 由长沙榫卯人工智能科技有限公司（品牌“榫卯 Tenon AI”，下称“我们”）提供。我们是本政策所述个人信息的处理者。'],
+            ['我们不收集什么', 'Caret 没有账号，也没有应用服务器。我们收不到你的文件、需求、API Key 或模型回复。Caret 不使用统计或追踪工具。'],
             ['发送给模型服务的内容', '你写的需求和全局指令，以及 Agent 为完成任务读取的文件内容和文件路径，会从浏览器直接发给你配置的模型服务。该服务按自己的隐私政策处理这些数据，是否出境取决于你选择的服务。.env、私钥等常见密钥文件不会被读取。'],
             ['保存在这台设备上的内容', '设置、API Key、对话记录、文件夹访问授权和打开的标签页保存在浏览器的 IndexedDB，主题和语言保存在 localStorage。对话记录包含 Agent 读取过的文件内容，每个项目最多保留 100 条，不会上传。你可以在设置里关闭保存对话记录。你可以在历史记录里删除对话，也可以在设置的数据页清除全部本地数据。'],
             ['网页托管', '通过线上地址访问时，为保障网络安全，服务器会记录访问日志，包括访问时间、IP 地址和访问的页面，不含网址中的参数；这些日志保存 6 个月后自动删除。'],
-            ['联系我们', '如有问题，请发送邮件到 support@tenonai.cn。']
+            ['联系我们', '如有问题或隐私请求，请发送邮件到 support@tenonai.cn。']
         ],
         terms: [
+            ['谁提供 Caret', 'Caret 由长沙榫卯人工智能科技有限公司（品牌“榫卯 Tenon AI”，下称“我们”）提供。本协议是你和我们之间关于使用 Caret 的约定。'],
             ['服务内容', 'Caret 免费提供，源代码按 MIT 许可证开源。服务按现状提供，不保证改动结果正确，也不保证持续可用。'],
             ['你的责任', '写入前请阅读 diff。Caret 不运行代码，也不验证改动，写入后的结果由你负责。建议在 Git 仓库里使用，以便回退。'],
             ['模型服务', '你需要自备模型服务账号和 API Key，相关费用和条款由你与服务商约定。'],
@@ -38,13 +40,15 @@ export const ARTICLES = {
             ['Models with a smaller limit', 'If a model allows less than the compaction size, Caret clears older results and retries once when the limit is exceeded. If that still fails, start a new task. You can also lower the compaction size in Settings.']
         ],
         privacy: [
-            ['What we do not collect', 'Caret has no accounts and no application server. Tenon AI never receives your files, requests, API keys or model replies. Caret uses no analytics or tracking.'],
+            ['Who provides Caret', 'Caret is provided by 长沙榫卯人工智能科技有限公司, the company behind Tenon AI (“we”). We handle the personal information described in this policy.'],
+            ['What we do not collect', 'Caret has no accounts and no application server. We never receive your files, requests, API keys or model replies. Caret uses no analytics or tracking.'],
             ['What goes to the model service', 'Your requests and global instructions, plus the file contents and paths the Agent reads for the task, go directly from your browser to the model service you configured. That service handles the data under its own privacy policy, and whether data leaves your country depends on the service you choose. Common secret files such as .env and private keys are not read.'],
             ['What stays on this device', 'Settings, API keys, conversation history, folder access and open tabs are stored in the browser\'s IndexedDB. Theme and language are stored in localStorage. Conversation history includes the file contents the Agent read, keeps up to 100 conversations per project, and is never uploaded. You can turn off saving conversations in Settings. You can delete conversations in History, or delete all local data on the Data page in Settings.'],
             ['Web hosting', 'When you use the hosted page, the server records access logs to keep the network secure. They include the access time, IP address and the page visited, without the parameters in the URL, and are deleted automatically after 6 months.'],
-            ['Contact', 'Questions? Email support@tenonai.cn.']
+            ['Contact', 'Questions or privacy requests? Email support@tenonai.cn.']
         ],
         terms: [
+            ['Who provides Caret', 'Caret is provided by 长沙榫卯人工智能科技有限公司, the company behind Tenon AI (“we”). These terms are an agreement between you and us about using Caret.'],
             ['The service', 'Caret is free, and its source code is open under the MIT License. The service is provided as is. We do not guarantee that changes are correct or that the service stays available.'],
             ['Your responsibility', 'Read the diff before you apply it. Caret does not run or verify code, and you are responsible for what you apply. We suggest working in a Git repository so you can roll back.'],
             ['Model services', 'You bring your own model service account and API key. Costs and terms are between you and that provider.'],
