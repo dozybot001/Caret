@@ -28,10 +28,10 @@ import { FileTreeUI } from '../file-tree/file-tree-ui.js';
 import { bindFolderDrop } from '../file-tree/folder-drop.js';
 import { Settings } from '../settings/settings.js';
 import { applyTranslations, onLanguageChange, t } from '../i18n/index.js';
-import { canMigrate, fetchLegacyData, importLegacyData } from './migration.js';
+import { canMigrate, migrateFromLegacy } from './migration.js';
 import { clearPreferences, onThemeChange } from './preferences.js';
 import { initResizers } from './resizers.js';
-import { filingOf, LEGACY_DOMAIN } from './site.js';
+import { filingOf, LEGACY_DOMAIN, legacyDeadline } from './site.js';
 
 /**
  * 应用控制器
@@ -183,7 +183,7 @@ export class AppController {
         if (this.file.hasRoot()) this.fileHandlers.refreshTree();
         else if (this.file.pendingHandle) this.fileTreeUI.renderResume(this.file.pendingHandle.name);
         else this.fileTreeUI.renderEmpty();
-        this.migrateRow.querySelector('span').textContent = t('migrate.prompt', LEGACY_DOMAIN);
+        this._renderMigratePrompt();
     }
 
     /**
@@ -209,30 +209,38 @@ export class AppController {
      */
     _initMigration() {
         this.migrateRow = document.getElementById('welcome-migrate');
-        this.migrateRow.querySelector('span').textContent = t('migrate.prompt', LEGACY_DOMAIN);
+        this._renderMigratePrompt();
         if (!canMigrate(this.store.getConfig())) return;
         this.migrateRow.hidden = false;
         const button = this.migrateRow.querySelector('button');
         button.addEventListener('click', async () => {
             button.disabled = true;
             try {
-                const data = await fetchLegacyData();
-                if (!data) {
-                    await this.store.updateConfig({ legacyMigrated: true });
-                    this.migrateRow.hidden = true;
-                    window.notify?.alert(t('migrate.empty'));
+                const { count, cleared } = await migrateFromLegacy(this.store);
+                // 旧地址删掉数据才算迁移完成，否则保留入口，再点一次会接着删
+                if (cleared) await this.store.updateConfig({ legacyMigrated: true });
+                if (count === null) {
+                    button.disabled = false;
+                    this.migrateRow.hidden = cleared;
+                    if (cleared) window.notify?.alert(t('migrate.empty'));
+                    else window.notify?.alert(t('migrate.notCleared'), { type: 'warning' });
                     return;
                 }
-                const count = await importLegacyData(this.store, data);
-                window.notify?.alert(t('migrate.done', count), { type: 'success' });
+                window.notify?.alert(t('migrate.done', count, cleared), { type: 'success' });
+                if (!cleared) window.notify?.alert(t('migrate.notCleared'), { type: 'warning', duration: 6000 });
                 // 刷新后设置、显示偏好和模型菜单都按迁过来的数据加载
                 this.isLeaving = true;
-                setTimeout(() => location.reload(), 2000);
+                setTimeout(() => location.reload(), cleared ? 2500 : 6000);
             } catch (error) {
                 button.disabled = false;
                 window.notify?.alert(t('migrate.failed', error.message), { type: 'error' });
             }
         });
+    }
+
+    /** 迁移入口的说明，定下截止日期后一并提醒 */
+    _renderMigratePrompt() {
+        this.migrateRow.querySelector('span').textContent = t('migrate.prompt', LEGACY_DOMAIN, legacyDeadline());
     }
 
     /**

@@ -27,7 +27,7 @@ function newSite(config = {}) {
 
 /** 旧地址发来的数据：一个项目，两个对话 */
 const legacy = () => ({
-    config: { provider: 'kimi', keys: { kimi: 'old-key' } },
+    config: { provider: 'kimi', keys: { kimi: 'old-key', deepseek: 'old-deepseek' }, models: { kimi: 'kimi-k2', deepseek: 'deepseek-chat' }, fontSize: 16 },
     projects: [{ id: 'project-old', name: 'app', handle: null, prompts: ['修标题', '加测试'] }],
     sessions: [
         { id: 'session-1', projectId: 'project-old', title: '修标题' },
@@ -41,22 +41,23 @@ test('新地址还没填 Key 时，设置、显示偏好和对话都迁过来', 
     saved.clear();
     const store = newSite();
     assert.equal(await importLegacyData(store, legacy()), 2);
-    assert.equal(store.config.keys.kimi, 'old-key');
-    assert.equal(store.config.legacyMigrated, true);
+    assert.deepEqual([store.config.provider, store.config.keys.kimi, store.config.fontSize], ['kimi', 'old-key', 16]);
     assert.equal(saved.get('caret_preferences'), '{"theme":"light"}');
     const [project] = await store.listProjects();
     assert.deepEqual([project.id, project.handle], ['project-old', null]);
     assert.deepEqual((await store.getSessionData('session-2')).messages, [2]);
 });
 
-test('新地址已经填过 Key 时，设置不变，对话合并到同名项目', async () => {
+test('新地址已经填过 Key 时，设置不变，只补上这里没有 Key 的服务商，对话合并到同名项目', async () => {
     saved.clear();
     const store = newSite({ provider: 'deepseek', keys: { deepseek: 'new-key' } });
     await store.saveProject({ id: 'project-new', name: 'app', handle: {}, prompts: ['加测试', '改配色'] });
     await store.saveSession({ id: 'session-1', projectId: 'project-new', title: '新地址里的对话' }, { messages: ['new'] });
 
     assert.equal(await importLegacyData(store, legacy()), 1);
-    assert.deepEqual([store.config.provider, store.config.keys.kimi], ['deepseek', undefined]);
+    assert.deepEqual([store.config.provider, store.config.fontSize], ['deepseek', undefined]);
+    assert.deepEqual(store.config.keys, { deepseek: 'new-key', kimi: 'old-key' });
+    assert.deepEqual(store.config.models, { kimi: 'kimi-k2' });
     assert.equal(saved.has('caret_preferences'), false);
     const projects = await store.listProjects();
     assert.equal(projects.length, 1);

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
-import { DOMAIN, FILINGS, LEGACY_DOMAIN, filingOf } from '../src/app/site.js';
+import { DOMAIN, FILINGS, LEGACY_DOMAIN, LEGACY_UNTIL, filingOf, legacyDeadline } from '../src/app/site.js';
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const ORIGIN = `https://${DOMAIN}`;
@@ -36,4 +36,15 @@ test('迁移页面只把数据发给 Caret 自己的地址，迁移期间就是�
     assert.equal(target.protocol, 'https:');
     assert.ok(target.hostname in FILINGS);
     if (LEGACY_DOMAIN) assert.equal(target.origin, ORIGIN);
+});
+
+test('迁移截止日期只在迁移期间填写，按本地日期提醒', () => {
+    if (!LEGACY_UNTIL) {
+        assert.equal(legacyDeadline(), null);
+        return;
+    }
+    assert.ok(LEGACY_DOMAIN);
+    assert.match(LEGACY_UNTIL, /^\d{4}-\d{2}-\d{2}$/);
+    const date = legacyDeadline();
+    assert.equal([date.getFullYear(), date.getMonth() + 1, date.getDate()].map(n => String(n).padStart(2, '0')).join('-'), LEGACY_UNTIL);
 });

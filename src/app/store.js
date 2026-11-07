@@ -293,7 +293,7 @@ export class AppStore {
     }
 
     /**
-     * 统一的数据库操作方法
+     * 统一的数据库操作方法。写入在事务提交后才算完成：迁移时新地址确认写好，旧地址就会删掉自己的数据
      * @private
      * @param {string} storeName - 存储名称
      * @param {string} method - 操作方法 ('get'|'put'|'delete')
@@ -313,7 +313,9 @@ export class AppStore {
                           store.delete(key);
 
             request.onerror = () => reject(request.error);
-            request.onsuccess = () => resolve(request.result);
+            transaction.onabort = () => reject(transaction.error);
+            if (method === 'get') request.onsuccess = () => resolve(request.result);
+            else transaction.oncomplete = () => resolve(request.result);
         });
     }
 }

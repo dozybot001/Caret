@@ -7,7 +7,8 @@
  * 2. 这里把 DOMAIN 改成 caret.tenonai.cn，LEGACY_DOMAIN 填 caret.tenon.asia，填上新地址的备案号
  * 3. 同步改 index.html 的分享地址和官网链接、security.txt、README，`node --test` 检查是否一致
  * 4. 发布后新地址上线，旧地址只做 301 跳转，保留 /migrate.html 给新地址迁移设置和对话。然后通知安全组验收
- * 5. tenon.asia 改到境外之前，清空 LEGACY_DOMAIN 再发布一次，旧地址的站点随之删除
+ * 5. 定下 tenon.asia 改到境外的日期后，填 LEGACY_UNTIL，欢迎页提醒用户在这之前迁移
+ * 6. tenon.asia 改到境外之前，清空 LEGACY_DOMAIN 和 LEGACY_UNTIL 再发布一次，旧地址的站点随之删除
  */
 
 /** 线上地址 */
@@ -15,6 +16,9 @@ export const DOMAIN = 'caret.tenon.asia';
 
 /** 迁走之前的旧地址，只做跳转和迁移数据；不在迁移期间时为空 */
 export const LEGACY_DOMAIN = '';
+
+/** 能从旧地址迁移的最后一天，格式 YYYY-MM-DD；还没定时为空 */
+export const LEGACY_UNTIL = '';
 
 /**
  * 每个地址的 ICP 备案号和公安备案号。caret.tenonai.cn 用公司的备案号，备案通过后填写；
@@ -32,4 +36,11 @@ export const FILINGS = {
  */
 export function filingOf(hostname) {
     return FILINGS[hostname] ?? FILINGS[DOMAIN];
+}
+
+/** @returns {Date|null} 能从旧地址迁移的最后一天，按本地时间 */
+export function legacyDeadline() {
+    if (!LEGACY_UNTIL) return null;
+    const [year, month, day] = LEGACY_UNTIL.split('-').map(Number);
+    return new Date(year, month - 1, day);
 }
