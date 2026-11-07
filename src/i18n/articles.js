@@ -40,7 +40,7 @@ export const ARTICLES = {
             ['Models with a smaller limit', 'If a model allows less than the compaction size, Caret clears older results and retries once when the limit is exceeded. If that still fails, start a new task. You can also lower the compaction size in Settings.']
         ],
         privacy: [
-            ['Who provides Caret', 'Caret is provided by 长沙榫卯人工智能科技有限公司, the company behind Tenon AI (“we”). We handle the personal information described in this policy.'],
+            ['Who provides Caret', 'Caret is provided by Changsha Tenon Artificial Intelligence Technology Co., Ltd. (长沙榫卯人工智能科技有限公司), the company behind Tenon AI ("we"). We handle the personal information described in this policy.'],
             ['What we do not collect', 'Caret has no accounts and no application server. We never receive your files, requests, API keys or model replies. Caret uses no analytics or tracking.'],
             ['What goes to the model service', 'Your requests and global instructions, plus the file contents and paths the Agent reads for the task, go directly from your browser to the model service you configured. That service handles the data under its own privacy policy, and whether data leaves your country depends on the service you choose. Common secret files such as .env and private keys are not read.'],
             ['What stays on this device', 'Settings, API keys, conversation history, folder access and open tabs are stored in the browser\'s IndexedDB. Theme and language are stored in localStorage. Conversation history includes the file contents the Agent read, keeps up to 100 conversations per project, and is never uploaded. You can turn off saving conversations in Settings. You can delete conversations in History, or delete all local data on the Data page in Settings.'],
@@ -48,7 +48,7 @@ export const ARTICLES = {
             ['Contact', 'Questions or privacy requests? Email support@tenonai.cn.']
         ],
         terms: [
-            ['Who provides Caret', 'Caret is provided by 长沙榫卯人工智能科技有限公司, the company behind Tenon AI (“we”). These terms are an agreement between you and us about using Caret.'],
+            ['Who provides Caret', 'Caret is provided by Changsha Tenon Artificial Intelligence Technology Co., Ltd. (长沙榫卯人工智能科技有限公司), the company behind Tenon AI ("we"). These terms are an agreement between you and us about using Caret.'],
             ['The service', 'Caret is free, and its source code is open under the MIT License. The service is provided as is. We do not guarantee that changes are correct or that the service stays available.'],
             ['Your responsibility', 'Read the diff before you apply it. Caret does not run or verify code, and you are responsible for what you apply. We suggest working in a Git repository so you can roll back.'],
             ['Model services', 'You bring your own model service account and API key. Costs and terms are between you and that provider.'],
