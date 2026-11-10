@@ -5,7 +5,7 @@
  * ## 迁到 caret.tenonai.cn
  * 1. 等备案通过、安全组加好 caret.tenonai.cn 的解析。发布脚本会检查解析和未备案拦截，没就绪时不发布
  * 2. 这里把 DOMAIN 改成 caret.tenonai.cn，LEGACY_DOMAIN 填 caret.tenon.asia，填上新地址的备案号
- * 3. 同步改 index.html 的分享地址和官网链接、security.txt、README，`node --test` 检查是否一致
+ * 3. 同步改各页面的分享图地址、index.html 的分享地址和官网链接、security.txt、README，`node --test` 检查是否一致
  * 4. 发布后新地址上线，旧地址只做 301 跳转，保留 /migrate.html 给新地址迁移设置和对话。然后通知安全组验收
  * 5. 定下 tenon.asia 改到境外的日期后，填 LEGACY_UNTIL，欢迎页提醒用户在这之前迁移
  * 6. tenon.asia 改到境外之前，清空 LEGACY_DOMAIN 和 LEGACY_UNTIL 再发布一次，旧地址的站点随之删除

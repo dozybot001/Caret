@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { test } from 'node:test';
 
 import { DOMAIN, FILINGS, LEGACY_DOMAIN, LEGACY_UNTIL, filingOf, legacyDeadline } from '../src/app/site.js';
@@ -10,7 +10,6 @@ const ORIGIN = `https://${DOMAIN}`;
 test('页面、security.txt 和 README 里的地址与 site.js 一致', () => {
     const html = read('index.html');
     assert.ok(html.includes(`<meta property="og:url" content="${ORIGIN}/">`));
-    assert.ok(html.includes(`<meta property="og:image" content="${ORIGIN}/assets/og.png">`));
     const security = read('.well-known/security.txt').split('\n');
     assert.ok(security.includes(`Canonical: ${ORIGIN}/.well-known/security.txt`));
     // 迁移期间新旧地址都列
@@ -23,6 +22,31 @@ test('页面、security.txt 和 README 里的地址与 site.js 一致', () => {
         assert.doesNotMatch(html, /tenon\.asia/);
         assert.doesNotMatch(security.filter(line => !line.startsWith('Canonical:')).join('\n'), /tenon\.asia/);
     }
+});
+
+test('每个页面都声明手机桌面图标和分享图', () => {
+    const pages = readdirSync(new URL('..', import.meta.url)).filter(name => name.endsWith('.html'));
+    assert.ok(pages.includes('index.html') && pages.includes('404.html'));
+    for (const page of pages) {
+        const html = read(page);
+        assert.ok(html.includes('<link rel="apple-touch-icon" href="/apple-touch-icon.png">'), page);
+        assert.ok(html.includes(`<meta property="og:image" content="${ORIGIN}/assets/share.png">`), page);
+        assert.ok(html.includes('<meta name="twitter:card" content="summary">'), page);
+    }
+});
+
+test('手机桌面图标和分享图是不透明的 PNG，尺寸合规', () => {
+    const header = path => {
+        const png = readFileSync(new URL(`../${path}`, import.meta.url));
+        assert.equal(png.toString('latin1', 12, 16), 'IHDR', path);
+        // 颜色类型 2 是没有透明通道的 RGB
+        return { width: png.readUInt32BE(16), height: png.readUInt32BE(20), colorType: png[25] };
+    };
+    assert.deepEqual(header('apple-touch-icon.png'), { width: 180, height: 180, colorType: 2 });
+    const share = header('assets/share.png');
+    assert.equal(share.width, share.height);
+    assert.ok(share.width >= 512);
+    assert.equal(share.colorType, 2);
 });
 
 test('线上地址有备案号，本地开发时按线上地址显示', () => {

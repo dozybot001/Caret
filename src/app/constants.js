@@ -153,4 +153,4 @@ export const PROVIDERS = {
 };
 
 /** 当前版本 */
-export const VERSION = '0.11.8';
+export const VERSION = '0.11.9';

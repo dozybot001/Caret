@@ -5,7 +5,7 @@ set -euo pipefail
 
 SERVER=agenthub-prod
 ROOT=/opt/caret
-FILES=(404.html 500.html maintenance.html migrate.html LICENSE index.html .well-known assets css src)
+FILES=(404.html 500.html maintenance.html migrate.html LICENSE index.html apple-touch-icon.png .well-known assets css src)
 # 主机公钥固定在 deploy/known_hosts，不信任开发机上临时记下的公钥
 SSH_OPTIONS=(-o BatchMode=yes -o ConnectTimeout=15 -o HostKeyAlias="$SERVER" -o UserKnownHostsFile=deploy/known_hosts -o StrictHostKeyChecking=yes)
 SSH=(ssh "${SSH_OPTIONS[@]}" "$SERVER")
@@ -94,7 +94,8 @@ grep -qi '^content-type: text/javascript' <<<"$headers" || fail 'main.js 类型�
 [ "$(status_of css/codicons/codicon.ttf)" = 200 ] || fail '图标字体不可用'
 headers=$(fetch -I "$ORIGIN/LICENSE") || fail '许可证不可用'
 grep -qi '^content-type: text/plain; charset=utf-8' <<<"$headers" || fail '许可证的类型不对'
-[ "$(status_of assets/og.png)" = 200 ] || fail '分享图不可用'
+[ "$(status_of assets/share.png)" = 200 ] || fail '分享图不可用'
+[ "$(status_of apple-touch-icon.png)" = 200 ] || fail '手机桌面图标不可用'
 
 headers=$(fetch -I "$ORIGIN/vendor/monaco-0.52.2/vs/loader.js") || fail 'Monaco 不可用'
 grep -qi '^cache-control: public' <<<"$headers" || fail 'Monaco 的缓存策略不对'
