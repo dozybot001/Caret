@@ -76,3 +76,25 @@ test('撤销新建的文件时删除它，内容回到待写入，文件已经�
     assert.deepEqual(await editor.changes.undo(applied, { force: true }), {});
     assert.equal(tab.isNew, true);
 });
+
+test('保存前核对磁盘：文件被其他程序改过时先问，取消就不写；磁盘没变时直接保存', async () => {
+    const { editor, disk, open } = await undoFixture({ 'a.txt': 'other\n' });
+    const tab = open('a.txt', 'mine\n', 'old\n');
+    editor.fileManager.writeFile = async (path, content) => void disk.set(path, content);
+    Object.assign(editor, { currentTabId: 'a.txt', tabBar: { flashSaved() {} } });
+    const asked = [];
+    let answer = false;
+    globalThis.window.notify = { confirm: async message => (asked.push(message), answer), alert() {} };
+
+    await editor.saveCurrentTab();
+    assert.equal(asked.length, 1);
+    assert.equal(disk.get('a.txt'), 'other\n');
+
+    answer = true;
+    await editor.saveCurrentTab();
+    assert.equal(disk.get('a.txt'), 'mine\n');
+    assert.equal(tab.original, 'mine\n');
+
+    await editor.saveCurrentTab();
+    assert.equal(asked.length, 2);
+});

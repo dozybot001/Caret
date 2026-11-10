@@ -15,6 +15,17 @@ function positionAt(text, offset) {
 /** 把文件内容转成编辑器使用的文本 */
 const toEditorText = bytes => decodeBytes(bytes).text.replace(/\r\n/g, '\n');
 
+/**
+ * 磁盘上的文件是否已经不是 Caret 读到的样子：新文件被其他程序建了出来，或者已有的文件被改过、删掉
+ * @param {Object} fileManager - 文件管理器
+ * @param {Object} tab - 标签页
+ * @returns {Promise<boolean>}
+ */
+export async function changedOnDisk(fileManager, tab) {
+    const disk = await fileManager.readBytes(tab.id);
+    return tab.isNew ? disk !== null : disk === null || toEditorText(disk) !== tab.original;
+}
+
 export class PendingChanges {
     /** @param {Object} editor - 编辑器管理器 */
     constructor(editor) {
@@ -131,9 +142,7 @@ export class PendingChanges {
         if (!force) {
             const conflicts = [];
             for (const tab of tabs) {
-                const disk = await fileManager.readText(tab.id);
-                const changed = tab.isNew ? disk !== null : disk?.text !== tab.original;
-                if (changed) conflicts.push(tab.id);
+                if (await changedOnDisk(fileManager, tab)) conflicts.push(tab.id);
             }
             if (conflicts.length > 0) return { conflicts };
         }

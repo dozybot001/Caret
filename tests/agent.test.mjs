@@ -99,6 +99,18 @@ test('模型服务报错时保留上下文，可以重试', async () => {
     assert.equal(await agent.resume(), 'done');
 });
 
+test('AGENTS.md 和 CLAUDE.md 都读，内容相同时只带一份，长期规则写进 AGENTS.md', async () => {
+    const requests = scriptedModel([{ text: '好' }, { text: '好' }]);
+    await new Agent(workspace({ 'AGENTS.md': '- 用中文注释\n', 'CLAUDE.md': '- 提交前跑测试\n' }), connection, {}).send('改');
+    const both = requests[0].messages[0].content;
+    assert.match(both, /Project instructions from AGENTS\.md:\n- 用中文注释/);
+    assert.match(both, /Project instructions from CLAUDE\.md:\n- 提交前跑测试/);
+    assert.match(both, /add one short line to AGENTS\.md\./);
+
+    await new Agent(workspace({ 'AGENTS.md': '- 用中文注释\n', 'CLAUDE.md': '- 用中文注释\n' }), connection, {}).send('改');
+    assert.doesNotMatch(requests[1].messages[0].content, /from CLAUDE\.md/);
+});
+
 test('系统提示词带上项目规则，并要求长期规则写进同一个文件', async () => {
     const requests = scriptedModel([{ text: '好' }, { text: '好' }]);
     await new Agent(workspace({ 'AGENTS.md': '- 用中文注释\n' }), connection, {}).send('改');

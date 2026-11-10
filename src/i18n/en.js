@@ -245,6 +245,8 @@ export const en = {
     'error.dropFile': 'Drop a folder, not a single file.',
     'notice.readOnly': name => `${name} is not UTF-8 text, so it is read-only.`,
     'editor.closeConfirm': name => `${name} has changes that are not applied. Close anyway?`,
+    'editor.saveConflict': name => `${name} changed on disk after Caret read it. Saving replaces the file on disk with the editor's content.`,
+    'editor.saveAnyway': 'Save anyway',
     'folder.loaded': name => `Opened ${name}`,
     'folder.release': 'Remove access',
     'folder.releaseConfirm': name => `Remove access to ${name}? Caret closes this folder and can no longer read or change it. Unapplied changes are lost. Conversations stay. You can clear the browser's own permission record in site settings.`,

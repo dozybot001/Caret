@@ -13,7 +13,7 @@ import { decodeBytes } from '../file-tree/file-manager.js';
 import { t } from '../i18n/index.js';
 import { EditorViews } from './editor-views.js';
 import { applyMonacoTheme, languageOf, loadMonaco } from './monaco.js';
-import { PendingChanges } from './pending-changes.js';
+import { PendingChanges, changedOnDisk } from './pending-changes.js';
 import { TabBar } from './tab-bar.js';
 import { TabState } from './tab-state.js';
 
@@ -316,6 +316,9 @@ export class EditorManager {
         if (!tab || tab.readOnly) return;
 
         try {
+            // 和写入改动一样先核对磁盘，不悄悄覆盖其他程序的修改
+            if (await changedOnDisk(this.fileManager, tab)
+                && !await window.notify.confirm(t('editor.saveConflict', tab.id), t('editor.saveAnyway'))) return;
             await this.writeTab(tab);
             this.onFileSaved?.();
             this.tabBar.flashSaved(tab.id);

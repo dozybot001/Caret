@@ -245,6 +245,8 @@ export const zh = {
     'error.dropFile': '请拖入文件夹，而不是单个文件。',
     'notice.readOnly': name => `${name} 不是 UTF-8 文本，只能查看，不能修改。`,
     'editor.closeConfirm': name => `${name} 有未写入的改动，确定关闭吗？`,
+    'editor.saveConflict': name => `${name} 在 Caret 读取后被其他程序改过。保存会用编辑器里的内容覆盖磁盘上的文件。`,
+    'editor.saveAnyway': '仍然保存',
     'folder.loaded': name => `已打开 ${name}`,
     'folder.release': '取消授权',
     'folder.releaseConfirm': name => `取消对 ${name} 的授权？Caret 会关闭这个文件夹，之后不能再读取或修改它。未写入的改动会丢失，对话记录保留。浏览器自己的授权记录可以在网站设置里清除。`,

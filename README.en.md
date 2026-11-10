@@ -44,7 +44,7 @@ Caret is web only, with no mobile app: it reads and writes a local folder direct
 
 Caret has no hidden memory. There are three things, and you can see all of them:
 
-- **Project rules**: `AGENTS.md` or `CLAUDE.md` is read at run time. When you state a lasting rule, the Agent adds a line, and you review it like any other diff. You can turn this off in Settings
+- **Project rules**: `AGENTS.md` and `CLAUDE.md` are read at run time. When you state a lasting rule, the Agent adds a line, and you review it like any other diff. You can turn this off in Settings
 - **Global instructions**: You write these in Settings. They apply to every project and the Agent does not change them. If they disagree with project rules, the project rules win
 - **Conversations**: Stored in this browser's IndexedDB. You can delete them, or turn saving off
 
