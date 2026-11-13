@@ -12,12 +12,13 @@ SSH=(ssh "${SSH_OPTIONS[@]}" "$SERVER")
 
 cd "$(dirname "$0")/.."
 
-# 线上地址和迁走之前的旧地址，见 src/app/site.js
+# 线上地址、切换前先上线的新地址和迁走之前的旧地址，见 src/app/site.js
 site_constant() {
     sed -n "s/^export const $1 = '\(.*\)';$/\1/p" src/app/site.js
 }
 DOMAIN=$(site_constant DOMAIN)
 LEGACY_DOMAIN=$(site_constant LEGACY_DOMAIN)
+NEXT_DOMAIN=$(site_constant NEXT_DOMAIN)
 ORIGIN=https://$DOMAIN
 
 # 服务器端：把 Caddy 站点切到指定版本，验证配置后重载
@@ -125,12 +126,28 @@ if [ -n "$LEGACY" ]; then
     body=$(fetch "https://$LEGACY/migrate.html") || fail '旧地址的迁移页面不可用'
     [[ $body == *"const TARGET = '$ORIGIN'"* ]] || fail '迁移页面的目标地址不对'
 fi
+
+# 切换前先上线的新地址，首次访问时签证书。签不下来只提示，不回滚线上地址；也不要反复发布，同一地址每小时最多失败 5 次
+if [ -n "$NEXT" ]; then
+    for _ in $(seq 1 30); do
+        if curl -fsS -m 8 -o /dev/null "https://$NEXT/"; then break; fi
+        sleep 2
+    done
+    body=$(curl -fsS -m 15 "https://$NEXT/src/app/build.js" 2>/dev/null || true)
+    headers=$(curl -fsSI -m 15 "https://$NEXT/" 2>/dev/null || true)
+    if [[ $body == *"'$COMMIT'"* ]] && grep -qi '^strict-transport-security: max-age=31536000; includeSubDomains' <<<"$headers"; then
+        echo "新地址 https://$NEXT/ 已可用"
+    else
+        echo "新地址 https://$NEXT/ 还不可用，可能是证书没签下来。不要反复发布，告诉安全组" >&2
+    fi
+fi
 REMOTE
 
 smoke() {
     remote <<EOS
 ORIGIN=$ORIGIN
 LEGACY=$LEGACY_DOMAIN
+NEXT=$NEXT_DOMAIN
 EXPECTED=$1
 COMMIT=$2
 $SMOKE
@@ -180,18 +197,20 @@ ADVISORIES=$(curl -fsS --retry 2 -m 20 https://api.osv.dev/v1/query \
 # 新地址要已经解析到服务器，并且不再按未备案被拦截，否则证书签不下来，验证失败多了还会拉长重试间隔
 ADDRESS=$(ssh -G "$SERVER" 2>/dev/null | awk '$1 == "hostname" { print $2 }')
 [[ $ADDRESS =~ ^[0-9.]+$ ]] || ADDRESS=$(dig +short A "$ADDRESS" | tail -1)
-[ "$(dig +short A "$DOMAIN" @119.29.29.29 | tail -1)" = "$ADDRESS" ] || { echo "$DOMAIN 还没有解析到服务器，不发布" >&2; exit 1; }
-if curl -s -m 10 -o /dev/null -w '%{redirect_url}' "http://$DOMAIN/" | grep -q webblock; then
-    echo "$DOMAIN 仍被按未备案拦截，不发布" >&2
-    exit 1
-fi
+for host in "$DOMAIN" ${NEXT_DOMAIN:+"$NEXT_DOMAIN"}; do
+    [ "$(dig +short A "$host" @119.29.29.29 | tail -1)" = "$ADDRESS" ] || { echo "$host 还没有解析到服务器，不发布" >&2; exit 1; }
+    if curl -s -m 10 -o /dev/null -w '%{redirect_url}' "http://$host/" | grep -q webblock; then
+        echo "$host 仍被按未备案拦截，不发布" >&2
+        exit 1
+    fi
+done
 
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 git archive --format=tar "$SHA" "${FILES[@]}" | gzip -n > "$WORK/site.tar.gz"
 DIGEST=$(shasum -a 256 "$WORK/site.tar.gz" | cut -d' ' -f1)
 {
-    sed "s#__DOMAIN__#$DOMAIN#g" deploy/caret.Caddyfile
+    sed "s#__ADDRESSES__#$DOMAIN${NEXT_DOMAIN:+, $NEXT_DOMAIN}#g" deploy/caret.Caddyfile
     if [ -n "$LEGACY_DOMAIN" ]; then
         echo
         sed -e "s#__DOMAIN__#$DOMAIN#g" -e "s#__LEGACY__#$LEGACY_DOMAIN#g" deploy/legacy.Caddyfile
@@ -255,4 +274,4 @@ fi
 # 保留规则见 deploy/retain.sh
 "${SSH[@]}" "sudo -n bash -s $ROOT" < deploy/retain.sh || echo '旧版本没有清理，这次发布不受影响' >&2
 
-echo "已发布 $SHA 到 $ORIGIN"
+echo "已发布 $SHA 到 $ORIGIN${NEXT_DOMAIN:+，新地址 https://$NEXT_DOMAIN/ 一起提供}"

@@ -4,15 +4,20 @@
  *
  * ## 迁到 caret.tenonai.cn
  * 1. 等备案通过、安全组加好 caret.tenonai.cn 的解析。发布脚本会检查解析和未备案拦截，没就绪时不发布
- * 2. 这里把 DOMAIN 改成 caret.tenonai.cn，LEGACY_DOMAIN 填 caret.tenon.asia，填上新地址的备案号
- * 3. 同步改各页面的分享图地址、index.html 的分享地址和官网链接、security.txt、README，`node --test` 检查是否一致
- * 4. 发布后新地址上线，旧地址只做 301 跳转，保留 /migrate.html 给新地址迁移设置和对话。然后通知安全组验收
- * 5. 定下 tenon.asia 改到境外的日期后，填 LEGACY_UNTIL，欢迎页提醒用户在这之前迁移
- * 6. tenon.asia 改到境外之前，清空 LEGACY_DOMAIN 和 LEGACY_UNTIL 再发布一次，旧地址的站点随之删除
+ * 2. 切换前先把 NEXT_DOMAIN 填成 caret.tenonai.cn 发布：两个地址提供同样的页面，新地址先签好证书，交安全组核对。
+ *    证书签不下来不要反复发布（同一地址每小时最多失败 5 次），告诉安全组
+ * 3. 切换：DOMAIN 改成 caret.tenonai.cn，LEGACY_DOMAIN 填 caret.tenon.asia，NEXT_DOMAIN 清空
+ * 4. 同步改各页面的分享图地址、index.html 的分享地址和官网链接、security.txt、README，`node --test` 检查是否一致
+ * 5. 发布后旧地址只做 301 跳转，保留 /migrate.html 给新地址迁移设置和对话。然后通知安全组验收
+ * 6. 定下 tenon.asia 改到境外的日期后，填 LEGACY_UNTIL，欢迎页提醒用户在这之前迁移
+ * 7. tenon.asia 改到境外之前，清空 LEGACY_DOMAIN 和 LEGACY_UNTIL 再发布一次，旧地址的站点随之删除
  */
 
 /** 线上地址 */
 export const DOMAIN = 'caret.tenon.asia';
+
+/** 切换前先上线的新地址：页面和线上地址相同，证书先签好；切换时改成 DOMAIN，这里清空 */
+export const NEXT_DOMAIN = 'caret.tenonai.cn';
 
 /** 迁走之前的旧地址，只做跳转和迁移数据；不在迁移期间时为空 */
 export const LEGACY_DOMAIN = '';

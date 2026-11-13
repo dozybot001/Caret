@@ -1,4 +1,4 @@
-# 发布脚本按 src/app/site.js 填入线上地址，服务器切换版本时填入版本目录
+# 发布脚本按 src/app/site.js 填入站点地址，服务器切换版本时填入版本目录
 # 安全响应头新旧地址共用。片段名在整个 Caddy 配置里不能重复
 (caret_headers) {
 	header {
@@ -11,7 +11,7 @@
 	}
 }
 
-__DOMAIN__ {
+__ADDRESSES__ {
 	import access_log
 	import caret_headers
 	root * __RELEASE__
