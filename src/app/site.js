@@ -21,12 +21,12 @@ export const LEGACY_DOMAIN = '';
 export const LEGACY_UNTIL = '';
 
 /**
- * 每个地址的 ICP 备案号和公安备案号。caret.tenonai.cn 用公司的备案号，备案通过后填写；
+ * 每个地址的 ICP 备案号和公安备案号。caret.tenonai.cn 用公司的 ICP 备案号；
  * 公安备案在新的 ICP 备案号下来后 30 日内办，办好之前只显示 ICP 备案号
  */
 export const FILINGS = {
     'caret.tenon.asia': { icp: '湘ICP备2026031578号-1', police: '43132202001134' },
-    'caret.tenonai.cn': { icp: '', police: '' }
+    'caret.tenonai.cn': { icp: '湘ICP备2026054319号-1', police: '' }
 };
 
 /**
