@@ -31,7 +31,7 @@ import { applyTranslations, onLanguageChange, t } from '../i18n/index.js';
 import { canMigrate, migrateFromLegacy } from './migration.js';
 import { clearPreferences, onThemeChange } from './preferences.js';
 import { initResizers } from './resizers.js';
-import { filingOf, LEGACY_DOMAIN, legacyDeadline } from './site.js';
+import { FILING, LEGACY_DOMAIN, legacyDeadline } from './site.js';
 
 /**
  * 应用控制器
@@ -187,11 +187,11 @@ export class AppController {
     }
 
     /**
-     * 按访问的地址显示备案号
+     * 显示备案号
      * @private
      */
     _renderFilings() {
-        const { icp, police } = filingOf(location.hostname);
+        const { icp, police } = FILING;
         document.querySelectorAll('[data-filing="icp"]').forEach(link => {
             link.textContent = icp;
             link.hidden = !icp;

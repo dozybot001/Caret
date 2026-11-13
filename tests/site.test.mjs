@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { test } from 'node:test';
 
-import { DOMAIN, FILINGS, LEGACY_DOMAIN, LEGACY_UNTIL, NEXT_DOMAIN, filingOf, legacyDeadline } from '../src/app/site.js';
+import { DOMAIN, FILING, LEGACY_DOMAIN, LEGACY_UNTIL, legacyDeadline } from '../src/app/site.js';
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const ORIGIN = `https://${DOMAIN}`;
@@ -14,10 +14,9 @@ test('页面、security.txt 和 README 里的地址与 site.js 一致', () => {
     assert.ok(security.includes(`Canonical: ${ORIGIN}/.well-known/security.txt`));
     // 迁移期间新旧地址都列
     if (LEGACY_DOMAIN) assert.ok(security.includes(`Canonical: https://${LEGACY_DOMAIN}/.well-known/security.txt`));
-    if (NEXT_DOMAIN) assert.ok(security.includes(`Canonical: https://${NEXT_DOMAIN}/.well-known/security.txt`));
     for (const readme of ['README.md', 'README.en.md']) assert.ok(read(readme).includes(`<${ORIGIN}/>`), readme);
     assert.doesNotMatch(read('deploy/caret.Caddyfile'), /tenon/);
-    assert.match(read('deploy/caret.Caddyfile'), /^__ADDRESSES__ \{$/m);
+    assert.match(read('deploy/caret.Caddyfile'), /^__DOMAIN__ \{$/m);
 
     // 迁到 tenonai.cn 后，官网链接和安全策略也换成新域名
     if (DOMAIN.endsWith('.tenonai.cn')) {
@@ -51,25 +50,13 @@ test('手机桌面图标和分享图是不透明的 PNG，尺寸合规', () => {
     assert.equal(share.colorType, 2);
 });
 
-test('线上地址有备案号，本地开发时按线上地址显示', () => {
-    assert.ok(FILINGS[DOMAIN]?.icp);
-    assert.equal(filingOf('localhost'), FILINGS[DOMAIN]);
-    assert.equal(filingOf('caret.tenonai.cn'), FILINGS['caret.tenonai.cn']);
+test('页脚显示公司的 ICP 备案号', () => {
+    assert.match(FILING.icp, /^湘ICP备\d+号-\d+$/);
 });
 
-test('迁移页面只把数据发给 Caret 自己的地址，迁移期间就是线上地址', () => {
+test('迁移页面只把数据发给线上地址', () => {
     const target = new URL(read('migrate.html').match(/const TARGET = '([^']+)'/)[1]);
-    assert.equal(target.protocol, 'https:');
-    assert.ok(target.hostname in FILINGS);
-    if (LEGACY_DOMAIN) assert.equal(target.origin, ORIGIN);
-    if (NEXT_DOMAIN) assert.equal(target.hostname, NEXT_DOMAIN);
-});
-
-test('切换前先上线的新地址有自己的备案号，不和旧地址同时出现', () => {
-    if (!NEXT_DOMAIN) return;
-    assert.notEqual(NEXT_DOMAIN, DOMAIN);
-    assert.ok(FILINGS[NEXT_DOMAIN]?.icp);
-    assert.equal(LEGACY_DOMAIN, '');
+    assert.equal(target.origin, ORIGIN);
 });
 
 test('迁移截止日期只在迁移期间填写，按本地日期提醒', () => {
