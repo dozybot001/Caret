@@ -6,7 +6,7 @@ An ultralight coding agent in your browser. It has three tools: `read`, `write` 
 
 Caret runs in your browser, with nothing to install and no account. Open a local folder and describe the change. The Agent finds the code and makes the edit. Changes stay in the editor until you have read the diff and applied them to disk.
 
-Try it at <https://caret.tenon.asia/>
+Try it at <https://caret.tenonai.cn/>
 
 ![Caret reviewing a change](docs/screenshot.png)
 
@@ -24,7 +24,7 @@ Caret has no bash, runs no commands and runs no tests. When a change has to be r
 
 ## Getting started
 
-1. Open <https://caret.tenon.asia/> in desktop Chrome or Edge. Other browsers cannot access local folders
+1. Open <https://caret.tenonai.cn/> in desktop Chrome or Edge. Other browsers cannot access local folders
 2. Choose a model service in Settings and enter your API key. DeepSeek, Kimi, Qwen, OpenAI and OpenRouter are built in, and you can enter a custom OpenAI-compatible URL
 3. Open or drop a folder, and describe the change
 4. Read the diff, then click Apply or press `Ctrl/Cmd+Enter`. You can undo an apply

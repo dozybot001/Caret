@@ -14,13 +14,13 @@
  */
 
 /** 线上地址 */
-export const DOMAIN = 'caret.tenon.asia';
+export const DOMAIN = 'caret.tenonai.cn';
 
 /** 切换前先上线的新地址：页面和线上地址相同，证书先签好；切换时改成 DOMAIN，这里清空 */
-export const NEXT_DOMAIN = 'caret.tenonai.cn';
+export const NEXT_DOMAIN = '';
 
 /** 迁走之前的旧地址，只做跳转和迁移数据；不在迁移期间时为空 */
-export const LEGACY_DOMAIN = '';
+export const LEGACY_DOMAIN = 'caret.tenon.asia';
 
 /** 能从旧地址迁移的最后一天，格式 YYYY-MM-DD；还没定时为空 */
 export const LEGACY_UNTIL = '';

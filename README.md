@@ -6,7 +6,7 @@
 
 Caret 运行在浏览器里，不用安装，也不用账号。打开一个本地文件夹，说明要改什么，Agent 找到代码并做出改动。改动先留在编辑器里，你看完 diff 再写入磁盘。
 
-线上地址：<https://caret.tenon.asia/>
+线上地址：<https://caret.tenonai.cn/>
 
 ![Caret 正在审阅一处改动](docs/screenshot.png)
 
@@ -24,7 +24,7 @@ Caret 不提供 bash，不执行命令，也不运行测试。需要跑起来才
 
 ## 开始使用
 
-1. 用桌面版 Chrome 或 Edge 打开 <https://caret.tenon.asia/>。其他浏览器不能访问本地文件夹
+1. 用桌面版 Chrome 或 Edge 打开 <https://caret.tenonai.cn/>。其他浏览器不能访问本地文件夹
 2. 在设置里选择模型服务，填写 API Key。内置 DeepSeek、Kimi、Qwen、OpenAI 和 OpenRouter，也可以填写 OpenAI 兼容的自定义地址
 3. 打开或拖入一个文件夹，说明要改什么
 4. 看完 diff，点“写入文件”或按 `Ctrl/Cmd+Enter`。写入后可以撤销
