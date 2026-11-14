@@ -90,6 +90,7 @@ bash deploy/release.sh maintenance on   # 显示维护页，off 恢复
 
 ```text
 *.html                 页面入口、错误页和维护页
+AGENTS.md              给 Agent 的项目约定
 CHANGELOG.md           更新记录
 src/
   main.js              启动

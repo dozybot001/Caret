@@ -90,6 +90,7 @@ bash deploy/release.sh maintenance on   # Show the maintenance page; off to rest
 
 ```text
 *.html                 Page entry point, error pages and maintenance page
+AGENTS.md              Project conventions for agents (in Chinese)
 CHANGELOG.md           Changelog (in Chinese)
 src/
   main.js              Startup
