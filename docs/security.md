@@ -1,6 +1,6 @@
 # 安全自查：OWASP ASVS 5.0 Level 1
 
-- 范围：Caret 0.11.3，线上地址 <https://caret.tenon.asia>。包括页面代码、`vendor/` 里的 Monaco、`deploy/` 里的 Caddy 站点配置和发布脚本；不包括使用者选择的模型服务，以及服务器上的 Caddy 主配置和操作系统。
+- 范围：Caret 0.11.3，当时的线上地址是 caret.tenon.asia，2026-11-13 迁到 <https://caret.tenonai.cn>。包括页面代码、`vendor/` 里的 Monaco、`deploy/` 里的 Caddy 站点配置和发布脚本；不包括使用者选择的模型服务，以及服务器上的 Caddy 主配置和操作系统。
 - 日期：2026-11-03。
 - 依据：Tenon 15.1.8，新产品逐条对照 OWASP ASVS 5.0 Level 1 自查，结果写进项目文档。
 - 方法：阅读代码和配置，对照 ASVS 5.0.0 的 70 条 Level 1 要求逐条判断，不涉及 Level 2、Level 3。要求清单取自 OWASP 的 [ASVS 5.0.0 正式版 CSV](https://github.com/OWASP/ASVS/releases/download/v5.0.0_release/OWASP_Application_Security_Verification_Standard_5.0.0_en.csv)。响应头、TLS 和证书另用 curl、openssl 检查了线上站点，当时线上是 0.11.2，本次发布改动的配置以仓库为准。
