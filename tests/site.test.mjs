@@ -50,8 +50,12 @@ test('手机桌面图标和分享图是不透明的 PNG，尺寸合规', () => {
     assert.equal(share.colorType, 2);
 });
 
-test('页脚显示公司的 ICP 备案号', () => {
+test('页脚显示公司的 ICP 备案号和公安备案号', () => {
     assert.match(FILING.icp, /^湘ICP备\d+号-\d+$/);
+    // 只写数字，前后的「湘公网安备」「号」由页面加上
+    assert.match(FILING.police, /^\d{14}$/);
+    const html = read('index.html');
+    assert.equal(html.match(/data-filing="icp"/g).length, html.match(/data-filing="police"/g).length);
 });
 
 test('迁移页面只把数据发给线上地址', () => {

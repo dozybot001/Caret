@@ -19,8 +19,8 @@ export const LEGACY_DOMAIN = 'caret.tenon.asia';
 /** 能从旧地址迁移的最后一天，格式 YYYY-MM-DD；还没定时为空 */
 export const LEGACY_UNTIL = '';
 
-/** 公司的 ICP 备案号和公安备案号。公安备案在 ICP 备案号下来后 30 日内办，办好之前只显示 ICP 备案号 */
-export const FILING = { icp: '湘ICP备2026054319号-1', police: '' };
+/** 公司的 ICP 备案号和公安备案号。公安备案号只写数字，页脚显示成「湘公网安备…号」并链接到公安备案查询 */
+export const FILING = { icp: '湘ICP备2026054319号-1', police: '43010202002408' };
 
 /** @returns {Date|null} 能从旧地址迁移的最后一天，按本地时间 */
 export function legacyDeadline() {
