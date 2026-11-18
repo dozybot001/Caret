@@ -9,7 +9,7 @@
 <p align="center">English | <a href="README.zh-CN.md">简体中文</a></p>
 
 <p align="center">
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-0.12.2-f06b32" alt="Version 0.12.2"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-0.12.3-f06b32" alt="Version 0.12.3"></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/dozybot001/Caret" alt="License"></a>
 </p>
 
