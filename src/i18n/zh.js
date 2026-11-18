@@ -4,7 +4,6 @@
  */
 
 export const zh = {
-    'brand.label': 'Caret，Tenon 出品',
     'sidebar.files': '文件',
     'sidebar.open': '打开文件夹',
     'sidebar.agent': 'Agent',

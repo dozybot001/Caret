@@ -244,17 +244,6 @@
     color: var(--accent-text);
 }
 
-.about-publisher {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.about-publisher svg {
-    width: 14px;
-    height: 14px;
-}
-
 .legal-meta {
     color: var(--text-4);
     font-size: 12px;

@@ -4,7 +4,6 @@
  */
 
 export const en = {
-    'brand.label': 'Caret, by Tenon',
     'sidebar.files': 'Files',
     'sidebar.open': 'Open folder',
     'sidebar.agent': 'Agent',

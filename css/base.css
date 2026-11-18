@@ -297,11 +297,11 @@ body {
     color: var(--text-3);
 }
 
-/* 完整标志：产品图形、字标和右上角 Tenon 标识 */
+/* 完整标志：产品图形和字标，图形边长等于字号，间距 0.3 倍字号 */
 .product-logo {
     display: inline-flex;
-    align-items: flex-start;
-    gap: max(4px, 0.18em);
+    align-items: center;
+    gap: 0.3em;
     font-family: var(--font-family);
     font-weight: 600;
     letter-spacing: 0.025em;
@@ -313,15 +313,6 @@ body {
     width: 1em;
     height: 1em;
     flex: 0 0 auto;
-    align-self: center;
-    margin-right: calc(0.3em - max(4px, 0.18em));
-}
-
-.product-logo-mark {
-    width: max(14px, 0.58em);
-    height: max(14px, 0.58em);
-    flex: 0 0 auto;
-    margin-top: -0.04em;
 }
 
 /* 侧栏拖拽：手柄盖在两栏交界处 */
