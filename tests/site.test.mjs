@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { test } from 'node:test';
 
 import { VERSION } from '../src/app/constants.js';
@@ -113,6 +113,19 @@ test('README 配图都在 docs/assets 里，有替代文字，不超过 500 KB�
     for (const name of readdirSync(new URL('../docs/assets', import.meta.url))) {
         assert.ok(used.has(name), `docs/assets/${name} 没有用到`);
         assert.ok(statSync(new URL(`../docs/assets/${name}`, import.meta.url)).size <= 500_000, name);
+    }
+});
+
+test('README、CONTRIBUTING 和数据清单里的相对链接都指向仓库里的文件', () => {
+    const docs = ['README.md', 'README.zh-CN.md', 'CONTRIBUTING.md', 'docs/en/data-inventory.md', 'docs/zh/data-inventory.md'];
+    for (const doc of docs) {
+        const text = read(doc);
+        const links = [...text.matchAll(/\]\(([^)\s]+)\)|(?:href|src|srcset)="([^"]+)"/g)].map(match => match[1] || match[2]);
+        for (const link of links) {
+            if (/^(https?:|mailto:|#)/.test(link)) continue;
+            const target = new URL(link.split('#')[0], new URL(`../${doc}`, import.meta.url));
+            assert.ok(existsSync(target), `${doc}: ${link}`);
+        }
     }
 });
 

@@ -23,4 +23,5 @@
 - 运行 `node --test`，全部通过。新行为加测试，测试文件和 `src` 的模块对应。
 - 用户看得到的变化：在 `CHANGELOG.md` 加一条，并改 `src/app/constants.js` 里的 `VERSION` 和两份 README 的版本徽章。
 - `README.md`（英文，默认页）和 `README.zh-CN.md`（中文）一起改，`CONTRIBUTING.md` 的中英两部分也一起改。README 配图放 `docs/assets/`，单张不超过 500 KB，中文 README 用中文界面的截图。
+- 收集、使用或保存的数据有变化：先改隐私政策和 `docs/en/`、`docs/zh/` 两份数据清单，再上线。
 - 改完一件事，同时清掉它留下的旧代码、旧配置和文档里的旧说法。

@@ -42,7 +42,7 @@ src/
 css/                   Styles, starting from style.css
 assets/                Static assets such as the share image
 tests/                 Tests, matching the modules in src and the scripts in deploy
-docs/                  Design guidelines, security self-check and README images
+docs/                  Design guidelines, security self-check, data inventory (en/, zh/) and README images
 vendor/                Monaco 0.52.2, from min/vs in the npm package, with only the Simplified Chinese language pack
 deploy/                Release and cleanup scripts, Caddy config and the server's host key
 .github/               Issue and pull request templates
@@ -98,7 +98,7 @@ src/
 css/                   样式，入口是 style.css
 assets/                分享图等静态资源
 tests/                 测试，和 src 的模块、deploy 的脚本对应
-docs/                  设计规范、安全自查和 README 配图
+docs/                  设计规范、安全自查、数据清单（en/、zh/）和 README 配图
 vendor/                Monaco 0.52.2，来自 npm 包的 min/vs，只保留简体中文语言包
 deploy/                发布和旧版本清理脚本、Caddy 配置、服务器主机公钥
 .github/               Issue 和 PR 模板

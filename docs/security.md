@@ -158,7 +158,7 @@ Caret 是由 Caddy 托管的静态网站，没有自己的应用服务器，也�
 
 | 编号 | 要求 | 结论 | 依据 |
 | --- | --- | --- | --- |
-| V14.2.1 | 敏感数据只放在请求体或请求头，不放在 URL 和查询字符串 | 满足 | API Key 放在 `Authorization` 请求头，需求和文件内容放在 POST 请求体，请求地址只有配置的地址和固定路径（`src/agent/model.js`）；站点的网址参数只有 `theme`、`lang`；README 写明访问日志不含网址参数（日志片段在服务器的 Caddy 主配置里） |
+| V14.2.1 | 敏感数据只放在请求体或请求头，不放在 URL 和查询字符串 | 满足 | API Key 放在 `Authorization` 请求头，需求和文件内容放在 POST 请求体，请求地址只有配置的地址和固定路径（`src/agent/model.js`）；站点的网址参数只有 `theme`、`lang`；数据清单（`docs/zh/data-inventory.md`）写明访问日志不含网址参数（日志片段在服务器的 Caddy 主配置里） |
 | V14.3.1 | 客户端或会话结束后清除客户端存储里的认证数据 | 不适用 | 没有登录和会话，也就没有登录后才能得到的数据。API Key、设置和对话记录按设计保存在 IndexedDB，使用者可以清除 Key、关闭保存对话记录，或在设置的数据页清除全部本地数据（`src/settings/data-page.js`） |
 
 ## V15 安全编码和架构（Secure Coding and Architecture）
