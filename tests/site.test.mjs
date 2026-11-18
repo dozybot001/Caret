@@ -1,11 +1,14 @@
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { test } from 'node:test';
 
+import { VERSION } from '../src/app/constants.js';
 import { DOMAIN, FILING, LEGACY_DOMAIN, LEGACY_UNTIL, legacyDeadline } from '../src/app/site.js';
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const ORIGIN = `https://${DOMAIN}`;
+/** 英文 README 是默认页，中文的在 README.zh-CN.md */
+const READMES = { 'README.md': 'en', 'README.zh-CN.md': 'zh' };
 
 test('页面、security.txt 和 README 里的地址与 site.js 一致', () => {
     const html = read('index.html');
@@ -14,7 +17,7 @@ test('页面、security.txt 和 README 里的地址与 site.js 一致', () => {
     assert.ok(security.includes(`Canonical: ${ORIGIN}/.well-known/security.txt`));
     // 迁移期间新旧地址都列
     if (LEGACY_DOMAIN) assert.ok(security.includes(`Canonical: https://${LEGACY_DOMAIN}/.well-known/security.txt`));
-    for (const readme of ['README.md', 'README.en.md']) assert.ok(read(readme).includes(`<${ORIGIN}/>`), readme);
+    for (const readme in READMES) assert.ok(read(readme).includes(`<${ORIGIN}/>`), readme);
     assert.doesNotMatch(read('deploy/caret.Caddyfile'), /tenon/);
     assert.match(read('deploy/caret.Caddyfile'), /^__DOMAIN__ \{$/m);
 
@@ -75,6 +78,39 @@ test('页脚显示公司的 ICP 备案号和公安备案号', () => {
     assert.match(FILING.police, /^\d{14}$/);
     const html = read('index.html');
     assert.equal(html.match(/data-filing="icp"/g).length, html.match(/data-filing="police"/g).length);
+});
+
+test('两份 README 顶部互相链接，版本徽章和 VERSION 一致', () => {
+    for (const readme in READMES) {
+        const text = read(readme);
+        const other = Object.keys(READMES).find(name => name !== readme);
+        assert.ok(text.slice(0, text.indexOf('<picture>')).includes(`<a href="${other}">`), readme);
+        assert.ok(text.includes(`https://img.shields.io/badge/version-${VERSION}-`), readme);
+    }
+});
+
+test('README 配图都在 docs/assets 里，有替代文字，不超过 500 KB，中文 README 用中文界面的图', () => {
+    const used = new Set();
+    for (const [readme, lang] of Object.entries(READMES)) {
+        const text = read(readme);
+        const markdown = [...text.matchAll(/!\[([^\]]*)\]\(([^)]+)\)/g)];
+        for (const [, alt, path] of markdown) assert.ok(alt, `${readme}: ${path} 没有替代文字`);
+        for (const tag of text.match(/<img [^>]*>/g)) assert.match(tag, / alt="[^"]+"/, tag);
+        const images = [
+            ...markdown.map(match => match[2]),
+            ...[...text.matchAll(/<img [^>]*src="([^"]+)"/g)].map(match => match[1]),
+            ...[...text.matchAll(/srcset="([^"]+)"/g)].map(match => match[1])
+        ].filter(path => !path.startsWith('https://') && path !== 'apple-touch-icon.png');
+        for (const path of images) {
+            assert.match(path, new RegExp(`^docs/assets/[a-z]+-${lang}-(dark|light)\\.webp$`), `${readme}: ${path}`);
+            used.add(path.slice('docs/assets/'.length));
+        }
+    }
+    // 目录里的图都要被引用，换图时清掉旧的
+    for (const name of readdirSync(new URL('../docs/assets', import.meta.url))) {
+        assert.ok(used.has(name), `docs/assets/${name} 没有用到`);
+        assert.ok(statSync(new URL(`../docs/assets/${name}`, import.meta.url)).size <= 500_000, name);
+    }
 });
 
 test('迁移页面只把数据发给线上地址', () => {

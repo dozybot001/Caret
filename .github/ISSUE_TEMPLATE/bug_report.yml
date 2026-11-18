@@ -1,0 +1,62 @@
+name: Bug report / 缺陷报告
+description: Something in Caret does not work as expected / Caret 有地方不对
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Security problems do not go here: see [SECURITY.md](https://github.com/dozybot001/Caret/blob/main/SECURITY.md). Never paste API keys.
+        安全问题不在这里报告，见 [SECURITY.md](https://github.com/dozybot001/Caret/blob/main/SECURITY.md)。请不要贴 API Key。
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened / 发生了什么
+      description: Include any message Caret showed. / Caret 有提示的话，把提示文字一起写上。
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce / 复现步骤
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected / 期望的结果
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Caret version / Caret 版本
+      description: Shown in Settings → About. / 在设置 → 关于里。
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and OS / 浏览器和系统
+      description: For example, Chrome or Edge and its version, on macOS or Windows. / 比如 Chrome 或 Edge 及版本号，macOS 或 Windows。
+    validations:
+      required: true
+  - type: dropdown
+    id: provider
+    attributes:
+      label: Model service / 模型服务
+      options:
+        - DeepSeek
+        - Kimi
+        - Qwen
+        - OpenAI
+        - OpenRouter
+        - Custom / 自定义
+        - Not related / 与模型无关
+  - type: textarea
+    id: more
+    attributes:
+      label: Screenshots or other details / 截图或其他信息

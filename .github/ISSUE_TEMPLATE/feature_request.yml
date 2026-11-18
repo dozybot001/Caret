@@ -1,0 +1,26 @@
+name: Feature request / 功能建议
+description: Suggest an idea for Caret / 给 Caret 提建议
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Caret stays small on purpose: the Agent has only `read`, `write` and `edit`, runs no commands, and there is no build step or runtime dependency. Ideas that need a shell or a server are unlikely to be taken up.
+        Caret 有意保持精简：Agent 只有 `read`、`write`、`edit`，不执行命令，没有构建步骤和运行时依赖。需要 bash 或服务器的建议多半不会采纳。
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does it solve? / 要解决什么问题
+      description: Describe the situation, not only the feature. / 写清楚遇到的情况，不只是想要的功能。
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like / 希望怎么做
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Other approaches you considered / 考虑过的其他做法
