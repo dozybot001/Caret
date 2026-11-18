@@ -244,6 +244,25 @@
     color: var(--accent-text);
 }
 
+/* 出品方：Tenon 标志加「榫卯 Tenon AI」的小号横版组合。T 边长 16px，文字 12px、字重 600，间距约 0.3 倍边长 */
+.about-facts .about-publisher {
+    align-items: center;
+}
+
+.about-publisher dd {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--text-1);
+    font-weight: 600;
+}
+
+.about-publisher svg {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+}
+
 .legal-meta {
     color: var(--text-4);
     font-size: 12px;

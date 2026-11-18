@@ -36,6 +36,25 @@ test('每个页面都声明手机桌面图标和分享图', () => {
     }
 });
 
+test('Tenon 标志只用在关于页的出品方', () => {
+    // 官方 Tenon 标志里白色 T 的路径。产品标志、侧栏、加载页和图标都不放，出品方是 T 加文字的横版组合
+    const T = 'M13 16H51V28H38V48H26V28H13Z';
+    const pages = readdirSync(new URL('..', import.meta.url)).filter(name => name.endsWith('.html'));
+    for (const page of pages) {
+        const html = read(page);
+        const count = html.split(T).length - 1;
+        if (page !== 'index.html') {
+            assert.equal(count, 0, page);
+            continue;
+        }
+        assert.equal(count, 1);
+        const row = html.slice(html.indexOf('<div class="about-publisher">'));
+        assert.ok(row.startsWith('<div class="about-publisher">'));
+        assert.ok(row.indexOf(T) < row.indexOf('</div>'));
+        assert.ok(row.indexOf('data-i18n="about.publisherName"') < row.indexOf('</div>'));
+    }
+});
+
 test('手机桌面图标和分享图是不透明的 PNG，尺寸合规', () => {
     const header = path => {
         const png = readFileSync(new URL(`../${path}`, import.meta.url));
