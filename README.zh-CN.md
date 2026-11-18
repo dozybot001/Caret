@@ -11,7 +11,6 @@
 <p align="center">
   <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-0.12.2-f06b32" alt="版本 0.12.2"></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/dozybot001/Caret" alt="许可证"></a>
-  <a href="https://caret.tenonai.cn/"><img src="https://img.shields.io/badge/try_it-caret.tenonai.cn-f06b32" alt="在 caret.tenonai.cn 使用"></a>
 </p>
 
 <picture>
@@ -20,6 +19,8 @@
 </picture>
 
 Caret 运行在浏览器里，不用安装，也不用账号。打开一个本地文件夹，说明要改什么，Agent 找到代码，在编辑器里做出改动。你看完 diff 写入之前，磁盘上的文件不会变。
+
+## 能做什么
 
 ### 三个工具，没有 bash
 
@@ -101,8 +102,12 @@ Caret 只做网页版，不做手机应用：它要直接读写本地文件夹�
 
 ## 许可证
 
-[MIT](LICENSE)。编辑器是 [Monaco Editor](https://github.com/microsoft/monaco-editor)，许可证见 [vendor/monaco-0.52.2](vendor/monaco-0.52.2)。图标来自 [vscode-codicons](https://github.com/microsoft/vscode-codicons)，许可证见 [css/codicons](css/codicons)。
+[MIT](LICENSE)。Copyright (c) 2025-2026 Changsha Tenon Artificial Intelligence Technology Co., Ltd.（长沙榫卯人工智能科技有限公司）
+
+编辑器是 [Monaco Editor](https://github.com/microsoft/monaco-editor)，许可证见 [vendor/monaco-0.52.2](vendor/monaco-0.52.2)。图标来自 [vscode-codicons](https://github.com/microsoft/vscode-codicons)，许可证见 [css/codicons](css/codicons)。
 
 ---
 
-出品方：[榫卯 Tenon AI](https://tenonai.cn/)
+<p align="center">
+  出品方　<a href="https://tenonai.cn/zh/products/caret/"><img src="docs/assets/tenon-mark.svg" width="20" height="20" align="absmiddle" alt="榫卯 Tenon AI 的标志"> <b>榫卯 Tenon AI</b></a>
+</p>

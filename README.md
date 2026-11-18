@@ -11,7 +11,6 @@
 <p align="center">
   <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-0.12.2-f06b32" alt="Version 0.12.2"></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/dozybot001/Caret" alt="License"></a>
-  <a href="https://caret.tenonai.cn/"><img src="https://img.shields.io/badge/try_it-caret.tenonai.cn-f06b32" alt="Try it at caret.tenonai.cn"></a>
 </p>
 
 <picture>
@@ -20,6 +19,8 @@
 </picture>
 
 Caret runs in your browser, with nothing to install and no account. Open a local folder and describe the change. The Agent finds the code and edits it in the editor, and nothing reaches the disk until you have read the diff and applied it.
+
+## What it does
 
 ### Three tools, no shell
 
@@ -103,8 +104,12 @@ Bug reports, ideas and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIB
 
 ## License
 
-[MIT](LICENSE). The editor is [Monaco Editor](https://github.com/microsoft/monaco-editor), with the license in [vendor/monaco-0.52.2](vendor/monaco-0.52.2). Icons are from [vscode-codicons](https://github.com/microsoft/vscode-codicons), with the license in [css/codicons](css/codicons).
+[MIT](LICENSE). Copyright (c) 2025-2026 Changsha Tenon Artificial Intelligence Technology Co., Ltd.
+
+The editor is [Monaco Editor](https://github.com/microsoft/monaco-editor), with the license in [vendor/monaco-0.52.2](vendor/monaco-0.52.2). Icons are from [vscode-codicons](https://github.com/microsoft/vscode-codicons), with the license in [css/codicons](css/codicons).
 
 ---
 
-Publisher: [Tenon AI](https://tenonai.cn/)
+<p align="center">
+  Publisher&emsp;<a href="https://tenonai.cn/products/caret/"><img src="docs/assets/tenon-mark.svg" width="20" height="20" align="absmiddle" alt="Tenon AI logo"> <b>Tenon AI</b></a>
+</p>

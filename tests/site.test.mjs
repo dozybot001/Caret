@@ -39,7 +39,7 @@ test('每个页面都声明手机桌面图标和分享图', () => {
     }
 });
 
-test('Tenon 标志只用在关于页的出品方', () => {
+test('页面上的 Tenon 标志只用在关于页的出品方', () => {
     // 官方 Tenon 标志里白色 T 的路径。产品标志、侧栏、加载页和图标都不放，出品方是 T 加文字的横版组合
     const T = 'M13 16H51V28H38V48H26V28H13Z';
     const pages = readdirSync(new URL('..', import.meta.url)).filter(name => name.endsWith('.html'));
@@ -102,7 +102,10 @@ test('README 配图都在 docs/assets 里，有替代文字，不超过 500 KB�
             ...[...text.matchAll(/srcset="([^"]+)"/g)].map(match => match[1])
         ].filter(path => !path.startsWith('https://') && path !== 'apple-touch-icon.png');
         for (const path of images) {
-            assert.match(path, new RegExp(`^docs/assets/[a-z]+-${lang}-(dark|light)\\.webp$`), `${readme}: ${path}`);
+            // 截图分语言和主题；结尾出品方用的 Tenon 标志两份共用
+            if (path !== 'docs/assets/tenon-mark.svg') {
+                assert.match(path, new RegExp(`^docs/assets/[a-z]+-${lang}-(dark|light)\\.webp$`), `${readme}: ${path}`);
+            }
             used.add(path.slice('docs/assets/'.length));
         }
     }
@@ -110,6 +113,26 @@ test('README 配图都在 docs/assets 里，有替代文字，不超过 500 KB�
     for (const name of readdirSync(new URL('../docs/assets', import.meta.url))) {
         assert.ok(used.has(name), `docs/assets/${name} 没有用到`);
         assert.ok(statSync(new URL(`../docs/assets/${name}`, import.meta.url)).size <= 500_000, name);
+    }
+});
+
+test('README 写公司的著作权行，结尾是出品方的横版组合', () => {
+    // 著作权行照抄 LICENSE 第 3 行，中文版括注公司中文名
+    const copyright = read('LICENSE').split('\n')[2];
+    assert.match(copyright, /^Copyright \(c\) \d{4}(-\d{4})? Changsha Tenon Artificial Intelligence Technology Co\., Ltd\.$/);
+    assert.ok(read('README.md').includes(copyright));
+    assert.ok(read('README.zh-CN.md').includes(`${copyright}（长沙榫卯人工智能科技有限公司）`));
+
+    // 出品方是 Tenon 标志加名字，不写成纯文字，链接官网产品页
+    const lockups = {
+        'README.md': ['Publisher', 'https://tenonai.cn/products/caret/', 'Tenon AI'],
+        'README.zh-CN.md': ['出品方', 'https://tenonai.cn/zh/products/caret/', '榫卯 Tenon AI']
+    };
+    for (const [readme, [label, page, name]] of Object.entries(lockups)) {
+        const last = read(readme).trimEnd().split('\n').slice(-3).join('\n');
+        assert.ok(last.startsWith('<p align="center">'), readme);
+        assert.ok(last.includes(`${label}`) && last.includes(`<a href="${page}"><img src="docs/assets/tenon-mark.svg"`), readme);
+        assert.ok(last.includes(`> <b>${name}</b></a>`), readme);
     }
 });
 
