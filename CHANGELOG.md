@@ -4,6 +4,10 @@
 
 ## [未发布]
 
+### 变更
+
+- 许可证里公司的英文名改为 Tenon Artificial Intelligence Technology Co., Ltd.，中文名不变。
+
 ## [0.12.3] - 2026-11-18
 
 ### 变更

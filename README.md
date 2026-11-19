@@ -71,7 +71,7 @@ Please report security problems privately, as described in [SECURITY.md](SECURIT
 
 ## License
 
-[MIT](LICENSE). Copyright (c) 2025-2026 Changsha Tenon Artificial Intelligence Technology Co., Ltd.
+[MIT](LICENSE). Copyright (c) 2025-2026 Tenon Artificial Intelligence Technology Co., Ltd.
 
 The editor is [Monaco Editor](https://github.com/microsoft/monaco-editor), with the license in [vendor/monaco-0.52.2](vendor/monaco-0.52.2). Icons are from [vscode-codicons](https://github.com/microsoft/vscode-codicons), with the license in [css/codicons](css/codicons).
 

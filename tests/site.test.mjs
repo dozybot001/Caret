@@ -132,7 +132,7 @@ test('README、CONTRIBUTING 和数据清单里的相对链接都指向仓库里�
 test('README 写公司的著作权行，结尾是出品方的横版组合', () => {
     // 著作权行照抄 LICENSE 第 3 行，中文版括注公司中文名
     const copyright = read('LICENSE').split('\n')[2];
-    assert.match(copyright, /^Copyright \(c\) \d{4}(-\d{4})? Changsha Tenon Artificial Intelligence Technology Co\., Ltd\.$/);
+    assert.match(copyright, /^Copyright \(c\) \d{4}(-\d{4})? Tenon Artificial Intelligence Technology Co\., Ltd\.$/);
     assert.ok(read('README.md').includes(copyright));
     assert.ok(read('README.zh-CN.md').includes(`${copyright}（长沙榫卯人工智能科技有限公司）`));
 
