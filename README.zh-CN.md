@@ -7,7 +7,7 @@
 <p align="center">极轻量的浏览器 Coding Agent</p>
 
 <p align="center">
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-0.12.4-f06b32" alt="版本 0.12.4"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-0.13.0-f06b32" alt="版本 0.13.0"></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/dozybot001/Caret" alt="许可证"></a>
 </p>
 
@@ -55,7 +55,7 @@ Caret 运行在浏览器里，不用安装，也不用账号。打开一个本�
 - [更新记录](CHANGELOG.md)
 - [参与贡献](CONTRIBUTING.md)：本地运行、测试和目录结构
 - [数据清单](docs/zh/data-inventory.md)
-- [项目约定](AGENTS.md)、[设计规范](docs/design-guidelines.md)和[安全自查](docs/security.md)
+- [项目约定](AGENTS.md)和[设计规范](docs/design-guidelines.md)
 
 ## 数据去向
 

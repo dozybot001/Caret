@@ -30,11 +30,11 @@ test('Markdown 解析行内结构，不误伤代码和普通星号', () => {
     assert.equal(parseInline('*斜体*')[0].type, 'emphasis');
     assert.equal(parseInline('~~删除~~')[0].type, 'deleted');
     assert.equal(parseInline('__init__.py')[0].text, '__init__.py');
-    assert.deepEqual(parseInline('见 https://tenon.asia/。').map(node => node.href ?? node.text), ['见 ', 'https://tenon.asia/', '。']);
+    assert.deepEqual(parseInline('见 https://tenonai.cn/。').map(node => node.href ?? node.text), ['见 ', 'https://tenonai.cn/', '。']);
 });
 
 test('Markdown 链接只允许 http、https 和 mailto', () => {
-    assert.equal(parseInline('[官网](https://tenon.asia/)')[0].href, 'https://tenon.asia/');
+    assert.equal(parseInline('[官网](https://tenonai.cn/)')[0].href, 'https://tenonai.cn/');
     assert.equal(parseInline('[邮件](mailto:a@b.c)')[0].href, 'mailto:a@b.c');
     assert.equal(parseInline('[维基](https://a.org/b_(c))')[0].href, 'https://a.org/b_(c)');
     assert.deepEqual(parseInline('[点我](javascript:alert(1))'), [{ type: 'text', text: '点我' }]);

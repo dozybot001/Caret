@@ -3,7 +3,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { test } from 'node:test';
 
 import { VERSION } from '../src/app/constants.js';
-import { DOMAIN, FILING, LEGACY_DOMAIN, LEGACY_UNTIL, legacyDeadline } from '../src/app/site.js';
+import { DOMAIN, FILING } from '../src/app/site.js';
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const ORIGIN = `https://${DOMAIN}`;
@@ -15,17 +15,13 @@ test('页面、security.txt 和 README 里的地址与 site.js 一致', () => {
     assert.ok(html.includes(`<meta property="og:url" content="${ORIGIN}/">`));
     const security = read('.well-known/security.txt').split('\n');
     assert.ok(security.includes(`Canonical: ${ORIGIN}/.well-known/security.txt`));
-    // 迁移期间新旧地址都列
-    if (LEGACY_DOMAIN) assert.ok(security.includes(`Canonical: https://${LEGACY_DOMAIN}/.well-known/security.txt`));
     for (const readme in READMES) assert.ok(read(readme).includes(`<${ORIGIN}/>`), readme);
     assert.doesNotMatch(read('deploy/caret.Caddyfile'), /tenon/);
     assert.match(read('deploy/caret.Caddyfile'), /^__DOMAIN__ \{$/m);
 
-    // 迁到 tenonai.cn 后，官网链接和安全策略也换成新域名
-    if (DOMAIN.endsWith('.tenonai.cn')) {
-        assert.doesNotMatch(html, /tenon\.asia/);
-        assert.doesNotMatch(security.filter(line => !line.startsWith('Canonical:')).join('\n'), /tenon\.asia/);
-    }
+    // 旧域名不留痕迹
+    assert.doesNotMatch(html, /tenon\.asia/);
+    assert.doesNotMatch(security.join('\n'), /tenon\.asia/);
 });
 
 test('每个页面都声明手机桌面图标和分享图', () => {
@@ -153,18 +149,4 @@ test('README 写公司的著作权行，结尾是出品方的横版组合', () =
     }
 });
 
-test('迁移页面只把数据发给线上地址', () => {
-    const target = new URL(read('migrate.html').match(/const TARGET = '([^']+)'/)[1]);
-    assert.equal(target.origin, ORIGIN);
-});
 
-test('迁移截止日期只在迁移期间填写，按本地日期提醒', () => {
-    if (!LEGACY_UNTIL) {
-        assert.equal(legacyDeadline(), null);
-        return;
-    }
-    assert.ok(LEGACY_DOMAIN);
-    assert.match(LEGACY_UNTIL, /^\d{4}-\d{2}-\d{2}$/);
-    const date = legacyDeadline();
-    assert.equal([date.getFullYear(), date.getMonth() + 1, date.getDate()].map(n => String(n).padStart(2, '0')).join('-'), LEGACY_UNTIL);
-});

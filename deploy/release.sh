@@ -5,19 +5,18 @@ set -euo pipefail
 
 SERVER=agenthub-prod
 ROOT=/opt/caret
-FILES=(404.html 500.html maintenance.html migrate.html LICENSE index.html apple-touch-icon.png .well-known assets css src)
+FILES=(404.html 500.html maintenance.html LICENSE index.html apple-touch-icon.png .well-known assets css src)
 # 主机公钥固定在 deploy/known_hosts，不信任开发机上临时记下的公钥
 SSH_OPTIONS=(-o BatchMode=yes -o ConnectTimeout=15 -o HostKeyAlias="$SERVER" -o UserKnownHostsFile=deploy/known_hosts -o StrictHostKeyChecking=yes)
 SSH=(ssh "${SSH_OPTIONS[@]}" "$SERVER")
 
 cd "$(dirname "$0")/.."
 
-# 线上地址和迁走之前的旧地址，见 src/app/site.js
+# 线上地址，见 src/app/site.js
 site_constant() {
     sed -n "s/^export const $1 = '\(.*\)';$/\1/p" src/app/site.js
 }
 DOMAIN=$(site_constant DOMAIN)
-LEGACY_DOMAIN=$(site_constant LEGACY_DOMAIN)
 ORIGIN=https://$DOMAIN
 
 # 服务器端：把 Caddy 站点切到指定版本，验证配置后重载
@@ -116,21 +115,11 @@ for path in tests/agent.test.mjs docs/design-guidelines.md deploy/release.sh REA
     [ "$(status_of "$path")" = 404 ] || fail "$path 不应该被发布"
 done
 
-# 迁移期间的旧地址：301 到新地址并保留路径和参数，只有迁移页面照常返回
-if [ -n "$LEGACY" ]; then
-    moved=$(curl -s --retry 3 --retry-delay 2 -m 15 -o /dev/null -w '%{http_code} %{redirect_url}' "https://$LEGACY/docs/a?b=1")
-    [ "$moved" = "301 $ORIGIN/docs/a?b=1" ] || fail "旧地址没有跳到新地址：$moved"
-    headers=$(curl -sI --retry 3 --retry-delay 2 -m 15 "https://$LEGACY/") || fail '旧地址不可用'
-    grep -qi '^strict-transport-security: max-age=31536000; includeSubDomains' <<<"$headers" || fail '旧地址的 HSTS 不对'
-    body=$(fetch "https://$LEGACY/migrate.html") || fail '旧地址的迁移页面不可用'
-    [[ $body == *"const TARGET = '$ORIGIN'"* ]] || fail '迁移页面的目标地址不对'
-fi
 REMOTE
 
 smoke() {
     remote <<EOS
 ORIGIN=$ORIGIN
-LEGACY=$LEGACY_DOMAIN
 EXPECTED=$1
 COMMIT=$2
 $SMOKE
@@ -190,13 +179,7 @@ WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 git archive --format=tar "$SHA" "${FILES[@]}" | gzip -n > "$WORK/site.tar.gz"
 DIGEST=$(shasum -a 256 "$WORK/site.tar.gz" | cut -d' ' -f1)
-{
-    sed "s#__DOMAIN__#$DOMAIN#g" deploy/caret.Caddyfile
-    if [ -n "$LEGACY_DOMAIN" ]; then
-        echo
-        sed -e "s#__DOMAIN__#$DOMAIN#g" -e "s#__LEGACY__#$LEGACY_DOMAIN#g" deploy/legacy.Caddyfile
-    fi
-} > "$WORK/caret.Caddyfile"
+sed "s#__DOMAIN__#$DOMAIN#g" deploy/caret.Caddyfile > "$WORK/caret.Caddyfile"
 
 "${SSH[@]}" "sudo -n install -d -m 0755 $ROOT $ROOT/releases $ROOT/state && sudo -n install -d -o ubuntu -g ubuntu -m 0700 $ROOT/incoming"
 

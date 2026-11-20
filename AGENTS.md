@@ -16,7 +16,7 @@
 - 界面文字都放在 `src/i18n/zh.js` 和 `src/i18n/en.js`，两边的键保持一致。
 - 改界面前先读 [docs/design-guidelines.md](docs/design-guidelines.md)。颜色只用 `css/theme.css` 里的变量，新变量同时给出深色和浅色取值。
 - 线上地址和备案号只写在 `src/app/site.js`。页面、`security.txt` 和 README 里的地址由 `tests/site.test.mjs` 核对。
-- 密钥不进仓库，也不写进测试。安全自查见 [docs/security.md](docs/security.md)。
+- 密钥不进仓库，也不写进测试。
 
 ## 改完之后
 

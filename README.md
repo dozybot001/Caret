@@ -7,7 +7,7 @@
 <p align="center">An ultralight coding agent in your browser</p>
 
 <p align="center">
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-0.12.4-f06b32" alt="Version 0.12.4"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-0.13.0-f06b32" alt="Version 0.13.0"></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/dozybot001/Caret" alt="License"></a>
 </p>
 
@@ -55,7 +55,7 @@ Other browsers cannot access local folders (the File System Access API), which i
 - [Changelog](CHANGELOG.md)
 - [Contributing](CONTRIBUTING.md): running locally, tests and the project layout
 - [Data inventory](docs/en/data-inventory.md)
-- [Project conventions](AGENTS.md), [design guidelines](docs/design-guidelines.md) and the [security self-check](docs/security.md), in Chinese
+- [Project conventions](AGENTS.md) and [design guidelines](docs/design-guidelines.md), in Chinese
 
 ## Where your data goes
 
