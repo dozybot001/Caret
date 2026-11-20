@@ -7,7 +7,7 @@
 <p align="center">极轻量的浏览器 Coding Agent</p>
 
 <p align="center">
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-0.12.3-f06b32" alt="版本 0.12.3"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-0.12.4-f06b32" alt="版本 0.12.4"></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/dozybot001/Caret" alt="许可证"></a>
 </p>
 
@@ -71,7 +71,7 @@ Caret 没有账号，也没有应用服务器：API Key、设置和对话记录�
 
 ## 许可证
 
-[MIT](LICENSE)。Copyright (c) 2025-2026 Tenon Artificial Intelligence Technology Co., Ltd.（长沙榫卯人工智能科技有限公司）
+[MIT](LICENSE)。Copyright (c) 2025-2026 Tenon Artificial Intelligence Technology Co., Ltd. (长沙榫卯人工智能科技有限公司)
 
 编辑器是 [Monaco Editor](https://github.com/microsoft/monaco-editor)，许可证见 [vendor/monaco-0.52.2](vendor/monaco-0.52.2)。图标来自 [vscode-codicons](https://github.com/microsoft/vscode-codicons)，许可证见 [css/codicons](css/codicons)。
 

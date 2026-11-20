@@ -4,9 +4,11 @@
 
 ## [未发布]
 
+## [0.12.4] - 2026-11-20
+
 ### 变更
 
-- 许可证里公司的英文名改为 Tenon Artificial Intelligence Technology Co., Ltd.，中文名不变。
+- 许可证和英文版隐私政策、用户协议里的公司英文名改为 Tenon Artificial Intelligence Technology Co., Ltd.，后面括注中文名长沙榫卯人工智能科技有限公司；政策和协议的内容与版本号不变。
 
 ## [0.12.3] - 2026-11-18
 

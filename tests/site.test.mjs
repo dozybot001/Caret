@@ -130,11 +130,15 @@ test('README、CONTRIBUTING 和数据清单里的相对链接都指向仓库里�
 });
 
 test('README 写公司的著作权行，结尾是出品方的横版组合', () => {
-    // 著作权行照抄 LICENSE 第 3 行，中文版括注公司中文名
+    // 著作权行照抄 LICENSE 第 3 行，英文名后括注中文法定名称
     const copyright = read('LICENSE').split('\n')[2];
-    assert.match(copyright, /^Copyright \(c\) \d{4}(-\d{4})? Tenon Artificial Intelligence Technology Co\., Ltd\.$/);
+    assert.match(copyright, /^Copyright \(c\) \d{4}(-\d{4})? Tenon Artificial Intelligence Technology Co\., Ltd\. \(长沙榫卯人工智能科技有限公司\)$/);
     assert.ok(read('README.md').includes(copyright));
-    assert.ok(read('README.zh-CN.md').includes(`${copyright}（长沙榫卯人工智能科技有限公司）`));
+    assert.ok(read('README.zh-CN.md').includes(copyright));
+    // 英文隐私政策和用户协议第一次出现公司名时同样括注，不再写 Changsha
+    const articles = read('src/i18n/articles.js');
+    assert.doesNotMatch(articles, /Changsha/);
+    assert.equal(articles.split('Tenon Artificial Intelligence Technology Co., Ltd. (长沙榫卯人工智能科技有限公司)').length - 1, 2);
 
     // 出品方是 Tenon 标志加名字，不写成纯文字，链接官网产品页
     const lockups = {
